@@ -21,10 +21,311 @@ __mako_require__.e(exports, {
 });
 var _export_star = __mako_require__("@swc/helpers/_/_export_star");
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
-var _g6pc = _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
+var _g6pc = /*#__PURE__*/ _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
 _g6pc.default.version = '4.8.23';
 var _default = _g6pc.default;
 var version = '4.8.23';
+
+},
+"src/pages/CommunityDiscovery/components/ComparisonView.tsx": function (module, exports, __mako_require__){
+"use strict";
+__mako_require__.d(exports, "__esModule", {
+    value: true
+});
+__mako_require__.d(exports, "default", {
+    enumerable: true,
+    get: function() {
+        return _default;
+    }
+});
+var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
+var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
+var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
+var _antd = __mako_require__("node_modules/antd/es/index.js");
+var _react = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/react/index.js"));
+var prevRefreshReg;
+var prevRefreshSig;
+prevRefreshReg = self.$RefreshReg$;
+prevRefreshSig = self.$RefreshSig$;
+self.$RefreshReg$ = (type, id)=>{
+    _reactrefresh.register(type, module.id + id);
+};
+self.$RefreshSig$ = _reactrefresh.createSignatureFunctionForTransform;
+function bestMark(items, key, higherIsBetter = true) {
+    if (items.length === 0) return new Set();
+    const values = items.map(key);
+    const best = higherIsBetter ? Math.max(...values) : Math.min(...values);
+    const result = new Set();
+    items.forEach((_, idx)=>{
+        if (values[idx] === best && best !== 0) result.add(idx);
+    });
+    return result;
+}
+const ComparisonView = ({ results })=>{
+    if (!results || results.length === 0) return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+        description: "暂无对比数据，请先执行算法对比"
+    }, void 0, false, {
+        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+        lineNumber: 28,
+        columnNumber: 12
+    }, this);
+    const validResults = results.filter((r)=>!r.error);
+    const bestModularity = bestMark(validResults, (r)=>r.modularity);
+    const bestCoverage = bestMark(validResults, (r)=>r.coverage);
+    const fastest = bestMark(validResults, (r)=>r.runtime_ms, false);
+    const mostCommunities = bestMark(validResults, (r)=>r.communities_count);
+    const columns = [
+        {
+            title: '算法',
+            dataIndex: 'label',
+            key: 'label',
+            width: 100,
+            render: (label, record)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                    children: record.error ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                        title: record.error,
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                            color: "red",
+                            children: label
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 47,
+                            columnNumber: 15
+                        }, this)
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                        lineNumber: 46,
+                        columnNumber: 13
+                    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                        color: "blue",
+                        children: label
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                        lineNumber: 50,
+                        columnNumber: 13
+                    }, this)
+                }, void 0, false, {
+                    fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                    lineNumber: 44,
+                    columnNumber: 9
+                }, this)
+        },
+        {
+            title: '社区数',
+            dataIndex: 'communities_count',
+            key: 'communities_count',
+            width: 80,
+            align: 'right',
+            render: (val, _, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                    style: {
+                        fontWeight: mostCommunities.has(idx) ? 600 : 400
+                    },
+                    children: [
+                        mostCommunities.has(idx) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CrownOutlined, {
+                            style: {
+                                color: '#faad14',
+                                marginRight: 4,
+                                fontSize: 11
+                            }
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 63,
+                            columnNumber: 40
+                        }, this),
+                        val || '-'
+                    ]
+                }, void 0, true, {
+                    fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                    lineNumber: 62,
+                    columnNumber: 9
+                }, this)
+        },
+        {
+            title: '模块度',
+            dataIndex: 'modularity',
+            key: 'modularity',
+            width: 90,
+            align: 'right',
+            render: (val, _, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                    style: {
+                        fontWeight: bestModularity.has(idx) ? 600 : 400,
+                        color: val > 0.5 ? '#52c41a' : val > 0.3 ? '#faad14' : '#999'
+                    },
+                    children: [
+                        bestModularity.has(idx) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CrownOutlined, {
+                            style: {
+                                color: '#faad14',
+                                marginRight: 4,
+                                fontSize: 11
+                            }
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 81,
+                            columnNumber: 39
+                        }, this),
+                        val ? val.toFixed(4) : '-'
+                    ]
+                }, void 0, true, {
+                    fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                    lineNumber: 75,
+                    columnNumber: 9
+                }, this)
+        },
+        {
+            title: '覆盖率',
+            dataIndex: 'coverage',
+            key: 'coverage',
+            width: 90,
+            align: 'right',
+            render: (val, _, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                    style: {
+                        fontWeight: bestCoverage.has(idx) ? 600 : 400
+                    },
+                    children: [
+                        bestCoverage.has(idx) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PieChartOutlined, {
+                            style: {
+                                color: '#1890ff',
+                                marginRight: 4,
+                                fontSize: 11
+                            }
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 94,
+                            columnNumber: 37
+                        }, this),
+                        val ? (val * 100).toFixed(1) + '%' : '-'
+                    ]
+                }, void 0, true, {
+                    fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                    lineNumber: 93,
+                    columnNumber: 9
+                }, this)
+        },
+        {
+            title: '耗时',
+            dataIndex: 'runtime_ms',
+            key: 'runtime_ms',
+            width: 80,
+            align: 'right',
+            render: (val, _, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                    style: {
+                        fontWeight: fastest.has(idx) ? 600 : 400
+                    },
+                    children: [
+                        fastest.has(idx) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {
+                            style: {
+                                color: '#52c41a',
+                                marginRight: 4,
+                                fontSize: 11
+                            }
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 107,
+                            columnNumber: 32
+                        }, this),
+                        val ? val + 'ms' : '-'
+                    ]
+                }, void 0, true, {
+                    fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                    lineNumber: 106,
+                    columnNumber: 9
+                }, this)
+        }
+    ];
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+        children: [
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                style: {
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#1a1a2e',
+                    marginBottom: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                },
+                children: [
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.DashboardOutlined, {}, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                        lineNumber: 127,
+                        columnNumber: 9
+                    }, this),
+                    "算法对比结果",
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                        title: "绿色图标 = 最佳值",
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                            color: "green",
+                            style: {
+                                fontSize: 10,
+                                marginLeft: 4
+                            },
+                            children: "BEST"
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                            lineNumber: 130,
+                            columnNumber: 11
+                        }, this)
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                        lineNumber: 129,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                lineNumber: 116,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                dataSource: results,
+                columns: columns,
+                rowKey: "method",
+                size: "small",
+                pagination: false,
+                locale: {
+                    emptyText: '无对比数据'
+                },
+                style: {
+                    background: '#fff'
+                }
+            }, void 0, false, {
+                fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+                lineNumber: 133,
+                columnNumber: 7
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "src/pages/CommunityDiscovery/components/ComparisonView.tsx",
+        lineNumber: 115,
+        columnNumber: 5
+    }, this);
+};
+_c = ComparisonView;
+var _default = ComparisonView;
+var _c;
+$RefreshReg$(_c, "ComparisonView");
+if (prevRefreshReg) self.$RefreshReg$ = prevRefreshReg;
+if (prevRefreshSig) self.$RefreshSig$ = prevRefreshSig;
+function registerClassComponent(filename, moduleExports) {
+    for(const key in moduleExports)try {
+        if (key === "__esModule") continue;
+        const exportValue = moduleExports[key];
+        if (_reactrefresh.isLikelyComponentType(exportValue) && exportValue.prototype && exportValue.prototype.isReactComponent) _reactrefresh.register(exportValue, filename + " " + key);
+    } catch (e) {}
+}
+function $RefreshIsReactComponentLike$(moduleExports) {
+    if (_reactrefresh.isLikelyComponentType(moduleExports || moduleExports.default)) return true;
+    for(var key in moduleExports)try {
+        if (_reactrefresh.isLikelyComponentType(moduleExports[key])) return true;
+    } catch (e) {}
+    return false;
+}
+registerClassComponent(module.id, module.exports);
+if ($RefreshIsReactComponentLike$(module.exports)) {
+    module.meta.hot.accept();
+    _reactrefresh.performReactRefresh();
+}
 
 },
 "src/pages/CommunityDiscovery/components/RightPanel.tsx": function (module, exports, __mako_require__){
@@ -48,12 +349,12 @@ __mako_require__.e(exports, {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
-var _react = _interop_require_default._(__mako_require__("node_modules/react/index.js"));
-var _RiskAssessment = _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/RiskAssessment.tsx"));
+var _react = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/react/index.js"));
+var _RiskAssessment = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/RiskAssessment.tsx"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -116,16 +417,17 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
     const { message } = _antd.App.useApp();
     const avgSize = result && result.communities.length > 0 ? Math.round(result.communities.reduce((s, c)=>s + c.size, 0) / result.communities.length) : 0;
     const maxSize = result && result.communities.length > 0 ? result.communities[0].size : 0;
-    const listTab = (0, _jsxdevruntime.jsxDEV)("div", {
+    // ── Tab 1: Community List ──
+    const listTab = /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             flex: 1,
             overflow: 'auto',
             maxHeight: 'calc(100vh - 220px)'
         },
-        children: result && result.communities.length > 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.List, {
+        children: result && result.communities.length > 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.List, {
             size: "small",
             dataSource: result.communities,
-            renderItem: (c, idx)=>(0, _jsxdevruntime.jsxDEV)(_antd.List.Item, {
+            renderItem: (c, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.List.Item, {
                     onClick: ()=>onSelectCommunity(c),
                     style: {
                         cursor: 'pointer',
@@ -134,22 +436,22 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         borderLeft: (selectedCommunity === null || selectedCommunity === void 0 ? void 0 : selectedCommunity.community_id) === c.community_id ? `3px solid ${COMMUNITY_COLORS[idx % COMMUNITY_COLORS.length]}` : '3px solid transparent',
                         transition: 'all 0.2s'
                     },
-                    children: (0, _jsxdevruntime.jsxDEV)("div", {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             width: '100%'
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
                                 },
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                         size: 4,
                                         children: [
-                                            (0, _jsxdevruntime.jsxDEV)("span", {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                 style: {
                                                     display: 'inline-block',
                                                     width: 10,
@@ -162,7 +464,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                                 lineNumber: 132,
                                                 columnNumber: 21
                                             }, void 0),
-                                            (0, _jsxdevruntime.jsxDEV)(Text, {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                                                 strong: true,
                                                 style: {
                                                     fontSize: 13
@@ -176,7 +478,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                                 lineNumber: 141,
                                                 columnNumber: 21
                                             }, void 0),
-                                            (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                 style: {
                                                     fontSize: 10,
                                                     lineHeight: '16px'
@@ -196,7 +498,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                         lineNumber: 131,
                                         columnNumber: 19
                                     }, void 0),
-                                    (0, _jsxdevruntime.jsxDEV)(Text, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                                         type: "secondary",
                                         style: {
                                             fontSize: 11
@@ -216,11 +518,11 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                 lineNumber: 130,
                                 columnNumber: 17
                             }, void 0),
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     marginTop: 4
                                 },
-                                children: Object.entries(c.label_distribution || {}).sort((a, b)=>b[1] - a[1]).slice(0, 2).map(([lbl, cnt])=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                children: Object.entries(c.label_distribution || {}).sort((a, b)=>b[1] - a[1]).slice(0, 2).map(([lbl, cnt])=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: LAYER_COLORS[lbl] || '#888',
                                         style: {
                                             fontSize: 10,
@@ -256,7 +558,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
             lineNumber: 110,
             columnNumber: 9
-        }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+        }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
             image: _antd.Empty.PRESENTED_IMAGE_SIMPLE,
             description: "配置参数后点击 ▶ 开始发现",
             style: {
@@ -272,8 +574,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
         lineNumber: 108,
         columnNumber: 5
     }, this);
+    // ── Tab 2: Community Detail ──
     const topNodes = graphData.nodes.length > 0 ? Array.from(computeDegreeCentrality(graphData).values()).sort((a, b)=>b.degree - a.degree).slice(0, 8) : [];
-    const detailTab = !selectedCommunity ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+    const detailTab = !selectedCommunity ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
         image: _antd.Empty.PRESENTED_IMAGE_SIMPLE,
         description: "在列表中点击一个群体查看详情",
         style: {
@@ -283,7 +586,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
         fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
         lineNumber: 184,
         columnNumber: 5
-    }, this) : (0, _jsxdevruntime.jsxDEV)("div", {
+    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             overflow: 'auto',
             maxHeight: 'calc(100vh - 220px)',
@@ -292,7 +595,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
             gap: 12
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     display: 'flex',
                     alignItems: 'center',
@@ -300,13 +603,13 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                     padding: '4px 0'
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(Text, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                         strong: true,
                         style: {
                             fontSize: 14
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {
                                 style: {
                                     marginRight: 6
                                 }
@@ -323,7 +626,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 200,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                         type: "text",
                         size: "small",
                         onClick: onClearSelection,
@@ -339,15 +642,15 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 192,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                 gutter: [
                     8,
                     8
                 ],
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "节点数",
                             value: selectedCommunity.size,
                             loading: graphLoading,
@@ -364,9 +667,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 210,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "内部边",
                             value: selectedCommunity.internal_edges,
                             loading: graphLoading,
@@ -383,9 +686,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 213,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "密度",
                             value: selectedCommunity.density.toFixed(3),
                             loading: graphLoading,
@@ -402,9 +705,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 216,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "类型数",
                             value: Object.keys(selectedCommunity.label_distribution).length,
                             suffix: "种",
@@ -428,8 +731,8 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 209,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)("div", {
-                children: Object.entries(selectedCommunity.label_distribution || {}).map(([lbl, cnt])=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                children: Object.entries(selectedCommunity.label_distribution || {}).map(([lbl, cnt])=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                         color: LAYER_COLORS[lbl] || '#888',
                         children: [
                             lbl,
@@ -446,9 +749,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 235,
                 columnNumber: 7
             }, this),
-            topNodes.length > 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+            topNodes.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(Text, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                         type: "secondary",
                         style: {
                             fontSize: 11
@@ -459,12 +762,12 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 246,
                         columnNumber: 11
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.List, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.List, {
                         size: "small",
                         dataSource: topNodes,
                         renderItem: ({ node, degree })=>{
                             const name = getNodeName(node);
-                            return (0, _jsxdevruntime.jsxDEV)(_antd.List.Item, {
+                            return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.List.Item, {
                                 style: {
                                     cursor: 'pointer',
                                     padding: '4px 0'
@@ -482,10 +785,10 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                         }
                                     });
                                 },
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                     size: 4,
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             style: {
                                                 display: 'inline-block',
                                                 width: 7,
@@ -498,7 +801,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                             lineNumber: 268,
                                             columnNumber: 21
                                         }, void 0),
-                                        (0, _jsxdevruntime.jsxDEV)(Text, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                                             style: {
                                                 fontSize: 12,
                                                 maxWidth: 120
@@ -510,7 +813,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                             lineNumber: 277,
                                             columnNumber: 21
                                         }, void 0),
-                                        (0, _jsxdevruntime.jsxDEV)(Text, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                                             type: "secondary",
                                             style: {
                                                 fontSize: 10
@@ -547,23 +850,23 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 245,
                 columnNumber: 9
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_RiskAssessment.default, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_RiskAssessment.default, {
                 community: selectedCommunity
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
                 lineNumber: 288,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                 direction: "vertical",
                 style: {
                     width: '100%'
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                         block: true,
                         size: "small",
-                        icon: (0, _jsxdevruntime.jsxDEV)(_icons.ExportOutlined, {}, void 0, false, {
+                        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ExportOutlined, {}, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
                             lineNumber: 292,
                             columnNumber: 42
@@ -575,10 +878,10 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 292,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                         block: true,
                         size: "small",
-                        icon: (0, _jsxdevruntime.jsxDEV)(_icons.FileTextOutlined, {}, void 0, false, {
+                        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.FileTextOutlined, {}, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
                             lineNumber: 295,
                             columnNumber: 42
@@ -590,10 +893,10 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 295,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                         block: true,
                         size: "small",
-                        icon: (0, _jsxdevruntime.jsxDEV)(_icons.MonitorOutlined, {}, void 0, false, {
+                        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.MonitorOutlined, {}, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
                             lineNumber: 298,
                             columnNumber: 42
@@ -617,7 +920,8 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
         lineNumber: 190,
         columnNumber: 5
     }, this);
-    const statsTab = !result ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+    // ── Tab 3: Statistics ──
+    const statsTab = !result ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
         image: _antd.Empty.PRESENTED_IMAGE_SIMPLE,
         description: "运行群体发现后查看统计",
         style: {
@@ -627,21 +931,21 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
         fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
         lineNumber: 307,
         columnNumber: 5
-    }, this) : (0, _jsxdevruntime.jsxDEV)("div", {
+    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             overflow: 'auto',
             maxHeight: 'calc(100vh - 220px)'
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                 gutter: [
                     12,
                     16
                 ],
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "群体总数",
                             value: result.communities_count
                         }, void 0, false, {
@@ -654,9 +958,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 315,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "模块度",
                             value: ((_result_modularity = result.modularity) === null || _result_modularity === void 0 ? void 0 : _result_modularity.toFixed(3)) || '-'
                         }, void 0, false, {
@@ -669,9 +973,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 318,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "平均规模",
                             value: avgSize
                         }, void 0, false, {
@@ -684,9 +988,9 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                         lineNumber: 321,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 12,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                             title: "最大规模",
                             value: maxSize
                         }, void 0, false, {
@@ -705,12 +1009,12 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 314,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     marginTop: 16
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(Text, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                         type: "secondary",
                         style: {
                             fontSize: 11
@@ -723,19 +1027,19 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                     }, this),
                     result.communities.slice(0, 10).map((c, idx)=>{
                         const pct = maxSize > 0 ? c.size / maxSize * 100 : 0;
-                        return (0, _jsxdevruntime.jsxDEV)("div", {
+                        return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 marginBottom: 6
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         fontSize: 11
                                     },
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             children: [
                                                 "#",
                                                 idx + 1
@@ -745,7 +1049,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                             lineNumber: 336,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             children: c.size
                                         }, void 0, false, {
                                             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
@@ -758,7 +1062,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                     lineNumber: 335,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                                     percent: pct,
                                     showInfo: false,
                                     size: "small",
@@ -782,12 +1086,12 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                 lineNumber: 329,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     marginTop: 16
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(Text, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
                         type: "secondary",
                         style: {
                             fontSize: 11
@@ -800,19 +1104,19 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                     }, this),
                     [
                         ...result.communities
-                    ].sort((a, b)=>b.density - a.density).slice(0, 10).map((c, idx)=>(0, _jsxdevruntime.jsxDEV)("div", {
+                    ].sort((a, b)=>b.density - a.density).slice(0, 10).map((c, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 marginBottom: 6
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         fontSize: 11
                                     },
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             children: [
                                                 "#",
                                                 c.community_id + 1
@@ -822,7 +1126,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                             lineNumber: 359,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             children: c.density.toFixed(2)
                                         }, void 0, false, {
                                             fileName: "src/pages/CommunityDiscovery/components/RightPanel.tsx",
@@ -835,7 +1139,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
                                     lineNumber: 358,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                                     percent: Math.round(c.density * 100),
                                     showInfo: false,
                                     size: "small",
@@ -863,7 +1167,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
         lineNumber: 313,
         columnNumber: 5
     }, this);
-    return (0, _jsxdevruntime.jsxDEV)("div", {
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             height: '100%',
             display: 'flex',
@@ -873,7 +1177,7 @@ const RightPanel = ({ result, selectedCommunity, graphData, graphLoading, active
             boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
             border: '1px solid #f0f0f0'
         },
-        children: (0, _jsxdevruntime.jsxDEV)(_antd.Tabs, {
+        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tabs, {
             size: "small",
             activeKey: activeTab,
             onChange: onTabChange,
@@ -963,6 +1267,7 @@ var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
 var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _service = __mako_require__("src/pages/CommunityDiscovery/service.ts");
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -986,17 +1291,17 @@ const RISK_LABELS = {
 const RISK_ICONS = {
     high: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.AlertOutlined, {}, void 0, false, {
         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-        lineNumber: 26,
+        lineNumber: 28,
         columnNumber: 9
     }, this),
     medium: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.WarningOutlined, {}, void 0, false, {
         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-        lineNumber: 27,
+        lineNumber: 29,
         columnNumber: 11
     }, this),
     low: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CheckCircleOutlined, {}, void 0, false, {
         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-        lineNumber: 28,
+        lineNumber: 30,
         columnNumber: 8
     }, this)
 };
@@ -1028,6 +1333,14 @@ const RiskAssessment = ({ community })=>{
     const { level, score } = (0, _react.useMemo)(()=>deriveRiskLevel(community), [
         community
     ]);
+    const [quality, setQuality] = (0, _react.useState)(null);
+    const [qualityLoading, setQualityLoading] = (0, _react.useState)(false);
+    (0, _react.useEffect)(()=>{
+        setQualityLoading(true);
+        (0, _service.getCommunityQuality)(community.community_id).then(setQuality).catch(()=>setQuality(null)).finally(()=>setQualityLoading(false));
+    }, [
+        community.community_id
+    ]);
     const labelDist = community.label_distribution || {};
     const eventCount = Object.entries(labelDist).filter(([l])=>[
             'Event',
@@ -1050,14 +1363,14 @@ const RiskAssessment = ({ community })=>{
                     }
                 }, void 0, false, {
                     fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                    lineNumber: 69,
+                    lineNumber: 81,
                     columnNumber: 11
                 }, void 0),
                 "风险评估"
             ]
         }, void 0, true, {
             fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-            lineNumber: 68,
+            lineNumber: 80,
             columnNumber: 9
         }, void 0),
         children: [
@@ -1078,7 +1391,7 @@ const RiskAssessment = ({ community })=>{
                         children: RISK_LABELS[level]
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 75,
+                        lineNumber: 87,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
@@ -1091,13 +1404,13 @@ const RiskAssessment = ({ community })=>{
                         format: ()=>`${score}/100`
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 82,
+                        lineNumber: 94,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                lineNumber: 74,
+                lineNumber: 86,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
@@ -1116,12 +1429,12 @@ const RiskAssessment = ({ community })=>{
                             }
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                            lineNumber: 95,
+                            lineNumber: 107,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 94,
+                        lineNumber: 106,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
@@ -1134,12 +1447,12 @@ const RiskAssessment = ({ community })=>{
                             }
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                            lineNumber: 98,
+                            lineNumber: 110,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 97,
+                        lineNumber: 109,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
@@ -1152,12 +1465,12 @@ const RiskAssessment = ({ community })=>{
                             }
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                            lineNumber: 101,
+                            lineNumber: 113,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 100,
+                        lineNumber: 112,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
@@ -1170,18 +1483,18 @@ const RiskAssessment = ({ community })=>{
                             }
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                            lineNumber: 108,
+                            lineNumber: 116,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                        lineNumber: 107,
+                        lineNumber: 115,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                lineNumber: 93,
+                lineNumber: 105,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -1196,22 +1509,185 @@ const RiskAssessment = ({ community })=>{
                     children: level === 'high' ? '该群体风险较高，建议重点监控其动态变化。' : level === 'medium' ? '该群体存在一定风险，建议定期审查。' : '该群体风险较低，常规关注即可。'
                 }, void 0, false, {
                     fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                    lineNumber: 117,
+                    lineNumber: 121,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-                lineNumber: 116,
+                lineNumber: 120,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                style: {
+                    marginTop: 16,
+                    borderTop: '1px solid #f0f0f0',
+                    paddingTop: 12
+                },
+                children: [
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                        style: {
+                            fontSize: 12,
+                            fontWeight: 600,
+                            marginBottom: 8,
+                            color: '#1a1a2e'
+                        },
+                        children: [
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ClusterOutlined, {
+                                style: {
+                                    marginRight: 4
+                                }
+                            }, void 0, false, {
+                                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                lineNumber: 133,
+                                columnNumber: 11
+                            }, this),
+                            "社区质量指标"
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                        lineNumber: 132,
+                        columnNumber: 9
+                    }, this),
+                    qualityLoading ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                        style: {
+                            textAlign: 'center',
+                            padding: 12
+                        },
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
+                            size: "small"
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                            lineNumber: 137,
+                            columnNumber: 61
+                        }, this)
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                        lineNumber: 137,
+                        columnNumber: 11
+                    }, this) : quality ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                        gutter: [
+                            8,
+                            8
+                        ],
+                        children: [
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                span: 12,
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                        title: "电导率",
+                                        value: quality.conductance,
+                                        valueStyle: {
+                                            fontSize: 18,
+                                            color: quality.conductance < 0.3 ? '#52c41a' : '#faad14'
+                                        }
+                                    }, void 0, false, {
+                                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                        lineNumber: 141,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
+                                        type: "secondary",
+                                        style: {
+                                            fontSize: 10
+                                        },
+                                        children: "越低越好"
+                                    }, void 0, false, {
+                                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                        lineNumber: 146,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                lineNumber: 140,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                span: 12,
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "覆盖率",
+                                    value: (quality.coverage * 100).toFixed(0) + '%',
+                                    valueStyle: {
+                                        fontSize: 18,
+                                        color: quality.coverage > 0.6 ? '#52c41a' : '#faad14'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                    lineNumber: 149,
+                                    columnNumber: 15
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                lineNumber: 148,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                span: 12,
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "三角形数",
+                                    value: quality.triangle_count,
+                                    valueStyle: {
+                                        fontSize: 18
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                    lineNumber: 156,
+                                    columnNumber: 15
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                lineNumber: 155,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                span: 12,
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "聚类系数",
+                                    value: quality.avg_clustering.toFixed(3),
+                                    valueStyle: {
+                                        fontSize: 18,
+                                        color: quality.avg_clustering > 0.3 ? '#52c41a' : '#999'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                    lineNumber: 163,
+                                    columnNumber: 15
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                                lineNumber: 162,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                        lineNumber: 139,
+                        columnNumber: 11
+                    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Text, {
+                        type: "secondary",
+                        style: {
+                            fontSize: 11
+                        },
+                        children: "质量指标加载失败"
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                        lineNumber: 171,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
+                lineNumber: 131,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/CommunityDiscovery/components/RiskAssessment.tsx",
-        lineNumber: 65,
+        lineNumber: 77,
         columnNumber: 5
     }, this);
 };
-_s(RiskAssessment, "H51Lm7DdgxxYcyrfxH3pMqFNmrI=");
+_s(RiskAssessment, "6O4gioU8qvXGAVUxLTFaxtKBMUw=");
 _c = RiskAssessment;
 var _default = RiskAssessment;
 var _c;
@@ -1250,13 +1726,13 @@ __mako_require__.d(exports, "default", {
         return _default;
     }
 });
-var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
-var _react = _interop_require_default._(__mako_require__("node_modules/react/index.js"));
+var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _service = __mako_require__("src/pages/CommunityDiscovery/service.ts");
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -1288,54 +1764,136 @@ const LAYER_OPTIONS = [
         label: '法规'
     }
 ];
-const TopControlBar = ({ loading, onDiscover, onReset })=>{
+const TopControlBar = ({ loading, onDiscover, onCompare, onReset })=>{
     _s();
-    const [method, setMethod] = _react.default.useState('wcc');
-    const [layer, setLayer] = _react.default.useState('all');
-    const [minSize, setMinSize] = _react.default.useState(3);
-    const [maxNodes, setMaxNodes] = _react.default.useState(5000);
+    const [algorithms, setAlgorithms] = (0, _react.useState)([]);
+    const [method, setMethod] = (0, _react.useState)('wcc');
+    const [layer, setLayer] = (0, _react.useState)('all');
+    const [minSize, setMinSize] = (0, _react.useState)(3);
+    const [maxNodes, setMaxNodes] = (0, _react.useState)(5000);
+    const [compareMode, setCompareMode] = (0, _react.useState)(false);
+    (0, _react.useEffect)(()=>{
+        (0, _service.getAlgorithms)().then(setAlgorithms).catch(()=>{
+            // Fallback to known algorithms if API unavailable
+            setAlgorithms([
+                {
+                    name: 'wcc',
+                    label: 'WCC',
+                    description: '连通分量',
+                    complexity: 'O(n+m)'
+                },
+                {
+                    name: 'louvain',
+                    label: 'Louvain',
+                    description: '模块度优化',
+                    complexity: 'O(n log n)'
+                },
+                {
+                    name: 'label_propagation',
+                    label: 'LPA',
+                    description: '标签传播',
+                    complexity: 'O(n+m)'
+                },
+                {
+                    name: 'leiden',
+                    label: 'Leiden',
+                    description: 'Leiden算法',
+                    complexity: 'O(n log n)'
+                },
+                {
+                    name: 'girvan_newman',
+                    label: 'G-N',
+                    description: '边介数分裂',
+                    complexity: 'O(n·m²)'
+                },
+                {
+                    name: 'spectral',
+                    label: 'Spectral',
+                    description: '谱聚类',
+                    complexity: 'O(n³)'
+                },
+                {
+                    name: 'infomap',
+                    label: 'Infomap',
+                    description: '信息论随机游走',
+                    complexity: 'O(m)'
+                }
+            ]);
+        });
+    }, []);
     const handleDiscover = ()=>{
-        onDiscover({
+        if (compareMode && onCompare) onCompare({
+            layer,
+            minSize,
+            maxNodes
+        });
+        else onDiscover({
             layer,
             method,
             minSize,
             maxNodes
         });
     };
-    return (0, _jsxdevruntime.jsxDEV)("div", {
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '6px 16px',
-            background: '#fff',
-            borderBottom: '1px solid #f0f0f0'
+            gap: 8,
+            flexWrap: 'wrap',
+            padding: '6px 16px'
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)(_antd.Segmented, {
+            !compareMode && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                 size: "small",
                 value: method,
-                onChange: (v)=>setMethod(String(v)),
-                options: [
-                    {
-                        value: 'wcc',
-                        label: 'WCC'
-                    },
-                    {
-                        value: 'louvain',
-                        label: 'Louvain'
-                    },
-                    {
-                        value: 'label_propagation',
-                        label: 'LPA'
-                    }
-                ]
+                onChange: setMethod,
+                options: algorithms.map((a)=>({
+                        value: a.name,
+                        label: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                            title: `${a.description} — ${a.complexity}`,
+                            children: a.label
+                        }, void 0, false, {
+                            fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
+                            lineNumber: 84,
+                            columnNumber: 15
+                        }, void 0)
+                    })),
+                style: {
+                    width: 130
+                },
+                popupMatchSelectWidth: false
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                lineNumber: 51,
-                columnNumber: 7
+                lineNumber: 77,
+                columnNumber: 9
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+            compareMode && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
+                style: {
+                    fontSize: 12,
+                    color: '#1890ff',
+                    fontWeight: 600,
+                    background: 'rgba(24,144,255,0.08)',
+                    padding: '2px 10px',
+                    borderRadius: 12
+                },
+                children: [
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SwapOutlined, {
+                        style: {
+                            marginRight: 4
+                        }
+                    }, void 0, false, {
+                        fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
+                        lineNumber: 105,
+                        columnNumber: 11
+                    }, this),
+                    "对比模式 (7 种算法)"
+                ]
+            }, void 0, true, {
+                fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
+                lineNumber: 95,
+                columnNumber: 9
+            }, this),
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                 size: "small",
                 value: layer,
                 onChange: setLayer,
@@ -1346,12 +1904,12 @@ const TopControlBar = ({ loading, onDiscover, onReset })=>{
                 variant: "borderless"
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                lineNumber: 62,
+                lineNumber: 110,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                 title: "最小群体规模",
-                children: (0, _jsxdevruntime.jsxDEV)(_antd.InputNumber, {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.InputNumber, {
                     size: "small",
                     min: 1,
                     max: 50,
@@ -1361,7 +1919,7 @@ const TopControlBar = ({ loading, onDiscover, onReset })=>{
                         width: 56
                     },
                     variant: "borderless",
-                    prefix: (0, _jsxdevruntime.jsxDEV)("span", {
+                    prefix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                         style: {
                             color: '#999',
                             fontSize: 11
@@ -1369,22 +1927,22 @@ const TopControlBar = ({ loading, onDiscover, onReset })=>{
                         children: "≥"
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                        lineNumber: 80,
+                        lineNumber: 128,
                         columnNumber: 19
                     }, void 0)
                 }, void 0, false, {
                     fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                    lineNumber: 72,
+                    lineNumber: 120,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                lineNumber: 71,
+                lineNumber: 119,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                 title: "最大节点数",
-                children: (0, _jsxdevruntime.jsxDEV)(_antd.InputNumber, {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.InputNumber, {
                     size: "small",
                     min: 100,
                     max: 10000,
@@ -1395,7 +1953,7 @@ const TopControlBar = ({ loading, onDiscover, onReset })=>{
                         width: 76
                     },
                     variant: "borderless",
-                    prefix: (0, _jsxdevruntime.jsxDEV)("span", {
+                    prefix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                         style: {
                             color: '#999',
                             fontSize: 11
@@ -1403,79 +1961,97 @@ const TopControlBar = ({ loading, onDiscover, onReset })=>{
                         children: "≤"
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                        lineNumber: 94,
+                        lineNumber: 142,
                         columnNumber: 19
                     }, void 0)
                 }, void 0, false, {
                     fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                    lineNumber: 85,
+                    lineNumber: 133,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                lineNumber: 84,
+                lineNumber: 132,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                title: compareMode ? '对比模式：同时运行所有算法' : '单算法模式',
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Switch, {
+                    size: "small",
+                    checked: compareMode,
+                    onChange: setCompareMode,
+                    checkedChildren: "对比",
+                    unCheckedChildren: "单选"
+                }, void 0, false, {
+                    fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
+                    lineNumber: 147,
+                    columnNumber: 9
+                }, this)
+            }, void 0, false, {
+                fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
+                lineNumber: 146,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                 size: 2,
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
-                        title: "开始发现",
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                        title: compareMode ? '开始对比分析' : '开始发现',
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                             type: "primary",
                             size: "small",
-                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.CaretRightOutlined, {}, void 0, false, {
+                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CaretRightOutlined, {}, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                                lineNumber: 103,
+                                lineNumber: 161,
                                 columnNumber: 19
                             }, void 0),
                             loading: loading,
                             onClick: handleDiscover
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                            lineNumber: 100,
+                            lineNumber: 158,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                        lineNumber: 99,
+                        lineNumber: 157,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                         title: "重置",
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                             size: "small",
-                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                                lineNumber: 111,
+                                lineNumber: 169,
                                 columnNumber: 19
                             }, void 0),
                             onClick: onReset,
                             disabled: loading
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                            lineNumber: 109,
+                            lineNumber: 167,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                        lineNumber: 108,
+                        lineNumber: 166,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-                lineNumber: 98,
+                lineNumber: 156,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/CommunityDiscovery/components/TopControlBar.tsx",
-        lineNumber: 41,
+        lineNumber: 67,
         columnNumber: 5
     }, this);
 };
-_s(TopControlBar, "OFhhKxR8pH25qxjoie+cPj5kiOY=");
+_s(TopControlBar, "ET9e6mTOPVmuwaWRFElLX+V/S8U=");
 _c = TopControlBar;
 var _default = TopControlBar;
 var _c;
@@ -1516,8 +2092,8 @@ __mako_require__.d(exports, "useCommunityGraph", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
-var _g6 = _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _g6 = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
 var _react = __mako_require__("node_modules/react/index.js");
 var _graphConfig = __mako_require__("src/pages/graphConfig.ts");
 var _convexHull = __mako_require__("src/pages/CommunityDiscovery/utils/convexHull.ts");
@@ -1611,6 +2187,7 @@ function useCommunityGraph(containerRef, options) {
         const cx = width / 2;
         const cy = height / 2;
         const R = Math.min(width, height) * 0.32;
+        // Group nodes by community and apply community colors
         const communityNodeMap = new Map();
         const nodes = graphData.nodes.map((n, idx)=>{
             var _n_properties, _n_properties1, _n_properties2;
@@ -1649,6 +2226,7 @@ function useCommunityGraph(containerRef, options) {
             communityNodeMap.get(communityId).push(nodeModel);
             return nodeModel;
         });
+        // ── Pre-layout: arrange community centers in a circle, nodes near center ──
         const commIds = Array.from(communityNodeMap.keys()).sort((a, b)=>a - b);
         commIds.forEach((commId, ci)=>{
             const angle = 2 * Math.PI * ci / commIds.length - Math.PI / 2;
@@ -1728,6 +2306,7 @@ function useCommunityGraph(containerRef, options) {
         });
         graph.render();
         graphRef.current = graph;
+        // Draw convex hulls after force layout stabilizes
         let hullsDrawn = false;
         const drawHulls = ()=>{
             if (hullsDrawn) return;
@@ -1763,20 +2342,26 @@ function useCommunityGraph(containerRef, options) {
                     hullFill: color,
                     communityId: commId
                 });
+                // Move hull behind data nodes
                 const hullItem = graph.findById(`hull-${commId}`);
                 if (hullItem) hullItem.toBack();
             });
             graph.paint();
         };
+        // Try drawing hulls after layout stabilizes
         const onAfterLayout = ()=>{
+            // Small delay to ensure positions are settled
             setTimeout(drawHulls, 300);
         };
         graph.on('afterlayout', onAfterLayout);
+        // If force layout doesn't fire afterlayout, fallback
         const fallbackTimer = setTimeout(drawHulls, 3000);
+        // Node click handler
         graph.on('node:click', (evt)=>{
             var _evt_item, _onNodeClickRef_current;
             const model = (_evt_item = evt.item) === null || _evt_item === void 0 ? void 0 : _evt_item.getModel();
             if (!model) return;
+            // Ignore clicks on hull nodes
             if (model.type === 'community-hull') {
                 if (model.communityId != null) {
                     var _onCommunityClickRef_current;
@@ -1793,6 +2378,7 @@ function useCommunityGraph(containerRef, options) {
             graph.setItemState(evt.item, 'selected', true);
             (_onNodeClickRef_current = onNodeClickRef.current) === null || _onNodeClickRef_current === void 0 || _onNodeClickRef_current.call(onNodeClickRef, model);
         });
+        // Canvas click to deselect
         graph.on('canvas:click', ()=>{
             const allNodes = graph.getNodes();
             allNodes.forEach((n)=>{
@@ -1809,6 +2395,7 @@ function useCommunityGraph(containerRef, options) {
         containerRef,
         destroyGraph
     ]);
+    // Handle selected community highlight
     (0, _react.useEffect)(()=>{
         const graph = graphRef.current;
         if (!graph) return;
@@ -1816,6 +2403,7 @@ function useCommunityGraph(containerRef, options) {
         allNodes.forEach((n)=>{
             const model = n.getModel();
             if (model.type === 'community-hull') {
+                // Highlight selected hull
                 if (selectedCommunityId != null && model.communityId === selectedCommunityId) graph.updateItem(n, {
                     style: {
                         fillOpacity: 0.18,
@@ -1901,16 +2489,17 @@ __mako_require__.d(exports, "default", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
-var _react = _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
 var _graphConfig = __mako_require__("src/pages/graphConfig.ts");
 var _service = __mako_require__("src/pages/CommunityDiscovery/service.ts");
 var _useCommunityGraph = __mako_require__("src/pages/CommunityDiscovery/hooks/useCommunityGraph.ts");
-var _TopControlBar = _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/TopControlBar.tsx"));
-var _RightPanel = _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/RightPanel.tsx"));
+var _TopControlBar = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/TopControlBar.tsx"));
+var _RightPanel = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/RightPanel.tsx"));
+var _ComparisonView = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/CommunityDiscovery/components/ComparisonView.tsx"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -1941,7 +2530,10 @@ const CommunityDiscoveryPage = ()=>{
     const [selectedNode, setSelectedNode] = (0, _react.useState)(null);
     const [discoverParams, setDiscoverParams] = (0, _react.useState)(null);
     const [rightPanelTab, setRightPanelTab] = (0, _react.useState)('list');
+    const [compareResult, setCompareResult] = (0, _react.useState)(null);
+    const [compareLoading, setCompareLoading] = (0, _react.useState)(false);
     const graphContainerRef = (0, _react.useRef)(null);
+    // ── Load merged graph from top N communities (parallel) ──
     const loadFullGraph = (0, _react.useCallback)(async (data, layer)=>{
         setGraphLoading(true);
         try {
@@ -1973,6 +2565,7 @@ const CommunityDiscoveryPage = ()=>{
             setGraphLoading(false);
         }
     }, []);
+    // ── Graph hook for the immersive main view ──
     const { downloadImage, centerOnCommunity } = (0, _useCommunityGraph.useCommunityGraph)(graphContainerRef, {
         graphData: fullGraphData,
         selectedCommunityId: (selectedCommunity === null || selectedCommunity === void 0 ? void 0 : selectedCommunity.community_id) ?? null,
@@ -1985,6 +2578,7 @@ const CommunityDiscoveryPage = ()=>{
             if (comm) handleSelectCommunity(comm);
         }
     });
+    // ── Handlers ──
     const handleDiscover = (0, _react.useCallback)(async (params)=>{
         setDiscoverParams(params);
         setLoading(true);
@@ -1997,6 +2591,7 @@ const CommunityDiscoveryPage = ()=>{
             nodes: [],
             edges: []
         });
+        setCompareResult(null);
         try {
             const data = await (0, _service.discoverCommunities)(params);
             if (data.success) {
@@ -2012,6 +2607,34 @@ const CommunityDiscoveryPage = ()=>{
     }, [
         loadFullGraph
     ]);
+    const handleCompare = (0, _react.useCallback)(async (params)=>{
+        setDiscoverParams({
+            ...params,
+            method: 'compare'
+        });
+        setCompareLoading(true);
+        setResult(null);
+        setSelectedCommunity(null);
+        setGraphData({
+            nodes: [],
+            edges: []
+        });
+        setFullGraphData({
+            nodes: [],
+            edges: []
+        });
+        try {
+            const data = await (0, _service.compareAlgorithms)(params);
+            if (data.results && data.results.length > 0) {
+                setCompareResult(data);
+                message.success(`对比完成: ${data.results.length} 种算法`);
+            } else message.warning('对比无结果');
+        } catch  {
+            message.error('对比请求失败');
+        } finally{
+            setCompareLoading(false);
+        }
+    }, []);
     const handleReset = (0, _react.useCallback)(()=>{
         setResult(null);
         setSelectedCommunity(null);
@@ -2025,6 +2648,7 @@ const CommunityDiscoveryPage = ()=>{
         });
         setDiscoverParams(null);
         setRightPanelTab('list');
+        setCompareResult(null);
     }, []);
     const handleSelectCommunity = (0, _react.useCallback)(async (community)=>{
         setSelectedCommunity(community);
@@ -2105,7 +2729,7 @@ const CommunityDiscoveryPage = ()=>{
         selectedCommunity,
         centerOnCommunity
     ]);
-    return (0, _jsxdevruntime.jsxDEV)("div", {
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             height: '100vh',
             display: 'flex',
@@ -2113,7 +2737,7 @@ const CommunityDiscoveryPage = ()=>{
             background: '#f5f6f8'
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     display: 'flex',
                     alignItems: 'center',
@@ -2123,51 +2747,52 @@ const CommunityDiscoveryPage = ()=>{
                     borderBottom: '1px solid #f0f0f0'
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(Title, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Title, {
                         level: 5,
                         style: {
                             margin: 0
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_icons.ApartmentOutlined, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ApartmentOutlined, {
                                 style: {
                                     marginRight: 8
                                 }
                             }, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                lineNumber: 216,
+                                lineNumber: 245,
                                 columnNumber: 11
                             }, this),
                             "群体发现"
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/CommunityDiscovery/index.tsx",
-                        lineNumber: 215,
+                        lineNumber: 244,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_TopControlBar.default, {
-                        loading: loading,
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_TopControlBar.default, {
+                        loading: loading || compareLoading,
                         onDiscover: handleDiscover,
+                        onCompare: handleCompare,
                         onReset: handleReset
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/index.tsx",
-                        lineNumber: 219,
+                        lineNumber: 248,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                lineNumber: 205,
+                lineNumber: 234,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     flex: 1,
                     display: 'flex',
                     overflow: 'hidden'
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)("div", {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             flex: 1,
                             minWidth: 0,
@@ -2175,7 +2800,43 @@ const CommunityDiscoveryPage = ()=>{
                             background: '#f9fafb'
                         },
                         children: [
-                            fullGraphData.nodes.length > 0 ? (0, _jsxdevruntime.jsxDEV)("div", {
+                            compareResult ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                                style: {
+                                    width: '100%',
+                                    height: '100%',
+                                    overflow: 'auto',
+                                    padding: 16
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_ComparisonView.default, {
+                                        results: compareResult.results
+                                    }, void 0, false, {
+                                        fileName: "src/pages/CommunityDiscovery/index.tsx",
+                                        lineNumber: 276,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                                        style: {
+                                            marginTop: 16
+                                        },
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                                            description: compareLoading ? '正在对比分析...' : '对比完成 — 请选择一个社区查看详情'
+                                        }, void 0, false, {
+                                            fileName: "src/pages/CommunityDiscovery/index.tsx",
+                                            lineNumber: 278,
+                                            columnNumber: 17
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "src/pages/CommunityDiscovery/index.tsx",
+                                        lineNumber: 277,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/pages/CommunityDiscovery/index.tsx",
+                                lineNumber: 268,
+                                columnNumber: 13
+                            }, this) : fullGraphData.nodes.length > 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 ref: graphContainerRef,
                                 style: {
                                     width: '100%',
@@ -2183,9 +2844,9 @@ const CommunityDiscoveryPage = ()=>{
                                 }
                             }, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                lineNumber: 238,
+                                lineNumber: 288,
                                 columnNumber: 13
-                            }, this) : (0, _jsxdevruntime.jsxDEV)("div", {
+                            }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     width: '100%',
                                     height: '100%',
@@ -2193,19 +2854,19 @@ const CommunityDiscoveryPage = ()=>{
                                     alignItems: 'center',
                                     justifyContent: 'center'
                                 },
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                                     description: loading ? '正在分析图谱结构...' : '选择算法，点击 ▶ 开始群体发现'
                                 }, void 0, false, {
                                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                    lineNumber: 252,
+                                    lineNumber: 302,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                lineNumber: 243,
+                                lineNumber: 293,
                                 columnNumber: 13
                             }, this),
-                            graphLoading && fullGraphData.nodes.length > 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+                            graphLoading && fullGraphData.nodes.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     position: 'absolute',
                                     top: 12,
@@ -2221,23 +2882,23 @@ const CommunityDiscoveryPage = ()=>{
                                 children: "加载子图数据..."
                             }, void 0, false, {
                                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                lineNumber: 264,
+                                lineNumber: 314,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/CommunityDiscovery/index.tsx",
-                        lineNumber: 229,
+                        lineNumber: 259,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)("div", {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             width: 340,
                             flexShrink: 0,
                             padding: '8px 12px 8px 0',
                             background: '#f5f6f8'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_RightPanel.default, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_RightPanel.default, {
                             result: result,
                             selectedCommunity: selectedCommunity,
                             graphData: graphData,
@@ -2255,34 +2916,34 @@ const CommunityDiscoveryPage = ()=>{
                             onViewFullGraph: handleViewFullGraph
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/index.tsx",
-                            lineNumber: 292,
+                            lineNumber: 342,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/CommunityDiscovery/index.tsx",
-                        lineNumber: 284,
+                        lineNumber: 334,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                lineNumber: 227,
+                lineNumber: 257,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
                 title: "节点详情",
                 width: 400,
                 onClose: ()=>setDrawerVisible(false),
                 open: drawerVisible,
-                children: selectedNode ? (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+                children: selectedNode ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("div", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 textAlign: 'center',
                                 marginBottom: 16
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         width: 56,
                                         height: 56,
@@ -2299,10 +2960,10 @@ const CommunityDiscoveryPage = ()=>{
                                     children: ((_selectedNode_fullLabel = selectedNode.fullLabel) === null || _selectedNode_fullLabel === void 0 ? void 0 : _selectedNode_fullLabel[0]) || '?'
                                 }, void 0, false, {
                                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                    lineNumber: 322,
+                                    lineNumber: 372,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(Title, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Title, {
                                     level: 5,
                                     style: {
                                         margin: 0
@@ -2310,24 +2971,24 @@ const CommunityDiscoveryPage = ()=>{
                                     children: selectedNode.fullLabel || selectedNode.label
                                 }, void 0, false, {
                                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                    lineNumber: 339,
+                                    lineNumber: 389,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: (_selectedNode_style1 = selectedNode.style) === null || _selectedNode_style1 === void 0 ? void 0 : _selectedNode_style1.fill,
                                     children: selectedNode.typeKey || 'Unknown'
                                 }, void 0, false, {
                                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                    lineNumber: 342,
+                                    lineNumber: 392,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/CommunityDiscovery/index.tsx",
-                            lineNumber: 321,
+                            lineNumber: 371,
                             columnNumber: 13
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                             column: 1,
                             bordered: true,
                             size: "small",
@@ -2335,39 +2996,39 @@ const CommunityDiscoveryPage = ()=>{
                                 var _GENERAL_CONFIG_propertyMap_key, _GENERAL_CONFIG_propertyMap;
                                 if (val === null || val === undefined) return null;
                                 const label = ((_GENERAL_CONFIG_propertyMap = _graphConfig.GENERAL_CONFIG.propertyMap) === null || _GENERAL_CONFIG_propertyMap === void 0 ? void 0 : (_GENERAL_CONFIG_propertyMap_key = _GENERAL_CONFIG_propertyMap[key]) === null || _GENERAL_CONFIG_propertyMap_key === void 0 ? void 0 : _GENERAL_CONFIG_propertyMap_key.label) || key;
-                                return (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: label,
                                     children: String(val).length > 100 ? String(val).substring(0, 100) + '...' : String(val)
                                 }, key, false, {
                                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                                    lineNumber: 349,
+                                    lineNumber: 399,
                                     columnNumber: 19
                                 }, this);
                             })
                         }, void 0, false, {
                             fileName: "src/pages/CommunityDiscovery/index.tsx",
-                            lineNumber: 344,
+                            lineNumber: 394,
                             columnNumber: 13
                         }, this)
                     ]
-                }, void 0, true) : (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {}, void 0, false, {
+                }, void 0, true) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {}, void 0, false, {
                     fileName: "src/pages/CommunityDiscovery/index.tsx",
-                    lineNumber: 359,
+                    lineNumber: 409,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "src/pages/CommunityDiscovery/index.tsx",
-                lineNumber: 313,
+                lineNumber: 363,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/CommunityDiscovery/index.tsx",
-        lineNumber: 203,
+        lineNumber: 232,
         columnNumber: 5
     }, this);
 };
-_s(CommunityDiscoveryPage, "qZlA25mgD2rR0biqyEqhgK8RTZw=", false, function() {
+_s(CommunityDiscoveryPage, "L/T/663dMvrkg7W+0M1AafpzecY=", false, function() {
     return [
         _antd.App.useApp,
         _useCommunityGraph.useCommunityGraph
@@ -2412,11 +3073,20 @@ function _export(target, all) {
     });
 }
 __mako_require__.e(exports, {
+    compareAlgorithms: function() {
+        return compareAlgorithms;
+    },
     discoverCommunities: function() {
         return discoverCommunities;
     },
+    getAlgorithms: function() {
+        return getAlgorithms;
+    },
     getCommunityGraph: function() {
         return getCommunityGraph;
+    },
+    getCommunityQuality: function() {
+        return getCommunityQuality;
     }
 });
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
@@ -2429,6 +3099,11 @@ self.$RefreshReg$ = (type, id)=>{
     _reactrefresh.register(type, module.id + id);
 };
 self.$RefreshSig$ = _reactrefresh.createSignatureFunctionForTransform;
+async function getAlgorithms() {
+    const response = await fetch('/api/v1/graph/communities/algorithms');
+    const data = await response.json();
+    return data.algorithms || [];
+}
 async function discoverCommunities(params) {
     const searchParams = new URLSearchParams();
     if (params.layer && params.layer !== 'all') searchParams.append('layer', params.layer);
@@ -2438,11 +3113,25 @@ async function discoverCommunities(params) {
     const response = await fetch(`/api/v1/graph/communities?${searchParams.toString()}`);
     return response.json();
 }
+async function compareAlgorithms(params) {
+    const searchParams = new URLSearchParams();
+    if (params.layer && params.layer !== 'all') searchParams.append('layer', params.layer);
+    if (params.minSize) searchParams.append('min_community_size', String(params.minSize));
+    searchParams.append('max_nodes', String(params.maxNodes));
+    const response = await fetch(`/api/v1/graph/communities/compare?${searchParams.toString()}`);
+    return response.json();
+}
 async function getCommunityGraph(communityId, layer, limit = 200) {
     const searchParams = new URLSearchParams();
     if (layer && layer !== 'all') searchParams.append('layer', layer);
     searchParams.append('limit', String(limit));
     const response = await fetch(`/api/v1/graph/communities/${communityId}?${searchParams.toString()}`);
+    return response.json();
+}
+async function getCommunityQuality(communityId, layer = 'all') {
+    const searchParams = new URLSearchParams();
+    if (layer && layer !== 'all') searchParams.append('layer', layer);
+    const response = await fetch(`/api/v1/graph/communities/${communityId}/quality?${searchParams.toString()}`);
     return response.json();
 }
 if (prevRefreshReg) self.$RefreshReg$ = prevRefreshReg;
@@ -2491,7 +3180,7 @@ __mako_require__.e(exports, {
     }
 });
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;

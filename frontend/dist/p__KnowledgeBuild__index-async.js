@@ -319,6 +319,7 @@ const CrawlProgress = ()=>{
     const stageMessage = (0, _crawlStore.useCrawlStore)((s)=>s.stageMessage);
     const logs = (0, _crawlStore.useCrawlStore)((s)=>s.logs);
     const error = (0, _crawlStore.useCrawlStore)((s)=>s.error);
+    const totalFilesDownloaded = (0, _crawlStore.useCrawlStore)((s)=>s.totalFilesDownloaded);
     const logEndRef = (0, _react.useRef)(null);
     (0, _react.useEffect)(()=>{
         var _logEndRef_current;
@@ -348,19 +349,42 @@ const CrawlProgress = ()=>{
                 }
             }, void 0, false, {
                 fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                lineNumber: 36,
+                lineNumber: 37,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                 percent: Math.round(progress),
                 size: "small",
                 style: {
-                    marginBottom: 16
+                    marginBottom: 12
                 }
             }, void 0, false, {
                 fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                lineNumber: 42,
+                lineNumber: 43,
                 columnNumber: 7
+            }, this),
+            stage === 'crawling' && totalFilesDownloaded > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                style: {
+                    textAlign: 'center',
+                    marginBottom: 16
+                },
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                    title: "已下载文件",
+                    value: totalFilesDownloaded,
+                    valueStyle: {
+                        fontSize: 28,
+                        color: '#1890ff'
+                    },
+                    suffix: "个"
+                }, void 0, false, {
+                    fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
+                    lineNumber: 46,
+                    columnNumber: 11
+                }, this)
+            }, void 0, false, {
+                fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
+                lineNumber: 45,
+                columnNumber: 9
             }, this),
             stageMessage && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Alert, {
                 type: error ? 'error' : 'info',
@@ -371,7 +395,7 @@ const CrawlProgress = ()=>{
                 showIcon: true
             }, void 0, false, {
                 fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                lineNumber: 44,
+                lineNumber: 55,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -404,38 +428,39 @@ const CrawlProgress = ()=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                                    lineNumber: 66,
+                                    lineNumber: 77,
                                     columnNumber: 13
                                 }, this),
                                 log.message
                             ]
                         }, i, true, {
                             fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                            lineNumber: 65,
+                            lineNumber: 76,
                             columnNumber: 11
                         }, this)),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         ref: logEndRef
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                        lineNumber: 70,
+                        lineNumber: 81,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-                lineNumber: 51,
+                lineNumber: 62,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/DataCollection/components/CrawlProgress.tsx",
-        lineNumber: 35,
+        lineNumber: 36,
         columnNumber: 5
     }, this);
 };
-_s(CrawlProgress, "z+1iTgcbkb2saHb3FkHDXbYG28I=", false, function() {
+_s(CrawlProgress, "WciA5ENAJ2K9jPCea4VM9J6gSfk=", false, function() {
     return [
+        _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
@@ -810,11 +835,13 @@ const QuickInputPanel = ()=>{
     const dataType = (0, _crawlStore.useCrawlStore)((s)=>s.dataType);
     const sources = (0, _crawlStore.useCrawlStore)((s)=>s.sources);
     const maxPages = (0, _crawlStore.useCrawlStore)((s)=>s.maxPages);
+    const maxFiles = (0, _crawlStore.useCrawlStore)((s)=>s.maxFiles);
     const setDataType = (0, _crawlStore.useCrawlStore)((s)=>s.setDataType);
     const setSources = (0, _crawlStore.useCrawlStore)((s)=>s.setSources);
     const setDateRange = (0, _crawlStore.useCrawlStore)((s)=>s.setDateRange);
     const setKeywords = (0, _crawlStore.useCrawlStore)((s)=>s.setKeywords);
     const setMaxPages = (0, _crawlStore.useCrawlStore)((s)=>s.setMaxPages);
+    const setMaxFiles = (0, _crawlStore.useCrawlStore)((s)=>s.setMaxFiles);
     return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
         direction: "vertical",
         size: "middle",
@@ -832,7 +859,7 @@ const QuickInputPanel = ()=>{
                         children: "数据类型"
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 34,
+                        lineNumber: 36,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
@@ -847,13 +874,13 @@ const QuickInputPanel = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 35,
+                        lineNumber: 37,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                lineNumber: 33,
+                lineNumber: 35,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -866,7 +893,7 @@ const QuickInputPanel = ()=>{
                         children: "数据源 (可多选)"
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 47,
+                        lineNumber: 49,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
@@ -880,13 +907,13 @@ const QuickInputPanel = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 48,
+                        lineNumber: 50,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                lineNumber: 46,
+                lineNumber: 48,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -899,7 +926,7 @@ const QuickInputPanel = ()=>{
                         children: "日期范围 (可选)"
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 59,
+                        lineNumber: 61,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(RangePicker, {
@@ -912,13 +939,13 @@ const QuickInputPanel = ()=>{
                             ])
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 60,
+                        lineNumber: 62,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                lineNumber: 58,
+                lineNumber: 60,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -931,7 +958,7 @@ const QuickInputPanel = ()=>{
                         children: "关键词 (可选，回车添加)"
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 67,
+                        lineNumber: 69,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
@@ -943,13 +970,13 @@ const QuickInputPanel = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 68,
+                        lineNumber: 70,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                lineNumber: 66,
+                lineNumber: 68,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
@@ -965,7 +992,7 @@ const QuickInputPanel = ()=>{
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 77,
+                        lineNumber: 79,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Slider, {
@@ -975,24 +1002,59 @@ const QuickInputPanel = ()=>{
                         onChange: setMaxPages
                     }, void 0, false, {
                         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                        lineNumber: 78,
+                        lineNumber: 80,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-                lineNumber: 76,
+                lineNumber: 78,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                children: [
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                        style: {
+                            marginBottom: 4,
+                            fontWeight: 500
+                        },
+                        children: "限制下载文件数 (0 = 不限)"
+                    }, void 0, false, {
+                        fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
+                        lineNumber: 84,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.InputNumber, {
+                        min: 0,
+                        max: 500,
+                        value: maxFiles,
+                        onChange: (v)=>setMaxFiles(v || 0),
+                        style: {
+                            width: '100%'
+                        },
+                        placeholder: "0 表示不限制"
+                    }, void 0, false, {
+                        fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
+                        lineNumber: 85,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
+                lineNumber: 83,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/DataCollection/components/QuickInputPanel.tsx",
-        lineNumber: 32,
+        lineNumber: 34,
         columnNumber: 5
     }, this);
 };
-_s(QuickInputPanel, "ecwcxjthpc0ed/HW/H49BDEpa+A=", false, function() {
+_s(QuickInputPanel, "ToRhvlChJWJn37rMPS7s2SQnJo0=", false, function() {
     return [
+        _crawlStore.useCrawlStore,
+        _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
@@ -1223,6 +1285,7 @@ function useCrawlSSE() {
                                 store.addLog('info', `[${data.stage}] ${data.message}`);
                                 break;
                             case 'source_result':
+                                store.addSourceResult(data.files_downloaded || 0);
                                 store.addLog(data.error ? 'error' : 'success', `${data.source}: ${data.files_downloaded || 0} files, ${data.records || 0} records${data.error ? ' (error: ' + data.error + ')' : ''}`);
                                 break;
                             case 'complete':
@@ -1338,6 +1401,10 @@ const useCrawlStore = (0, _zustand.create)((set)=>({
         setMaxPages: (maxPages)=>set({
                 maxPages
             }),
+        maxFiles: 0,
+        setMaxFiles: (maxFiles)=>set({
+                maxFiles
+            }),
         nlQuery: '',
         setNlQuery: (nlQuery)=>set({
                 nlQuery
@@ -1358,13 +1425,15 @@ const useCrawlStore = (0, _zustand.create)((set)=>({
         logs: [],
         result: null,
         error: null,
+        totalFilesDownloaded: 0,
         startTask: (taskId)=>set({
                 taskId,
                 isRunning: true,
                 progress: 0,
                 logs: [],
                 result: null,
-                error: null
+                error: null,
+                totalFilesDownloaded: 0
             }),
         updateProgress: (data)=>set((state)=>({
                     progress: data.progress ?? state.progress,
@@ -1380,6 +1449,9 @@ const useCrawlStore = (0, _zustand.create)((set)=>({
                         },
                         ...state.logs
                     ].slice(0, 100)
+                })),
+        addSourceResult: (filesDownloaded)=>set((state)=>({
+                    totalFilesDownloaded: state.totalFilesDownloaded + filesDownloaded
                 })),
         completeTask: (result)=>set({
                 result,
@@ -1440,20 +1512,20 @@ __mako_require__.d(exports, "default", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _procomponents = __mako_require__("node_modules/@ant-design/pro-components/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
-var _react = _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
 var _graphConfig = __mako_require__("src/pages/graphConfig.ts");
 var _crawlStore = __mako_require__("src/pages/DataCollection/store/crawlStore.ts");
 var _useCrawlSSE = __mako_require__("src/pages/DataCollection/hooks/useCrawlSSE.ts");
-var _QuickInputPanel = _interop_require_default._(__mako_require__("src/pages/DataCollection/components/QuickInputPanel.tsx"));
-var _ComplexInputPanel = _interop_require_default._(__mako_require__("src/pages/DataCollection/components/ComplexInputPanel.tsx"));
-var _TemplatePanel = _interop_require_default._(__mako_require__("src/pages/DataCollection/components/TemplatePanel.tsx"));
-var _CrawlProgress = _interop_require_default._(__mako_require__("src/pages/DataCollection/components/CrawlProgress.tsx"));
-var _CrawlResult = _interop_require_default._(__mako_require__("src/pages/DataCollection/components/CrawlResult.tsx"));
+var _QuickInputPanel = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/DataCollection/components/QuickInputPanel.tsx"));
+var _ComplexInputPanel = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/DataCollection/components/ComplexInputPanel.tsx"));
+var _TemplatePanel = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/DataCollection/components/TemplatePanel.tsx"));
+var _CrawlProgress = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/DataCollection/components/CrawlProgress.tsx"));
+var _CrawlResult = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/DataCollection/components/CrawlResult.tsx"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -1466,11 +1538,12 @@ var _s = $RefreshSig$();
 const RadioGroup = _antd.Radio.Group;
 const RadioButton = _antd.Radio.Button;
 const { Dragger } = _antd.Upload;
+// ─── Constants ───────────────────────────────────────────────────────
 const STAGES = [
     {
         key: 'data_import',
         title: '数据导入',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloudUploadOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloudUploadOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 163,
             columnNumber: 46
@@ -1480,7 +1553,7 @@ const STAGES = [
     {
         key: 'subject_extraction',
         title: '主体提取',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 164,
             columnNumber: 53
@@ -1490,7 +1563,7 @@ const STAGES = [
     {
         key: 'event_extraction',
         title: '事件提取',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 165,
             columnNumber: 51
@@ -1500,7 +1573,7 @@ const STAGES = [
     {
         key: 'feature_extraction',
         title: '风险特征',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.ExclamationCircleOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ExclamationCircleOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 166,
             columnNumber: 53
@@ -1510,7 +1583,7 @@ const STAGES = [
     {
         key: 'regulation_linking',
         title: '法规链接',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.LinkOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.LinkOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 167,
             columnNumber: 53
@@ -1520,7 +1593,7 @@ const STAGES = [
     {
         key: 'kg_import',
         title: '图谱导入',
-        icon: (0, _jsxdevruntime.jsxDEV)(_icons.BuildOutlined, {}, void 0, false, {
+        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.BuildOutlined, {}, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
             lineNumber: 168,
             columnNumber: 44
@@ -1564,10 +1637,12 @@ const NODE_TYPE_COLORS = {
     Law: '#1890FF',
     Action: '#45B7D1'
 };
+// ─── Component ───────────────────────────────────────────────────────
 const KnowledgeBuild = ()=>{
     var _STAGES_find, _STAGES_find1, _STAGES_find2, _STAGES_stageIndex;
     _s();
     const { message: msg } = _antd.App.useApp();
+    // Build state
     const [buildStatus, setBuildStatus] = (0, _react.useState)('idle');
     const [buildId, setBuildId] = (0, _react.useState)(null);
     const [activeStage, setActiveStage] = (0, _react.useState)('data_import');
@@ -1575,6 +1650,7 @@ const KnowledgeBuild = ()=>{
     const [abortRef] = (0, _react.useState)({
         controller: null
     });
+    // Stage data
     const [dataSources, setDataSources] = (0, _react.useState)([]);
     const [subjects, setSubjects] = (0, _react.useState)([]);
     const [events, setEvents] = (0, _react.useState)([]);
@@ -1584,6 +1660,7 @@ const KnowledgeBuild = ()=>{
     const [importResult, setImportResult] = (0, _react.useState)(null);
     const [stageLogs, setStageLogs] = (0, _react.useState)([]);
     const [buildHistory, setBuildHistory] = (0, _react.useState)([]);
+    // UI state
     const [uploadedFiles, setUploadedFiles] = (0, _react.useState)([]);
     const [selectedCrawlers, setSelectedCrawlers] = (0, _react.useState)([]);
     const [scanLoading, setScanLoading] = (0, _react.useState)(false);
@@ -1595,6 +1672,7 @@ const KnowledgeBuild = ()=>{
     const [editingSubject, setEditingSubject] = (0, _react.useState)(null);
     const [importing, setImporting] = (0, _react.useState)(false);
     const [importTab, setImportTab] = (0, _react.useState)('upload');
+    // ─── Crawl store / SSE (from DataCollection) ──────────────────────
     const crawlMode = (0, _crawlStore.useCrawlStore)((s)=>s.mode);
     const crawlRunning = (0, _crawlStore.useCrawlStore)((s)=>s.isRunning);
     const crawlResult = (0, _crawlStore.useCrawlStore)((s)=>s.result);
@@ -1602,6 +1680,7 @@ const KnowledgeBuild = ()=>{
     const crawlSources = (0, _crawlStore.useCrawlStore)((s)=>s.sources);
     const crawlKeywords = (0, _crawlStore.useCrawlStore)((s)=>s.keywords);
     const crawlMaxPages = (0, _crawlStore.useCrawlStore)((s)=>s.maxPages);
+    const crawlMaxFiles = (0, _crawlStore.useCrawlStore)((s)=>s.maxFiles);
     const crawlNlQuery = (0, _crawlStore.useCrawlStore)((s)=>s.nlQuery);
     const crawlParsedIntent = (0, _crawlStore.useCrawlStore)((s)=>s.parsedIntent);
     const crawlTemplateId = (0, _crawlStore.useCrawlStore)((s)=>s.templateId);
@@ -1613,7 +1692,8 @@ const KnowledgeBuild = ()=>{
             data_type: crawlDataType,
             sources: crawlSources.length > 0 ? crawlSources : undefined,
             keywords: crawlKeywords.length > 0 ? crawlKeywords : undefined,
-            max_pages: crawlMaxPages
+            max_pages: crawlMaxPages,
+            max_files: crawlMaxFiles
         };
         if (crawlMode === 'complex') {
             payload.natural_language_query = crawlNlQuery;
@@ -1624,16 +1704,20 @@ const KnowledgeBuild = ()=>{
             }
         }
         if (crawlMode === 'template') payload.template_id = crawlTemplateId;
+        // Switch right panel to show crawl progress
         setActiveStage('data_import');
         startCrawl(payload);
     };
+    // G6 refs
     const graphContainer = (0, _react.useRef)(null);
     const graphRef = (0, _react.useRef)(null);
+    // ─── Stage index helpers ──────────────────────────────────────────
     const stageIndex = STAGES.findIndex((s)=>s.key === activeStage);
     const completedStages = STAGES.filter((s)=>{
         const idx = STAGES.findIndex((x)=>x.key === s.key);
         return idx < stageIndex || idx === stageIndex && buildStatus === 'completed';
     }).map((s)=>s.key);
+    // ─── Logging ─────────────────────────────────────────────────────
     const addLog = (stage, message, level = 'info')=>{
         const now = new Date().toLocaleTimeString();
         setStageLogs((prev)=>[
@@ -1666,8 +1750,10 @@ const KnowledgeBuild = ()=>{
         if (total === 0) msg.info('所选数据源中没有待处理文件');
         else msg.success(`扫描完成: 共 ${total} 个文件`);
     };
+    // ─── Map real pipeline results to rendering state ────────────────────
     const populateStageResults = (stages)=>{
         var _extractStage_stats, _extractStage_stats1;
+        // Extract entities from the extract stage
         const extractStage = stages.extract || stages.parse || {};
         const entities = extractStage.entities || extractStage.records || [];
         const newSubjects = [];
@@ -1680,6 +1766,7 @@ const KnowledgeBuild = ()=>{
             const id = ent.id || ent.kg_id || `ent_${i}`;
             if (seenIds.has(id)) continue;
             seenIds.add(id);
+            // Classify into subject, event, or feature based on type
             if (entType === 'EVENT' || entType === 'Event' || entType === 'event') newEvents.push({
                 id: String(id),
                 title: name,
@@ -1700,6 +1787,7 @@ const KnowledgeBuild = ()=>{
         }
         setSubjects(newSubjects);
         setEvents(newEvents);
+        // Features and regulations — derive from stats if available
         const featuresList = ((_extractStage_stats = extractStage.stats) === null || _extractStage_stats === void 0 ? void 0 : _extractStage_stats.features) || extractStage.features || [];
         const newFeatures = featuresList.map((f, i)=>({
                 id: f.id || `feat_${i}`,
@@ -1722,6 +1810,7 @@ const KnowledgeBuild = ()=>{
                 violation: r.violation || ''
             }));
         setRegulations(newRegs);
+        // Import results
         const importStage = stages.import || {};
         if (importStage.records_processed > 0 || importStage.stats) {
             var _importStage_stats, _importStage_stats1;
@@ -1776,6 +1865,7 @@ const KnowledgeBuild = ()=>{
             const data = await res.json();
             addLog('data_import', `流水线已触发: ${data.message}`, 'success');
             setOverallProgress(10);
+            // Stage name mapping for UI display
             const STAGE_PROGRESS = {
                 crawl: {
                     label: '数据采集',
@@ -1806,6 +1896,7 @@ const KnowledgeBuild = ()=>{
                     pct: 93
                 }
             };
+            // Poll for pipeline status
             const pollInterval = setInterval(async ()=>{
                 try {
                     const statusRes = await fetch('/api/v1/pipeline/status');
@@ -1818,6 +1909,7 @@ const KnowledgeBuild = ()=>{
                         setOverallProgress(100);
                         setActiveStage('kg_import');
                         addLog('kg_import', 'ETL 流水线执行完成', 'success');
+                        // Fetch real entity data from the pipeline
                         try {
                             const entitiesRes = await fetch(`/api/v1/pipeline/entities/${encodeURIComponent(source)}`);
                             const entitiesData = await entitiesRes.json();
@@ -1830,6 +1922,7 @@ const KnowledgeBuild = ()=>{
                         }
                         const duration = (Date.now() - startTime) / 1000;
                         msg.success(`图谱构建完成! 耗时 ${duration.toFixed(1)}s`);
+                        // Save to history
                         const record = {
                             buildId: `build_${Date.now()}`,
                             createdAt: new Date().toISOString(),
@@ -1843,6 +1936,7 @@ const KnowledgeBuild = ()=>{
                                 record,
                                 ...prev
                             ]);
+                        // Refresh scan results
                         setScannedFiles({});
                     } else if (statusData.current_run) {
                         const run = statusData.current_run;
@@ -1865,8 +1959,11 @@ const KnowledgeBuild = ()=>{
                             msg.error('流水线执行失败');
                         }
                     }
-                } catch  {}
+                } catch  {
+                // Ignore polling errors
+                }
             }, 1500);
+            // Safety timeout: stop polling after 10 minutes
             setTimeout(()=>{
                 clearInterval(pollInterval);
                 if (pipelineRunning) {
@@ -1883,6 +1980,7 @@ const KnowledgeBuild = ()=>{
             msg.error('构建失败: ' + err.message);
         }
     };
+    // ── Stage 2-5: Dify extraction API ──────────────────────────────
     const [extracting, setExtracting] = (0, _react.useState)({});
     const runExtraction = async (stage)=>{
         const source = selectedCrawlers[0];
@@ -1904,6 +2002,7 @@ const KnowledgeBuild = ()=>{
             const nodes = data.nodes || [];
             const edges = data.edges || [];
             addLog(stage, `${stage} 完成: ${nodes.length} 节点, ${edges.length} 关系`, 'success');
+            // Map nodes/edges to stage-specific state
             if (stage === 'subject_extraction') {
                 const newSubjects = nodes.map((n, i)=>{
                     var _n_properties, _n_properties1;
@@ -1960,6 +2059,7 @@ const KnowledgeBuild = ()=>{
                 });
                 setRegulations(newRegs);
             }
+            // Build G6 preview from all accumulated data
             const allNodes = [];
             const allEdges = [];
             for (const n of nodes)allNodes.push({
@@ -2022,6 +2122,7 @@ const KnowledgeBuild = ()=>{
         _crawlStore.useCrawlStore.getState().reset();
         msg.info('已重置');
     };
+    // ─── G6 preview for stage 6 ───────────────────────────────────────
     (0, _react.useEffect)(()=>{
         if (activeStage !== 'kg_import' || !importPreview || !graphContainer.current) return;
         let G6Module;
@@ -2115,71 +2216,73 @@ const KnowledgeBuild = ()=>{
         activeStage,
         importPreview
     ]);
-    const renderStepper = ()=>(0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+    // ─── Render: stage stepper ────────────────────────────────────────
+    const renderStepper = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
             size: "small",
             style: {
                 marginBottom: 16
             },
             children: [
-                (0, _jsxdevruntime.jsxDEV)(_antd.Steps, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Steps, {
                     size: "small",
                     current: stageIndex,
                     status: buildStatus === 'failed' ? 'error' : 'process',
                     items: STAGES.map((s)=>({
                             title: s.title,
                             description: s.description,
-                            icon: completedStages.includes(s.key) ? (0, _jsxdevruntime.jsxDEV)(_icons.CheckCircleOutlined, {
+                            icon: completedStages.includes(s.key) ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CheckCircleOutlined, {
                                 style: {
                                     color: '#52c41a'
                                 }
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 718,
+                                lineNumber: 720,
                                 columnNumber: 51
                             }, void 0) : s.icon
                         }))
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 711,
+                    lineNumber: 713,
                     columnNumber: 7
                 }, this),
-                buildStatus !== 'idle' && (0, _jsxdevruntime.jsxDEV)("div", {
+                buildStatus !== 'idle' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginTop: 12
                     },
-                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                         percent: overallProgress,
                         status: buildStatus === 'failed' ? 'exception' : buildStatus === 'paused' ? 'normal' : 'active',
                         size: "small"
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 723,
+                        lineNumber: 725,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 722,
+                    lineNumber: 724,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 710,
+            lineNumber: 712,
             columnNumber: 5
         }, this);
-    const renderLeftPanel = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    // ─── Render: left panel ───────────────────────────────────────────
+    const renderLeftPanel = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             style: {
                 height: '100%',
                 overflow: 'auto'
             },
             children: [
-                (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                     size: "small",
                     title: "数据导入",
                     style: {
                         marginBottom: 12
                     },
-                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Tabs, {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tabs, {
                         activeKey: importTab,
                         onChange: (key)=>{
                             setImportTab(key);
@@ -2189,14 +2292,14 @@ const KnowledgeBuild = ()=>{
                             {
                                 key: 'upload',
                                 label: '文件上传',
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginBottom: 12
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         marginBottom: 6,
                                                         fontWeight: 500,
@@ -2205,10 +2308,10 @@ const KnowledgeBuild = ()=>{
                                                     children: "PDF 文档上传"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 745,
+                                                    lineNumber: 747,
                                                     columnNumber: 21
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)(Dragger, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Dragger, {
                                                     multiple: true,
                                                     accept: ".pdf,.docx,.txt",
                                                     fileList: uploadedFiles,
@@ -2219,52 +2322,52 @@ const KnowledgeBuild = ()=>{
                                                         borderRadius: 8
                                                     },
                                                     children: [
-                                                        (0, _jsxdevruntime.jsxDEV)("p", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("p", {
                                                             className: "ant-upload-drag-icon",
-                                                            children: (0, _jsxdevruntime.jsxDEV)(_icons.InboxOutlined, {}, void 0, false, {
+                                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.InboxOutlined, {}, void 0, false, {
                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                lineNumber: 755,
+                                                                lineNumber: 757,
                                                                 columnNumber: 59
                                                             }, void 0)
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 755,
+                                                            lineNumber: 757,
                                                             columnNumber: 23
                                                         }, void 0),
-                                                        (0, _jsxdevruntime.jsxDEV)("p", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("p", {
                                                             className: "ant-upload-text",
                                                             children: "点击或拖拽文件到此区域上传"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 756,
+                                                            lineNumber: 758,
                                                             columnNumber: 23
                                                         }, void 0),
-                                                        (0, _jsxdevruntime.jsxDEV)("p", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("p", {
                                                             className: "ant-upload-hint",
                                                             children: "支持 PDF、DOCX、TXT 格式"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 757,
+                                                            lineNumber: 759,
                                                             columnNumber: 23
                                                         }, void 0)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 746,
+                                                    lineNumber: 748,
                                                     columnNumber: 21
                                                 }, void 0)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 744,
+                                            lineNumber: 746,
                                             columnNumber: 19
                                         }, void 0),
-                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginBottom: 12
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         marginBottom: 6,
                                                         fontWeight: 500,
@@ -2272,7 +2375,7 @@ const KnowledgeBuild = ()=>{
                                                     },
                                                     children: [
                                                         "已爬取数据源",
-                                                        (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                             color: "blue",
                                                             style: {
                                                                 marginLeft: 6,
@@ -2281,16 +2384,16 @@ const KnowledgeBuild = ()=>{
                                                             children: "选择后扫描文件并运行 ETL"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 764,
+                                                            lineNumber: 766,
                                                             columnNumber: 23
                                                         }, void 0)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 762,
+                                                    lineNumber: 764,
                                                     columnNumber: 21
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                                                     mode: "multiple",
                                                     placeholder: "选择数据源...",
                                                     value: selectedCrawlers,
@@ -2304,29 +2407,29 @@ const KnowledgeBuild = ()=>{
                                                     },
                                                     options: CRAWLER_SOURCES.map((s)=>({
                                                             value: s.value,
-                                                            label: (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                                            label: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                                                 title: s.description,
                                                                 children: s.label
                                                             }, void 0, false, {
                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                lineNumber: 776,
+                                                                lineNumber: 778,
                                                                 columnNumber: 27
                                                             }, void 0)
                                                         }))
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 766,
+                                                    lineNumber: 768,
                                                     columnNumber: 21
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         marginTop: 8
                                                     },
                                                     children: [
-                                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                lineNumber: 784,
+                                                                lineNumber: 786,
                                                                 columnNumber: 31
                                                             }, void 0),
                                                             size: "small",
@@ -2336,22 +2439,22 @@ const KnowledgeBuild = ()=>{
                                                             children: "扫描已爬取文件"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 783,
+                                                            lineNumber: 785,
                                                             columnNumber: 23
                                                         }, void 0),
-                                                        Object.keys(scannedFiles).length > 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+                                                        Object.keys(scannedFiles).length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                             style: {
                                                                 marginTop: 8
                                                             },
                                                             children: [
                                                                 Object.entries(scannedFiles).map(([source, files])=>{
                                                                     var _CRAWLER_SOURCES_find;
-                                                                    return (0, _jsxdevruntime.jsxDEV)("div", {
+                                                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                         style: {
                                                                             marginBottom: 4
                                                                         },
                                                                         children: [
-                                                                            (0, _jsxdevruntime.jsxDEV)("div", {
+                                                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                                 style: {
                                                                                     fontSize: 12,
                                                                                     fontWeight: 500,
@@ -2360,7 +2463,7 @@ const KnowledgeBuild = ()=>{
                                                                                 },
                                                                                 children: [
                                                                                     ((_CRAWLER_SOURCES_find = CRAWLER_SOURCES.find((s)=>s.value === source)) === null || _CRAWLER_SOURCES_find === void 0 ? void 0 : _CRAWLER_SOURCES_find.label) || source,
-                                                                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                                                         color: "blue",
                                                                                         style: {
                                                                                             marginLeft: 6
@@ -2371,16 +2474,16 @@ const KnowledgeBuild = ()=>{
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                        lineNumber: 798,
+                                                                                        lineNumber: 800,
                                                                                         columnNumber: 33
                                                                                     }, void 0)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                lineNumber: 796,
+                                                                                lineNumber: 798,
                                                                                 columnNumber: 31
                                                                             }, void 0),
-                                                                            files.length > 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+                                                                            files.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                                 style: {
                                                                                     maxHeight: 100,
                                                                                     overflow: 'auto',
@@ -2388,7 +2491,7 @@ const KnowledgeBuild = ()=>{
                                                                                     borderRadius: 4,
                                                                                     padding: '4px 8px'
                                                                                 },
-                                                                                children: files.map((f, i)=>(0, _jsxdevruntime.jsxDEV)("div", {
+                                                                                children: files.map((f, i)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                                         style: {
                                                                                             fontSize: 11,
                                                                                             color: '#94a3b8',
@@ -2397,7 +2500,7 @@ const KnowledgeBuild = ()=>{
                                                                                             justifyContent: 'space-between'
                                                                                         },
                                                                                         children: [
-                                                                                            (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                                                 style: {
                                                                                                     overflow: 'hidden',
                                                                                                     textOverflow: 'ellipsis',
@@ -2407,40 +2510,40 @@ const KnowledgeBuild = ()=>{
                                                                                                 children: f.name
                                                                                             }, void 0, false, {
                                                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                                lineNumber: 804,
+                                                                                                lineNumber: 806,
                                                                                                 columnNumber: 39
                                                                                             }, void 0),
-                                                                                            (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                                                 children: f.size_display
                                                                                             }, void 0, false, {
                                                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                                lineNumber: 805,
+                                                                                                lineNumber: 807,
                                                                                                 columnNumber: 39
                                                                                             }, void 0)
                                                                                         ]
                                                                                     }, i, true, {
                                                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                        lineNumber: 803,
+                                                                                        lineNumber: 805,
                                                                                         columnNumber: 37
                                                                                     }, void 0))
                                                                             }, void 0, false, {
                                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                                lineNumber: 801,
+                                                                                lineNumber: 803,
                                                                                 columnNumber: 33
                                                                             }, void 0)
                                                                         ]
                                                                     }, source, true, {
                                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                        lineNumber: 795,
+                                                                        lineNumber: 797,
                                                                         columnNumber: 29
                                                                     }, void 0);
                                                                 }),
-                                                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                                     danger: true,
                                                                     size: "small",
-                                                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ClearOutlined, {}, void 0, false, {
+                                                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ClearOutlined, {}, void 0, false, {
                                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                        lineNumber: 815,
+                                                                        lineNumber: 817,
                                                                         columnNumber: 35
                                                                     }, void 0),
                                                                     onClick: async ()=>{
@@ -2456,40 +2559,40 @@ const KnowledgeBuild = ()=>{
                                                                     children: "清空所有文件"
                                                                 }, void 0, false, {
                                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                    lineNumber: 812,
+                                                                    lineNumber: 814,
                                                                     columnNumber: 27
                                                                 }, void 0)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 793,
+                                                            lineNumber: 795,
                                                             columnNumber: 25
                                                         }, void 0)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 782,
+                                                    lineNumber: 784,
                                                     columnNumber: 21
                                                 }, void 0)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 761,
+                                            lineNumber: 763,
                                             columnNumber: 19
                                         }, void 0),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                             style: {
                                                 width: '100%',
                                                 justifyContent: 'flex-end'
                                             },
                                             children: [
-                                                buildStatus === 'idle' && (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+                                                buildStatus === 'idle' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                                                     children: [
-                                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                             type: "primary",
-                                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
+                                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                lineNumber: 837,
+                                                                lineNumber: 839,
                                                                 columnNumber: 33
                                                             }, void 0),
                                                             onClick: handleStartBuild,
@@ -2497,14 +2600,14 @@ const KnowledgeBuild = ()=>{
                                                             children: "开始构建"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 835,
+                                                            lineNumber: 837,
                                                             columnNumber: 25
                                                         }, void 0),
-                                                        selectedCrawlers.length > 0 && Object.values(scannedFiles).some((f)=>f.length > 0) && (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                        selectedCrawlers.length > 0 && Object.values(scannedFiles).some((f)=>f.length > 0) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                             type: "primary",
-                                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+                                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
                                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                                lineNumber: 846,
+                                                                lineNumber: 848,
                                                                 columnNumber: 35
                                                             }, void 0),
                                                             onClick: handleRunPipeline,
@@ -2516,124 +2619,124 @@ const KnowledgeBuild = ()=>{
                                                             children: "运行 ETL 流水线"
                                                         }, void 0, false, {
                                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                            lineNumber: 844,
+                                                            lineNumber: 846,
                                                             columnNumber: 27
                                                         }, void 0)
                                                     ]
                                                 }, void 0, true),
-                                                (buildStatus === 'completed' || buildStatus === 'failed') && (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                                                (buildStatus === 'completed' || buildStatus === 'failed') && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 857,
+                                                        lineNumber: 859,
                                                         columnNumber: 37
                                                     }, void 0),
                                                     onClick: handleReset,
                                                     children: "重新构建"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 857,
+                                                    lineNumber: 859,
                                                     columnNumber: 23
                                                 }, void 0),
-                                                (buildStatus === 'running' || pipelineRunning) && (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                (buildStatus === 'running' || pipelineRunning) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                     danger: true,
-                                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
+                                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 860,
+                                                        lineNumber: 862,
                                                         columnNumber: 44
                                                     }, void 0),
                                                     onClick: handleReset,
                                                     children: "取消"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 860,
+                                                    lineNumber: 862,
                                                     columnNumber: 23
                                                 }, void 0)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 832,
+                                            lineNumber: 834,
                                             columnNumber: 19
                                         }, void 0)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 743,
+                                    lineNumber: 745,
                                     columnNumber: 17
                                 }, void 0)
                             },
                             {
                                 key: 'crawl',
                                 label: '智能采集',
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginBottom: 12
                                             },
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Group, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Group, {
                                                 value: crawlMode,
                                                 onChange: (e)=>crawlSetMode(e.target.value),
                                                 size: "small",
                                                 optionType: "button",
                                                 buttonStyle: "solid",
                                                 children: [
-                                                    (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
+                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
                                                         value: "quick",
                                                         children: "快速采集"
                                                     }, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 879,
+                                                        lineNumber: 881,
                                                         columnNumber: 23
                                                     }, void 0),
-                                                    (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
+                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
                                                         value: "complex",
                                                         children: "智能采集"
                                                     }, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 880,
+                                                        lineNumber: 882,
                                                         columnNumber: 23
                                                     }, void 0),
-                                                    (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
+                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Radio.Button, {
                                                         value: "template",
                                                         children: "模板采集"
                                                     }, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 881,
+                                                        lineNumber: 883,
                                                         columnNumber: 23
                                                     }, void 0)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 872,
+                                                lineNumber: 874,
                                                 columnNumber: 21
                                             }, void 0)
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 871,
+                                            lineNumber: 873,
                                             columnNumber: 19
                                         }, void 0),
-                                        crawlMode === 'quick' && (0, _jsxdevruntime.jsxDEV)(_QuickInputPanel.default, {}, void 0, false, {
+                                        crawlMode === 'quick' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_QuickInputPanel.default, {}, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 885,
+                                            lineNumber: 887,
                                             columnNumber: 45
                                         }, void 0),
-                                        crawlMode === 'complex' && (0, _jsxdevruntime.jsxDEV)(_ComplexInputPanel.default, {}, void 0, false, {
+                                        crawlMode === 'complex' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_ComplexInputPanel.default, {}, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 886,
+                                            lineNumber: 888,
                                             columnNumber: 47
                                         }, void 0),
-                                        crawlMode === 'template' && (0, _jsxdevruntime.jsxDEV)("div", {
+                                        crawlMode === 'template' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 textAlign: 'center',
                                                 padding: '12px 0'
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)(_TemplatePanel.default, {}, void 0, false, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_TemplatePanel.default, {}, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 889,
+                                                    lineNumber: 891,
                                                     columnNumber: 23
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         marginTop: 8,
                                                         color: 'var(--ant-color-text-secondary)',
@@ -2642,91 +2745,91 @@ const KnowledgeBuild = ()=>{
                                                     children: "点击模板即可自动填充采集参数"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 890,
+                                                    lineNumber: 892,
                                                     columnNumber: 23
                                                 }, void 0)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 888,
+                                            lineNumber: 890,
                                             columnNumber: 21
                                         }, void 0),
-                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginTop: 16,
                                                 textAlign: 'right'
                                             },
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
-                                                children: crawlRunning ? (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                                children: crawlRunning ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                     danger: true,
                                                     size: "small",
-                                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
+                                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 899,
+                                                        lineNumber: 901,
                                                         columnNumber: 59
                                                     }, void 0),
                                                     onClick: cancelCrawl,
                                                     children: "取消采集"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 899,
+                                                    lineNumber: 901,
                                                     columnNumber: 25
-                                                }, void 0) : (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                }, void 0) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                     type: "primary",
                                                     size: "small",
-                                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloudDownloadOutlined, {}, void 0, false, {
+                                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloudDownloadOutlined, {}, void 0, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 906,
+                                                        lineNumber: 908,
                                                         columnNumber: 33
                                                     }, void 0),
                                                     onClick: handleStartCrawl,
                                                     children: "开始采集"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 903,
+                                                    lineNumber: 905,
                                                     columnNumber: 25
                                                 }, void 0)
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 897,
+                                                lineNumber: 899,
                                                 columnNumber: 21
                                             }, void 0)
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 896,
+                                            lineNumber: 898,
                                             columnNumber: 19
                                         }, void 0),
-                                        crawlRunning && (0, _jsxdevruntime.jsxDEV)("div", {
+                                        crawlRunning && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginTop: 8
                                             },
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                 color: "processing",
                                                 children: "采集进行中..."
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 917,
+                                                lineNumber: 919,
                                                 columnNumber: 23
                                             }, void 0)
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 916,
+                                            lineNumber: 918,
                                             columnNumber: 21
                                         }, void 0),
-                                        crawlResult && !crawlRunning && (0, _jsxdevruntime.jsxDEV)("div", {
+                                        crawlResult && !crawlRunning && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginTop: 8
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                     color: "success",
                                                     children: "采集完成"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 922,
+                                                    lineNumber: 924,
                                                     columnNumber: 23
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         marginTop: 4,
                                                         fontSize: 12,
@@ -2742,10 +2845,10 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 923,
+                                                    lineNumber: 925,
                                                     columnNumber: 23
                                                 }, void 0),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                     size: "small",
                                                     type: "link",
                                                     onClick: ()=>{
@@ -2758,162 +2861,162 @@ const KnowledgeBuild = ()=>{
                                                     children: "切换到文件上传，扫描并运行 ETL 流水线 →"
                                                 }, void 0, false, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 926,
+                                                    lineNumber: 928,
                                                     columnNumber: 23
                                                 }, void 0)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 921,
+                                            lineNumber: 923,
                                             columnNumber: 21
                                         }, void 0)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 870,
+                                    lineNumber: 872,
                                     columnNumber: 17
                                 }, void 0)
                             }
                         ]
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 734,
+                        lineNumber: 736,
                         columnNumber: 9
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 733,
+                    lineNumber: 735,
                     columnNumber: 7
                 }, this),
-                buildStatus !== 'idle' && (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                buildStatus !== 'idle' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                     size: "small",
                     title: "流水线状态",
                     style: {
                         marginBottom: 12
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                             gutter: [
                                 12,
                                 8
                             ],
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                         title: "主体实体",
                                         value: subjects.length,
                                         valueStyle: {
                                             fontSize: 18
                                         },
-                                        suffix: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        suffix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#FFC101",
                                             children: "个"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 951,
+                                            lineNumber: 953,
                                             columnNumber: 101
                                         }, void 0)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 951,
+                                        lineNumber: 953,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 950,
+                                    lineNumber: 952,
                                     columnNumber: 13
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                         title: "事件",
                                         value: events.length,
                                         valueStyle: {
                                             fontSize: 18
                                         },
-                                        suffix: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        suffix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#FF6B6B",
                                             children: "个"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 954,
+                                            lineNumber: 956,
                                             columnNumber: 97
                                         }, void 0)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 954,
+                                        lineNumber: 956,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 953,
+                                    lineNumber: 955,
                                     columnNumber: 13
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                         title: "风险特征",
                                         value: features.length,
                                         valueStyle: {
                                             fontSize: 18
                                         },
-                                        suffix: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        suffix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#4CAF50",
                                             children: "个"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 957,
+                                            lineNumber: 959,
                                             columnNumber: 101
                                         }, void 0)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 957,
+                                        lineNumber: 959,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 956,
+                                    lineNumber: 958,
                                     columnNumber: 13
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                         title: "法规匹配",
                                         value: regulations.length,
                                         valueStyle: {
                                             fontSize: 18
                                         },
-                                        suffix: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        suffix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#45B7D1",
                                             children: "条"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 960,
+                                            lineNumber: 962,
                                             columnNumber: 104
                                         }, void 0)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 960,
+                                        lineNumber: 962,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 959,
+                                    lineNumber: 961,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 949,
+                            lineNumber: 951,
                             columnNumber: 11
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)("div", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 marginTop: 12
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         fontWeight: 500,
                                         fontSize: 13,
@@ -2922,17 +3025,17 @@ const KnowledgeBuild = ()=>{
                                     children: "执行日志"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 964,
+                                    lineNumber: 966,
                                     columnNumber: 13
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         maxHeight: 160,
                                         overflow: 'auto'
                                     },
                                     children: stageLogs.slice(-8).reverse().map((log, i)=>{
                                         var _STAGES_find;
-                                        return (0, _jsxdevruntime.jsxDEV)("div", {
+                                        return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 fontSize: 12,
                                                 color: '#94a3b8',
@@ -2940,7 +3043,7 @@ const KnowledgeBuild = ()=>{
                                                 fontFamily: 'monospace'
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                     style: {
                                                         color: log.level === 'error' ? '#f5222d' : log.level === 'success' ? '#52c41a' : log.level === 'warning' ? '#faad14' : '#666'
                                                     },
@@ -2953,7 +3056,7 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 968,
+                                                    lineNumber: 970,
                                                     columnNumber: 19
                                                 }, this),
                                                 ' ',
@@ -2961,55 +3064,55 @@ const KnowledgeBuild = ()=>{
                                             ]
                                         }, i, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 967,
+                                            lineNumber: 969,
                                             columnNumber: 17
                                         }, this);
                                     })
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 965,
+                                    lineNumber: 967,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 963,
+                            lineNumber: 965,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 948,
+                    lineNumber: 950,
                     columnNumber: 9
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                     size: "small",
                     title: "历史构建记录",
                     style: {
                         marginBottom: 12
                     },
-                    children: buildHistory.length === 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                    children: buildHistory.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                         description: "暂无历史记录",
                         image: _antd.Empty.PRESENTED_IMAGE_SIMPLE
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 982,
+                        lineNumber: 984,
                         columnNumber: 11
-                    }, this) : buildHistory.slice(0, 5).map((rec)=>(0, _jsxdevruntime.jsxDEV)("div", {
+                    }, this) : buildHistory.slice(0, 5).map((rec)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 padding: '8px 0',
                                 borderBottom: '1px solid #f0f0f0',
                                 cursor: 'pointer'
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     },
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                             style: {
                                                 fontSize: 13,
                                                 fontWeight: 500
@@ -3017,24 +3120,24 @@ const KnowledgeBuild = ()=>{
                                             children: rec.buildId
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 987,
+                                            lineNumber: 989,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: rec.status === 'completed' ? 'success' : 'error',
                                             children: rec.status === 'completed' ? '完成' : '失败'
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 988,
+                                            lineNumber: 990,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 986,
+                                    lineNumber: 988,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         fontSize: 12,
                                         color: '#94a3b8',
@@ -3054,69 +3157,70 @@ const KnowledgeBuild = ()=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 992,
+                                    lineNumber: 994,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, rec.buildId, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 985,
+                            lineNumber: 987,
                             columnNumber: 13
                         }, this))
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 980,
+                    lineNumber: 982,
                     columnNumber: 7
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 731,
+            lineNumber: 733,
             columnNumber: 5
         }, this);
-    const renderDataImport = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
-            children: importTab === 'crawl' && (crawlRunning || crawlResult) ? (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+    // ─── Render: Stage 1 - Data Import ─────────────────────────────────
+    const renderDataImport = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+            children: importTab === 'crawl' && (crawlRunning || crawlResult) ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                 children: [
-                    crawlRunning && (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                    crawlRunning && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                         title: "采集进度",
                         size: "small",
                         style: {
                             marginBottom: 16
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_CrawlProgress.default, {}, void 0, false, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_CrawlProgress.default, {}, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1010,
+                            lineNumber: 1012,
                             columnNumber: 15
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1009,
+                        lineNumber: 1011,
                         columnNumber: 13
                     }, this),
-                    crawlResult && !crawlRunning && (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                    crawlResult && !crawlRunning && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                         title: "采集结果",
                         size: "small",
                         style: {
                             marginBottom: 16
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_CrawlResult.default, {}, void 0, false, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_CrawlResult.default, {}, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1015,
+                                lineNumber: 1017,
                                 columnNumber: 15
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     marginTop: 16,
                                     textAlign: 'center'
                                 },
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                             type: "primary",
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1020,
+                                                lineNumber: 1022,
                                                 columnNumber: 27
                                             }, void 0),
                                             onClick: ()=>{
@@ -3126,43 +3230,43 @@ const KnowledgeBuild = ()=>{
                                             children: "扫描已爬取文件"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1018,
+                                            lineNumber: 1020,
                                             columnNumber: 19
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloudUploadOutlined, {}, void 0, false, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloudUploadOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1029,
+                                                lineNumber: 1031,
                                                 columnNumber: 27
                                             }, void 0),
                                             onClick: ()=>setImportTab('upload'),
                                             children: "切换到文件上传"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1028,
+                                            lineNumber: 1030,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1017,
+                                    lineNumber: 1019,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1016,
+                                lineNumber: 1018,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1014,
+                        lineNumber: 1016,
                         columnNumber: 13
                     }, this)
                 ]
-            }, void 0, true) : (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+            }, void 0, true) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)("div", {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             marginBottom: 16,
                             display: 'flex',
@@ -3170,7 +3274,7 @@ const KnowledgeBuild = ()=>{
                             alignItems: 'center'
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)("span", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                 style: {
                                     fontSize: 16,
                                     fontWeight: 600
@@ -3178,12 +3282,12 @@ const KnowledgeBuild = ()=>{
                                 children: importTab === 'crawl' ? '智能采集' : '数据导入结果'
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1042,
+                                lineNumber: 1044,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: "blue",
                                         children: [
                                             "文档数: ",
@@ -3191,10 +3295,10 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1046,
+                                        lineNumber: 1048,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: "green",
                                         children: [
                                             "总页数: ",
@@ -3202,10 +3306,10 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1047,
+                                        lineNumber: 1049,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: "purple",
                                         children: [
                                             "总字符: ",
@@ -3213,33 +3317,33 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1048,
+                                        lineNumber: 1050,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1045,
+                                lineNumber: 1047,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1041,
+                        lineNumber: 1043,
                         columnNumber: 11
                     }, this),
-                    dataSources.length === 0 ? pipelineRunning ? (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                    dataSources.length === 0 ? pipelineRunning ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                         size: "small",
                         style: {
                             background: '#f6ffed',
                             border: '1px solid #b7eb8f'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)("div", {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 textAlign: 'center'
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_icons.LoadingOutlined, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.LoadingOutlined, {
                                     style: {
                                         fontSize: 32,
                                         color: '#52c41a',
@@ -3247,10 +3351,10 @@ const KnowledgeBuild = ()=>{
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1056,
+                                    lineNumber: 1058,
                                     columnNumber: 19
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         fontSize: 14,
                                         fontWeight: 500
@@ -3258,10 +3362,10 @@ const KnowledgeBuild = ()=>{
                                     children: "ETL 流水线执行中"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1057,
+                                    lineNumber: 1059,
                                     columnNumber: 19
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         fontSize: 12,
                                         color: '#64748b',
@@ -3270,10 +3374,10 @@ const KnowledgeBuild = ()=>{
                                     children: "后端正在执行 parse → extract → link → resolve → import → index 各阶段"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1058,
+                                    lineNumber: 1060,
                                     columnNumber: 19
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         fontSize: 12,
                                         color: '#94a3b8',
@@ -3282,59 +3386,59 @@ const KnowledgeBuild = ()=>{
                                     children: "处理完成后文件将自动清理"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1061,
+                                    lineNumber: 1063,
                                     columnNumber: 19
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1055,
+                            lineNumber: 1057,
                             columnNumber: 17
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1054,
+                        lineNumber: 1056,
                         columnNumber: 15
-                    }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                         description: importTab === 'crawl' ? '请先在左侧"智能采集"标签页中配置采集参数，然后点击"开始采集"' : '尚未导入数据。请先在左侧上传PDF文件或选择爬虫数据源，然后点击【开始构建】或扫描文件后点击【运行 ETL 流水线】。',
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
-                            children: importTab === 'crawl' ? (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            children: importTab === 'crawl' ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloudDownloadOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloudDownloadOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1070,
+                                    lineNumber: 1072,
                                     columnNumber: 50
                                 }, void 0),
                                 onClick: ()=>setImportTab('crawl'),
                                 children: "去智能采集"
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1070,
+                                lineNumber: 1072,
                                 columnNumber: 21
-                            }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                            }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1074,
+                                    lineNumber: 1076,
                                     columnNumber: 50
                                 }, void 0),
                                 onClick: handleStartBuild,
                                 children: "开始构建"
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1074,
+                                lineNumber: 1076,
                                 columnNumber: 21
                             }, this)
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1068,
+                            lineNumber: 1070,
                             columnNumber: 17
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1067,
+                        lineNumber: 1069,
                         columnNumber: 15
-                    }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                         dataSource: dataSources,
                         rowKey: "id",
                         size: "small",
@@ -3344,22 +3448,22 @@ const KnowledgeBuild = ()=>{
                                 title: '文件名',
                                 dataIndex: 'name',
                                 key: 'name',
-                                render: (t, r)=>(0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                render: (t, r)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                         children: [
-                                            (0, _jsxdevruntime.jsxDEV)(_icons.FilePdfOutlined, {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.FilePdfOutlined, {
                                                 style: {
                                                     color: '#f5222d'
                                                 }
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1086,
+                                                lineNumber: 1088,
                                                 columnNumber: 110
                                             }, void 0),
                                             t
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1086,
+                                        lineNumber: 1088,
                                         columnNumber: 103
                                     }, void 0)
                             },
@@ -3368,11 +3472,11 @@ const KnowledgeBuild = ()=>{
                                 dataIndex: 'type',
                                 key: 'type',
                                 width: 80,
-                                render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         children: t === 'pdf' ? 'PDF' : t === 'crawl' ? '爬虫' : '已有'
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1087,
+                                        lineNumber: 1089,
                                         columnNumber: 98
                                     }, void 0)
                             },
@@ -3422,12 +3526,12 @@ const KnowledgeBuild = ()=>{
                                             text: '失败'
                                         }
                                     };
-                                    return (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: (_map_s = map[s]) === null || _map_s === void 0 ? void 0 : _map_s.color,
                                         children: ((_map_s1 = map[s]) === null || _map_s1 === void 0 ? void 0 : _map_s1.text) || s
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1093,
+                                        lineNumber: 1095,
                                         columnNumber: 26
                                     }, void 0);
                                 }
@@ -3435,10 +3539,10 @@ const KnowledgeBuild = ()=>{
                         ]
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1080,
+                        lineNumber: 1082,
                         columnNumber: 13
                     }, this),
-                    dataSources.length > 0 && (0, _jsxdevruntime.jsxDEV)(_antd.Collapse, {
+                    dataSources.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Collapse, {
                         style: {
                             marginTop: 12
                         },
@@ -3449,12 +3553,12 @@ const KnowledgeBuild = ()=>{
                                 label: '文本分段预览',
                                 children: dataSources.map((ds)=>{
                                     var _ds_recordCount;
-                                    return (0, _jsxdevruntime.jsxDEV)("div", {
+                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         style: {
                                             marginBottom: 12
                                         },
                                         children: [
-                                            (0, _jsxdevruntime.jsxDEV)("div", {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     fontWeight: 500,
                                                     marginBottom: 4
@@ -3462,10 +3566,10 @@ const KnowledgeBuild = ()=>{
                                                 children: ds.name
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1103,
+                                                lineNumber: 1105,
                                                 columnNumber: 19
                                             }, void 0),
-                                            (0, _jsxdevruntime.jsxDEV)("div", {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     background: '#f8fafc',
                                                     padding: 10,
@@ -3484,13 +3588,13 @@ const KnowledgeBuild = ()=>{
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1104,
+                                                lineNumber: 1106,
                                                 columnNumber: 19
                                             }, void 0)
                                         ]
                                     }, ds.id, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1102,
+                                        lineNumber: 1104,
                                         columnNumber: 17
                                     }, void 0);
                                 })
@@ -3498,16 +3602,17 @@ const KnowledgeBuild = ()=>{
                         ]
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1100,
+                        lineNumber: 1102,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true)
         }, void 0, false, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1004,
+            lineNumber: 1006,
             columnNumber: 5
         }, this);
+    // ─── Render: Stage 2 - Subject Extraction ─────────────────────────
     const subjectColumns = [
         {
             title: '实体名称',
@@ -3515,11 +3620,11 @@ const KnowledgeBuild = ()=>{
             key: 'name',
             width: 180,
             ellipsis: true,
-            render: (t)=>(0, _jsxdevruntime.jsxDEV)("strong", {
+            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("strong", {
                     children: t
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1118,
+                    lineNumber: 1120,
                     columnNumber: 105
                 }, this)
         },
@@ -3528,12 +3633,12 @@ const KnowledgeBuild = ()=>{
             dataIndex: 'type',
             key: 'type',
             width: 100,
-            render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                     color: NODE_TYPE_COLORS[t] || '#888',
                     children: t
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1119,
+                    lineNumber: 1121,
                     columnNumber: 87
                 }, this)
         },
@@ -3542,13 +3647,13 @@ const KnowledgeBuild = ()=>{
             dataIndex: 'confidence',
             key: 'confidence',
             width: 120,
-            render: (v)=>(0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
+            render: (v)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                     percent: Math.round(v * 100),
                     size: "small",
                     strokeColor: v > 0.9 ? '#52c41a' : v > 0.8 ? '#faad14' : '#f5222d'
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1120,
+                    lineNumber: 1122,
                     columnNumber: 100
                 }, this)
         },
@@ -3564,11 +3669,11 @@ const KnowledgeBuild = ()=>{
             key: 'props',
             width: 200,
             ellipsis: true,
-            render: (_, r)=>(0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+            render: (_, r)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                     size: 4,
                     wrap: true,
                     children: [
-                        Object.entries(r.properties).slice(0, 2).map(([k, v])=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                        Object.entries(r.properties).slice(0, 2).map(([k, v])=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                 style: {
                                     fontSize: 11
                                 },
@@ -3579,20 +3684,20 @@ const KnowledgeBuild = ()=>{
                                 ]
                             }, k, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1124,
+                                lineNumber: 1126,
                                 columnNumber: 67
                             }, this)),
-                        Object.keys(r.properties).length > 2 && (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                        Object.keys(r.properties).length > 2 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                             children: "..."
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1125,
+                            lineNumber: 1127,
                             columnNumber: 50
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1123,
+                    lineNumber: 1125,
                     columnNumber: 7
                 }, this)
         },
@@ -3600,12 +3705,12 @@ const KnowledgeBuild = ()=>{
             title: '操作',
             key: 'actions',
             width: 80,
-            render: (_, r)=>(0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+            render: (_, r)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                     type: "link",
                     size: "small",
-                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.EditOutlined, {}, void 0, false, {
+                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.EditOutlined, {}, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1131,
+                        lineNumber: 1133,
                         columnNumber: 48
                     }, void 0),
                     onClick: ()=>setEditingSubject(r),
@@ -3613,14 +3718,14 @@ const KnowledgeBuild = ()=>{
                     children: "修正"
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1131,
+                    lineNumber: 1133,
                     columnNumber: 9
                 }, this)
         }
     ];
-    const renderSubjectExtraction = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    const renderSubjectExtraction = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             children: [
-                (0, _jsxdevruntime.jsxDEV)("div", {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginBottom: 16,
                         display: 'flex',
@@ -3628,7 +3733,7 @@ const KnowledgeBuild = ()=>{
                         alignItems: 'center'
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("span", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                             style: {
                                 fontSize: 16,
                                 fontWeight: 600
@@ -3636,17 +3741,17 @@ const KnowledgeBuild = ()=>{
                             children: "主体实体提取结果"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1139,
+                            lineNumber: 1141,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     type: "primary",
                                     size: "small",
-                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1144,
+                                        lineNumber: 1146,
                                         columnNumber: 19
                                     }, void 0),
                                     loading: extracting['subject_extraction'],
@@ -3655,103 +3760,51 @@ const KnowledgeBuild = ()=>{
                                     children: "Dify 提取"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1141,
+                                    lineNumber: 1143,
                                     columnNumber: 11
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     size: "small",
-                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ExportOutlined, {}, void 0, false, {
+                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ExportOutlined, {}, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1151,
+                                        lineNumber: 1153,
                                         columnNumber: 38
                                     }, void 0),
                                     disabled: subjects.length === 0,
                                     children: "导出CSV"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1151,
+                                    lineNumber: 1153,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1140,
+                            lineNumber: 1142,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1138,
+                    lineNumber: 1140,
                     columnNumber: 7
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                     gutter: 12,
                     style: {
                         marginBottom: 16
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                     title: "实体总数",
                                     value: subjects.length,
                                     valueStyle: {
                                         fontSize: 20,
                                         color: '#1890ff'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1156,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1156,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1156,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "COMPANY",
-                                    value: subjects.filter((s)=>s.type === 'COMPANY').length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#FFC101'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1157,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1157,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1157,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "PERSON",
-                                    value: subjects.filter((s)=>s.type === 'PERSON').length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#1890FF'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -3768,16 +3821,16 @@ const KnowledgeBuild = ()=>{
                             lineNumber: 1158,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "PFCOMPANY/PFUND",
-                                    value: subjects.filter((s)=>s.type === 'PFCOMPANY' || s.type === 'PFUND').length,
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "COMPANY",
+                                    value: subjects.filter((s)=>s.type === 'COMPANY').length,
                                     valueStyle: {
                                         fontSize: 20,
-                                        color: '#722ED1'
+                                        color: '#FFC101'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -3793,26 +3846,78 @@ const KnowledgeBuild = ()=>{
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
                             lineNumber: 1159,
                             columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 6,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "PERSON",
+                                    value: subjects.filter((s)=>s.type === 'PERSON').length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#1890FF'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1160,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1160,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1160,
+                            columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 6,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "PFCOMPANY/PFUND",
+                                    value: subjects.filter((s)=>s.type === 'PFCOMPANY' || s.type === 'PFUND').length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#722ED1'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1161,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1161,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1161,
+                            columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1155,
+                    lineNumber: 1157,
                     columnNumber: 7
                 }, this),
-                subjects.length === 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                subjects.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                     description: buildStatus === 'idle' ? '请先启动构建流水线' : '提取中...'
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1163,
+                    lineNumber: 1165,
                     columnNumber: 9
-                }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                     dataSource: subjects,
                     columns: subjectColumns,
                     rowKey: "id",
                     size: "small",
                     expandable: {
-                        expandedRowRender: (r)=>(0, _jsxdevruntime.jsxDEV)("pre", {
+                        expandedRowRender: (r)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("pre", {
                                 style: {
                                     fontSize: 11,
                                     margin: 0,
@@ -3822,16 +3927,16 @@ const KnowledgeBuild = ()=>{
                                 children: JSON.stringify(r.properties, null, 2)
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1166,
+                                lineNumber: 1168,
                                 columnNumber: 37
                             }, void 0)
                     }
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1165,
+                    lineNumber: 1167,
                     columnNumber: 9
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Modal, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Modal, {
                     title: "修正实体",
                     open: !!editingSubject,
                     onCancel: ()=>setEditingSubject(null),
@@ -3841,86 +3946,87 @@ const KnowledgeBuild = ()=>{
                     },
                     okText: "保存",
                     cancelText: "取消",
-                    children: editingSubject && (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
+                    children: editingSubject && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
                         layout: "vertical",
                         size: "small",
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                 label: "实体名称",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Input, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Input, {
                                     defaultValue: editingSubject.name
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1174,
+                                    lineNumber: 1176,
                                     columnNumber: 37
                                 }, this)
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1174,
+                                lineNumber: 1176,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                 label: "实体类型",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                                     defaultValue: editingSubject.type,
                                     options: Object.entries(NODE_TYPE_COLORS).map(([k, v])=>({
                                             value: k,
-                                            label: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                            label: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                                 color: v,
                                                 children: k
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1176,
+                                                lineNumber: 1178,
                                                 columnNumber: 136
                                             }, void 0)
                                         }))
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1176,
+                                    lineNumber: 1178,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1175,
+                                lineNumber: 1177,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                 label: "置信度",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Slider, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Slider, {
                                     defaultValue: editingSubject.confidence,
                                     min: 0,
                                     max: 1,
                                     step: 0.01
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1178,
+                                    lineNumber: 1180,
                                     columnNumber: 36
                                 }, this)
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1178,
+                                lineNumber: 1180,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1173,
+                        lineNumber: 1175,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1171,
+                    lineNumber: 1173,
                     columnNumber: 7
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1137,
+            lineNumber: 1139,
             columnNumber: 5
         }, this);
-    const renderEventExtraction = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    // ─── Render: Stage 3 - Event Extraction ───────────────────────────
+    const renderEventExtraction = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             children: [
-                (0, _jsxdevruntime.jsxDEV)("div", {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginBottom: 16,
                         display: 'flex',
@@ -3928,7 +4034,7 @@ const KnowledgeBuild = ()=>{
                         alignItems: 'center'
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("span", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                             style: {
                                 fontSize: 16,
                                 fontWeight: 600
@@ -3936,17 +4042,17 @@ const KnowledgeBuild = ()=>{
                             children: "事件提取结果"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1189,
+                            lineNumber: 1191,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     type: "primary",
                                     size: "small",
-                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1194,
+                                        lineNumber: 1196,
                                         columnNumber: 19
                                     }, void 0),
                                     loading: extracting['event_extraction'],
@@ -3955,118 +4061,66 @@ const KnowledgeBuild = ()=>{
                                     children: "Dify 提取"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1191,
+                                    lineNumber: 1193,
                                     columnNumber: 11
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(RadioGroup, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(RadioGroup, {
                                     value: eventViewMode,
                                     onChange: (e)=>setEventViewMode(e.target.value),
                                     size: "small",
                                     optionType: "button",
                                     buttonStyle: "solid",
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)(RadioButton, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(RadioButton, {
                                             value: "table",
                                             children: "表格视图"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1202,
+                                            lineNumber: 1204,
                                             columnNumber: 13
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(RadioButton, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(RadioButton, {
                                             value: "timeline",
                                             children: "时间线视图"
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1203,
+                                            lineNumber: 1205,
                                             columnNumber: 13
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1201,
+                                    lineNumber: 1203,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1190,
+                            lineNumber: 1192,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1188,
+                    lineNumber: 1190,
                     columnNumber: 7
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                     gutter: 12,
                     style: {
                         marginBottom: 16
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                     title: "事件总数",
                                     value: events.length,
                                     valueStyle: {
                                         fontSize: 20,
                                         color: '#FF6B6B'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1209,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1209,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1209,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "高风险事件",
-                                    value: events.filter((e)=>e.riskLevel === 'high').length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#f5222d'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1210,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1210,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1210,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "关联主体",
-                                    value: new Set(events.flatMap((e)=>e.subjects)).size,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#1890ff'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -4082,20 +4136,72 @@ const KnowledgeBuild = ()=>{
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
                             lineNumber: 1211,
                             columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 8,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "高风险事件",
+                                    value: events.filter((e)=>e.riskLevel === 'high').length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#f5222d'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1212,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1212,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1212,
+                            columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 8,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "关联主体",
+                                    value: new Set(events.flatMap((e)=>e.subjects)).size,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#1890ff'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1213,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1213,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1213,
+                            columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1208,
+                    lineNumber: 1210,
                     columnNumber: 7
                 }, this),
-                events.length === 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                events.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                     description: buildStatus === 'idle' ? '请先启动构建流水线' : '提取中...'
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1215,
+                    lineNumber: 1217,
                     columnNumber: 9
-                }, this) : eventViewMode === 'table' ? (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                }, this) : eventViewMode === 'table' ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                     dataSource: events,
                     rowKey: "id",
                     size: "small",
@@ -4112,12 +4218,12 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'eventType',
                             key: 'eventType',
                             width: 100,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: t === '违规风险' ? 'red' : t === '减持风险' ? 'orange' : 'blue',
                                     children: t
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1219,
+                                    lineNumber: 1221,
                                     columnNumber: 105
                                 }, void 0)
                         },
@@ -4126,20 +4232,20 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'subjects',
                             key: 'subjects',
                             width: 180,
-                            render: (s)=>(0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            render: (s)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                     size: 4,
                                     wrap: true,
-                                    children: s.map((n)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    children: s.map((n)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#FFC101",
                                             children: n.length > 8 ? n.slice(0, 8) + '...' : n
                                         }, n, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1220,
+                                            lineNumber: 1222,
                                             columnNumber: 140
                                         }, void 0))
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1220,
+                                    lineNumber: 1222,
                                     columnNumber: 105
                                 }, void 0)
                         },
@@ -4154,12 +4260,12 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'riskLevel',
                             key: 'riskLevel',
                             width: 90,
-                            render: (l)=>(0, _jsxdevruntime.jsxDEV)(_antd.Badge, {
+                            render: (l)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Badge, {
                                     status: l === 'high' ? 'error' : 'warning',
                                     text: l === 'high' ? '高' : '中'
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1222,
+                                    lineNumber: 1224,
                                     columnNumber: 104
                                 }, void 0)
                         },
@@ -4167,30 +4273,30 @@ const KnowledgeBuild = ()=>{
                             title: '操作',
                             key: 'actions',
                             width: 60,
-                            render: (_, r)=>(0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                            render: (_, r)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     type: "link",
                                     size: "small",
                                     onClick: ()=>setSelectedEvent(r),
                                     children: "详情"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1223,
+                                    lineNumber: 1225,
                                     columnNumber: 92
                                 }, void 0)
                         }
                     ]
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1217,
+                    lineNumber: 1219,
                     columnNumber: 9
-                }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Timeline, {
+                }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Timeline, {
                     items: [
                         ...events
                     ].sort((a, b)=>b.time.localeCompare(a.time)).map((e)=>({
                             color: e.riskLevel === 'high' ? 'red' : 'orange',
-                            children: (0, _jsxdevruntime.jsxDEV)("div", {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)("div", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         style: {
                                             fontWeight: 500,
                                             cursor: 'pointer'
@@ -4199,10 +4305,10 @@ const KnowledgeBuild = ()=>{
                                         children: e.title
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1231,
+                                        lineNumber: 1233,
                                         columnNumber: 17
                                     }, void 0),
-                                    (0, _jsxdevruntime.jsxDEV)("div", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         style: {
                                             fontSize: 12,
                                             color: '#94a3b8'
@@ -4216,67 +4322,44 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1232,
+                                        lineNumber: 1234,
                                         columnNumber: 17
                                     }, void 0)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1230,
+                                lineNumber: 1232,
                                 columnNumber: 15
                             }, void 0)
                         }))
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1226,
+                    lineNumber: 1228,
                     columnNumber: 9
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
                     title: "事件详情",
                     open: !!selectedEvent,
                     onClose: ()=>setSelectedEvent(null),
                     width: 500,
-                    children: selectedEvent && (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                    children: selectedEvent && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                         column: 1,
                         size: "small",
                         bordered: true,
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                 label: "事件标题",
                                 children: selectedEvent.title
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1245,
-                                columnNumber: 13
-                            }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
-                                label: "事件类型",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
-                                    color: selectedEvent.eventType === '违规风险' ? 'red' : selectedEvent.eventType === '减持风险' ? 'orange' : 'blue',
-                                    children: selectedEvent.eventType
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1246,
-                                    columnNumber: 45
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1246,
-                                columnNumber: 13
-                            }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
-                                label: "发生时间",
-                                children: selectedEvent.time
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
                                 lineNumber: 1247,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
-                                label: "风险等级",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Badge, {
-                                    status: selectedEvent.riskLevel === 'high' ? 'error' : 'warning',
-                                    text: selectedEvent.riskLevel === 'high' ? '高风险' : '中风险'
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                label: "事件类型",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    color: selectedEvent.eventType === '违规风险' ? 'red' : selectedEvent.eventType === '减持风险' ? 'orange' : 'blue',
+                                    children: selectedEvent.eventType
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
                                     lineNumber: 1248,
@@ -4287,49 +4370,73 @@ const KnowledgeBuild = ()=>{
                                 lineNumber: 1248,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
-                                label: "涉及主体",
-                                children: selectedEvent.subjects.map((s)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
-                                        color: "#FFC101",
-                                        children: s
-                                    }, s, false, {
-                                        fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1249,
-                                        columnNumber: 80
-                                    }, this))
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                label: "发生时间",
+                                children: selectedEvent.time
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
                                 lineNumber: 1249,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                label: "风险等级",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Badge, {
+                                    status: selectedEvent.riskLevel === 'high' ? 'error' : 'warning',
+                                    text: selectedEvent.riskLevel === 'high' ? '高风险' : '中风险'
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1250,
+                                    columnNumber: 45
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1250,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                label: "涉及主体",
+                                children: selectedEvent.subjects.map((s)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        color: "#FFC101",
+                                        children: s
+                                    }, s, false, {
+                                        fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                        lineNumber: 1251,
+                                        columnNumber: 80
+                                    }, this))
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1251,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                 label: "事件描述",
                                 children: selectedEvent.description
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1250,
+                                lineNumber: 1252,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1244,
+                        lineNumber: 1246,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1242,
+                    lineNumber: 1244,
                     columnNumber: 7
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1187,
+            lineNumber: 1189,
             columnNumber: 5
         }, this);
-    const renderFeatureExtraction = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    // ─── Render: Stage 4 - Feature Extraction ─────────────────────────
+    const renderFeatureExtraction = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             children: [
-                (0, _jsxdevruntime.jsxDEV)("div", {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginBottom: 16,
                         display: 'flex',
@@ -4337,7 +4444,7 @@ const KnowledgeBuild = ()=>{
                         alignItems: 'center'
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("span", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                             style: {
                                 fontSize: 16,
                                 fontWeight: 600
@@ -4345,16 +4452,16 @@ const KnowledgeBuild = ()=>{
                             children: "风险特征提取结果"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1261,
+                            lineNumber: 1263,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
                                 size: "small",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1266,
+                                    lineNumber: 1268,
                                     columnNumber: 19
                                 }, void 0),
                                 loading: extracting['feature_extraction'],
@@ -4363,88 +4470,36 @@ const KnowledgeBuild = ()=>{
                                 children: "Dify 提取"
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1263,
+                                lineNumber: 1265,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1262,
+                            lineNumber: 1264,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1260,
+                    lineNumber: 1262,
                     columnNumber: 7
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                     gutter: 12,
                     style: {
                         marginBottom: 16
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                     title: "特征总数",
                                     value: features.length,
                                     valueStyle: {
                                         fontSize: 20,
                                         color: '#4CAF50'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1277,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1277,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1277,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "财务预警",
-                                    value: features.filter((f)=>f.featureType === '1').length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#faad14'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1278,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1278,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1278,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "法律诉讼",
-                                    value: features.filter((f)=>f.featureType === '2').length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#f5222d'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -4461,16 +4516,16 @@ const KnowledgeBuild = ()=>{
                             lineNumber: 1279,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 6,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "股权变动",
-                                    value: features.filter((f)=>f.featureType === '3').length,
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "财务预警",
+                                    value: features.filter((f)=>f.featureType === '1').length,
                                     valueStyle: {
                                         fontSize: 20,
-                                        color: '#1890ff'
+                                        color: '#faad14'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -4486,77 +4541,129 @@ const KnowledgeBuild = ()=>{
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
                             lineNumber: 1280,
                             columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 6,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "法律诉讼",
+                                    value: features.filter((f)=>f.featureType === '2').length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#f5222d'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1281,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1281,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1281,
+                            columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 6,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "股权变动",
+                                    value: features.filter((f)=>f.featureType === '3').length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#1890ff'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1282,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1282,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1282,
+                            columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1276,
+                    lineNumber: 1278,
                     columnNumber: 7
                 }, this),
-                features.length === 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                features.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                     description: buildStatus === 'idle' ? '请先启动构建流水线' : '提取中...'
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1284,
+                    lineNumber: 1286,
                     columnNumber: 9
-                }, this) : features.map((f)=>(0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                }, this) : features.map((f)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                         size: "small",
                         style: {
                             marginBottom: 12
                         },
-                        title: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        title: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_icons.ExclamationCircleOutlined, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ExclamationCircleOutlined, {
                                     style: {
                                         color: f.riskLevel === 'high' ? '#f5222d' : '#faad14'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1289,
+                                    lineNumber: 1291,
                                     columnNumber: 15
                                 }, void 0),
-                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                     children: f.name
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1290,
+                                    lineNumber: 1292,
                                     columnNumber: 15
                                 }, void 0),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: f.featureType === '1' ? 'gold' : f.featureType === '2' ? 'red' : 'blue',
                                     children: _graphConfig.FACTOR_TYPE_MAP[f.featureType] || f.featureType
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1291,
+                                    lineNumber: 1293,
                                     columnNumber: 15
                                 }, void 0),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: f.riskLevel === 'high' ? 'error' : 'warning',
                                     children: f.riskLevel === 'high' ? '高风险' : '中风险'
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1292,
+                                    lineNumber: 1294,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1288,
+                            lineNumber: 1290,
                             columnNumber: 13
                         }, void 0),
-                        extra: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        extra: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     children: [
                                         f.relatedSubjects.length,
                                         " 个关联主体"
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1296,
+                                    lineNumber: 1298,
                                     columnNumber: 15
                                 }, void 0),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     children: [
                                         "置信度 ",
                                         Math.round(f.confidence * 100),
@@ -4564,36 +4671,36 @@ const KnowledgeBuild = ()=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1297,
+                                    lineNumber: 1299,
                                     columnNumber: 15
                                 }, void 0),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     size: "small",
-                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.EditOutlined, {}, void 0, false, {
+                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.EditOutlined, {}, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1298,
+                                        lineNumber: 1300,
                                         columnNumber: 42
                                     }, void 0),
                                     disabled: running,
                                     children: "调整"
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1298,
+                                    lineNumber: 1300,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1295,
+                            lineNumber: 1297,
                             columnNumber: 13
                         }, void 0),
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     marginBottom: 8
                                 },
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)("span", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         style: {
                                             fontWeight: 500,
                                             fontSize: 13
@@ -4601,26 +4708,26 @@ const KnowledgeBuild = ()=>{
                                         children: "关联主体: "
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1302,
+                                        lineNumber: 1304,
                                         columnNumber: 15
                                     }, this),
-                                    f.relatedSubjects.map((s)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    f.relatedSubjects.map((s)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "#FFC101",
                                             children: s
                                         }, s, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1303,
+                                            lineNumber: 1305,
                                             columnNumber: 45
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1301,
+                                lineNumber: 1303,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)("span", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         style: {
                                             fontWeight: 500,
                                             fontSize: 13
@@ -4628,10 +4735,10 @@ const KnowledgeBuild = ()=>{
                                         children: "证据片段: "
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1306,
+                                        lineNumber: 1308,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)("span", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         style: {
                                             color: '#64748b',
                                             fontSize: 13,
@@ -4654,7 +4761,7 @@ const KnowledgeBuild = ()=>{
                                                 const highlighted = keywords.some((kw)=>f.evidence.slice(i, i + kw.length) === kw);
                                                 if (highlighted) {
                                                     const kw = keywords.find((kw)=>f.evidence.slice(i, i + kw.length) === kw);
-                                                    return (0, _jsxdevruntime.jsxDEV)("mark", {
+                                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("mark", {
                                                         style: {
                                                             background: '#FFF2B2',
                                                             padding: '0 2px'
@@ -4662,7 +4769,7 @@ const KnowledgeBuild = ()=>{
                                                         children: kw
                                                     }, i, false, {
                                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                        lineNumber: 1313,
+                                                        lineNumber: 1315,
                                                         columnNumber: 28
                                                     }, this);
                                                 }
@@ -4672,30 +4779,31 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1307,
+                                        lineNumber: 1309,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1305,
+                                lineNumber: 1307,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, f.id, true, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1287,
+                        lineNumber: 1289,
                         columnNumber: 11
                     }, this))
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1259,
+            lineNumber: 1261,
             columnNumber: 5
         }, this);
-    const renderRegulationLinking = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    // ─── Render: Stage 5 - Regulation Linking ─────────────────────────
+    const renderRegulationLinking = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             children: [
-                (0, _jsxdevruntime.jsxDEV)("div", {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginBottom: 16,
                         display: 'flex',
@@ -4703,7 +4811,7 @@ const KnowledgeBuild = ()=>{
                         alignItems: 'center'
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("span", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                             style: {
                                 fontSize: 16,
                                 fontWeight: 600
@@ -4711,16 +4819,16 @@ const KnowledgeBuild = ()=>{
                             children: "法规链接结果"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1330,
+                            lineNumber: 1332,
                             columnNumber: 9
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
                                 size: "small",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ThunderboltOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1335,
+                                    lineNumber: 1337,
                                     columnNumber: 19
                                 }, void 0),
                                 loading: extracting['regulation_linking'],
@@ -4729,88 +4837,36 @@ const KnowledgeBuild = ()=>{
                                 children: "Dify 提取"
                             }, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1332,
+                                lineNumber: 1334,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1331,
+                            lineNumber: 1333,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1329,
+                    lineNumber: 1331,
                     columnNumber: 7
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                     gutter: 12,
                     style: {
                         marginBottom: 16
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                             span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                 size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                     title: "匹配法规",
                                     value: regulations.length,
                                     valueStyle: {
                                         fontSize: 20,
                                         color: '#45B7D1'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1346,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1346,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1346,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "匹配条款",
-                                    value: regulations.length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#1890ff'
-                                    }
-                                }, void 0, false, {
-                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1347,
-                                    columnNumber: 42
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1347,
-                                columnNumber: 23
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1347,
-                            columnNumber: 9
-                        }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                            span: 8,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
-                                size: "small",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
-                                    title: "违规认定",
-                                    value: regulations.filter((r)=>r.violation).length,
-                                    valueStyle: {
-                                        fontSize: 20,
-                                        color: '#f5222d'
                                     }
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
@@ -4826,20 +4882,72 @@ const KnowledgeBuild = ()=>{
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
                             lineNumber: 1348,
                             columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 8,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "匹配条款",
+                                    value: regulations.length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#1890ff'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1349,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1349,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1349,
+                            columnNumber: 9
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            span: 8,
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                size: "small",
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                                    title: "违规认定",
+                                    value: regulations.filter((r)=>r.violation).length,
+                                    valueStyle: {
+                                        fontSize: 20,
+                                        color: '#f5222d'
+                                    }
+                                }, void 0, false, {
+                                    fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                    lineNumber: 1350,
+                                    columnNumber: 42
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/pages/KnowledgeBuild/index.tsx",
+                                lineNumber: 1350,
+                                columnNumber: 23
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/pages/KnowledgeBuild/index.tsx",
+                            lineNumber: 1350,
+                            columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1345,
+                    lineNumber: 1347,
                     columnNumber: 7
                 }, this),
-                regulations.length === 0 ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                regulations.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                     description: buildStatus === 'idle' ? '请先启动构建流水线' : '匹配中...'
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1352,
+                    lineNumber: 1354,
                     columnNumber: 9
-                }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                     dataSource: regulations,
                     rowKey: "id",
                     size: "small",
@@ -4849,11 +4957,11 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'regulationName',
                             key: 'regulationName',
                             width: 140,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)("strong", {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("strong", {
                                     children: t
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1355,
+                                    lineNumber: 1357,
                                     columnNumber: 115
                                 }, void 0)
                         },
@@ -4862,12 +4970,12 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'article',
                             key: 'article',
                             width: 80,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: "blue",
                                     children: t
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1356,
+                                    lineNumber: 1358,
                                     columnNumber: 98
                                 }, void 0)
                         },
@@ -4877,9 +4985,9 @@ const KnowledgeBuild = ()=>{
                             key: 'articleText',
                             width: 260,
                             ellipsis: true,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                     title: t,
-                                    children: (0, _jsxdevruntime.jsxDEV)("span", {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         style: {
                                             fontSize: 12
                                         },
@@ -4889,12 +4997,12 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1357,
+                                        lineNumber: 1359,
                                         columnNumber: 144
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1357,
+                                    lineNumber: 1359,
                                     columnNumber: 125
                                 }, void 0)
                         },
@@ -4903,12 +5011,12 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'matchedFeature',
                             key: 'matchedFeature',
                             width: 120,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: "green",
                                     children: t
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1358,
+                                    lineNumber: 1360,
                                     columnNumber: 115
                                 }, void 0)
                         },
@@ -4917,13 +5025,13 @@ const KnowledgeBuild = ()=>{
                             dataIndex: 'score',
                             key: 'score',
                             width: 120,
-                            render: (v)=>(0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
+                            render: (v)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Progress, {
                                     percent: Math.round(v * 100),
                                     size: "small",
                                     strokeColor: v > 0.9 ? '#52c41a' : '#faad14'
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1359,
+                                    lineNumber: 1361,
                                     columnNumber: 97
                                 }, void 0)
                         },
@@ -4933,7 +5041,7 @@ const KnowledgeBuild = ()=>{
                             key: 'violation',
                             width: 200,
                             ellipsis: true,
-                            render: (t)=>(0, _jsxdevruntime.jsxDEV)("span", {
+                            render: (t)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                     style: {
                                         color: '#f5222d',
                                         fontSize: 12
@@ -4941,29 +5049,30 @@ const KnowledgeBuild = ()=>{
                                     children: t
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1360,
+                                    lineNumber: 1362,
                                     columnNumber: 121
                                 }, void 0)
                         }
                     ]
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1354,
+                    lineNumber: 1356,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1328,
+            lineNumber: 1330,
             columnNumber: 5
         }, this);
-    const renderKGImport = ()=>(0, _jsxdevruntime.jsxDEV)("div", {
+    // ─── Render: Stage 6 - KG Import ──────────────────────────────────
+    const renderKGImport = ()=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
             children: [
-                (0, _jsxdevruntime.jsxDEV)("div", {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         marginBottom: 16
                     },
-                    children: (0, _jsxdevruntime.jsxDEV)("span", {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                         style: {
                             fontSize: 16,
                             fontWeight: 600
@@ -4971,43 +5080,43 @@ const KnowledgeBuild = ()=>{
                         children: "图谱导入"
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1370,
+                        lineNumber: 1372,
                         columnNumber: 9
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1369,
+                    lineNumber: 1371,
                     columnNumber: 7
                 }, this),
-                importResult ? (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+                importResult ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
                             style: {
                                 marginBottom: 12,
                                 background: '#f6ffed',
                                 border: '1px solid #b7eb8f'
                             },
-                            children: (0, _jsxdevruntime.jsxDEV)("div", {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 8
                                 },
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)(_icons.CheckCircleOutlined, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CheckCircleOutlined, {
                                         style: {
                                             fontSize: 24,
                                             color: '#52c41a'
                                         }
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1377,
+                                        lineNumber: 1379,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)("div", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         children: [
-                                            (0, _jsxdevruntime.jsxDEV)("div", {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     fontSize: 16,
                                                     fontWeight: 600,
@@ -5016,10 +5125,10 @@ const KnowledgeBuild = ()=>{
                                                 children: "导入完成"
                                             }, void 0, false, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1379,
+                                                lineNumber: 1381,
                                                 columnNumber: 17
                                             }, this),
-                                            (0, _jsxdevruntime.jsxDEV)("div", {
+                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     fontSize: 13,
                                                     color: '#64748b'
@@ -5035,42 +5144,42 @@ const KnowledgeBuild = ()=>{
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                lineNumber: 1380,
+                                                lineNumber: 1382,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1378,
+                                        lineNumber: 1380,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1376,
+                                lineNumber: 1378,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1375,
+                            lineNumber: 1377,
                             columnNumber: 11
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                             gutter: 12,
                             style: {
                                 marginBottom: 12
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                         size: "small",
                                         title: "节点统计",
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                                             column: 1,
                                             size: "small",
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                                     label: "主体节点",
                                                     children: [
                                                         importResult.nodes.subjects,
@@ -5078,10 +5187,10 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 1391,
+                                                    lineNumber: 1393,
                                                     columnNumber: 19
                                                 }, this),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                                     label: "事件节点",
                                                     children: [
                                                         importResult.nodes.events,
@@ -5089,10 +5198,10 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 1392,
+                                                    lineNumber: 1394,
                                                     columnNumber: 19
                                                 }, this),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                                     label: "特征节点",
                                                     children: [
                                                         importResult.nodes.features,
@@ -5100,10 +5209,10 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 1393,
+                                                    lineNumber: 1395,
                                                     columnNumber: 19
                                                 }, this),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                                     label: "法规节点",
                                                     children: [
                                                         importResult.nodes.regulations,
@@ -5111,34 +5220,34 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 1394,
+                                                    lineNumber: 1396,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1390,
+                                            lineNumber: 1392,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1389,
+                                        lineNumber: 1391,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1388,
+                                    lineNumber: 1390,
                                     columnNumber: 13
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                     span: 12,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                         size: "small",
                                         title: "关系统计",
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                                             column: 1,
                                             size: "small",
-                                            children: Object.entries(importResult.edges).map(([k, v])=>(0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                            children: Object.entries(importResult.edges).map(([k, v])=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                                     label: k,
                                                     children: [
                                                         v,
@@ -5146,48 +5255,48 @@ const KnowledgeBuild = ()=>{
                                                     ]
                                                 }, k, true, {
                                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                                    lineNumber: 1402,
+                                                    lineNumber: 1404,
                                                     columnNumber: 21
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1400,
+                                            lineNumber: 1402,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1399,
+                                        lineNumber: 1401,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1398,
+                                    lineNumber: 1400,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1387,
+                            lineNumber: 1389,
                             columnNumber: 11
                         }, this)
                     ]
-                }, void 0, true) : (0, _jsxdevruntime.jsxDEV)("div", {
-                    children: !importPreview ? (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                }, void 0, true) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
+                    children: !importPreview ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                         description: buildStatus === 'idle' ? '请先启动构建流水线' : '预览生成中...'
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1412,
+                        lineNumber: 1414,
                         columnNumber: 13
-                    }, this) : (0, _jsxdevruntime.jsxDEV)("div", {
+                    }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             marginBottom: 12,
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: "blue",
                                     children: [
                                         "待导入节点: ",
@@ -5195,10 +5304,10 @@ const KnowledgeBuild = ()=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1416,
+                                    lineNumber: 1418,
                                     columnNumber: 17
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                     color: "green",
                                     children: [
                                         "待导入关系: ",
@@ -5206,38 +5315,38 @@ const KnowledgeBuild = ()=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                    lineNumber: 1417,
+                                    lineNumber: 1419,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1415,
+                            lineNumber: 1417,
                             columnNumber: 15
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1414,
+                        lineNumber: 1416,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1410,
+                    lineNumber: 1412,
                     columnNumber: 9
                 }, this),
-                (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                     size: "small",
                     title: "图谱预览",
                     style: {
                         marginBottom: 12
                     },
-                    extra: importPreview && !importResult && (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                    extra: importPreview && !importResult && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                             type: "primary",
                             size: "small",
-                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.BuildOutlined, {}, void 0, false, {
+                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.BuildOutlined, {}, void 0, false, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1429,
+                                lineNumber: 1431,
                                 columnNumber: 57
                             }, void 0),
                             loading: importing,
@@ -5301,15 +5410,15 @@ const KnowledgeBuild = ()=>{
                             children: "确认导入"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1429,
+                            lineNumber: 1431,
                             columnNumber: 15
                         }, void 0)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1428,
+                        lineNumber: 1430,
                         columnNumber: 13
                     }, void 0),
-                    children: (0, _jsxdevruntime.jsxDEV)("div", {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         ref: graphContainer,
                         style: {
                             width: '100%',
@@ -5319,20 +5428,21 @@ const KnowledgeBuild = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1484,
+                        lineNumber: 1486,
                         columnNumber: 9
                     }, this)
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1425,
+                    lineNumber: 1427,
                     columnNumber: 7
                 }, this)
             ]
         }, void 0, true, {
             fileName: "src/pages/KnowledgeBuild/index.tsx",
-            lineNumber: 1368,
+            lineNumber: 1370,
             columnNumber: 5
         }, this);
+    // ─── Stage router ──────────────────────────────────────────────────
     const renderStageContent = ()=>{
         switch(activeStage){
             case 'data_import':
@@ -5348,25 +5458,26 @@ const KnowledgeBuild = ()=>{
             case 'kg_import':
                 return renderKGImport();
             default:
-                return (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                     description: "未知阶段"
                 }, void 0, false, {
                     fileName: "src/pages/KnowledgeBuild/index.tsx",
-                    lineNumber: 1498,
+                    lineNumber: 1500,
                     columnNumber: 23
                 }, this);
         }
     };
-    return (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
+    // ─── Main render ───────────────────────────────────────────────────
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
         children: [
             renderStepper(),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                 gutter: 16,
                 style: {
                     height: 'calc(100vh - 240px)'
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 7,
                         style: {
                             height: '100%'
@@ -5374,21 +5485,21 @@ const KnowledgeBuild = ()=>{
                         children: renderLeftPanel()
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1509,
+                        lineNumber: 1511,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 17,
                         style: {
                             height: '100%',
                             overflow: 'auto'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
-                            title: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            title: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                 children: [
                                     (_STAGES_find = STAGES.find((s)=>s.key === activeStage)) === null || _STAGES_find === void 0 ? void 0 : _STAGES_find.icon,
-                                    (0, _jsxdevruntime.jsxDEV)("span", {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         children: [
                                             (_STAGES_find1 = STAGES.find((s)=>s.key === activeStage)) === null || _STAGES_find1 === void 0 ? void 0 : _STAGES_find1.title,
                                             " - ",
@@ -5396,30 +5507,30 @@ const KnowledgeBuild = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1520,
+                                        lineNumber: 1522,
                                         columnNumber: 17
                                     }, void 0),
-                                    running && activeStage === ((_STAGES_stageIndex = STAGES[stageIndex]) === null || _STAGES_stageIndex === void 0 ? void 0 : _STAGES_stageIndex.key) && (0, _jsxdevruntime.jsxDEV)(_icons.LoadingOutlined, {
+                                    running && activeStage === ((_STAGES_stageIndex = STAGES[stageIndex]) === null || _STAGES_stageIndex === void 0 ? void 0 : _STAGES_stageIndex.key) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.LoadingOutlined, {
                                         spin: true
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1521,
+                                        lineNumber: 1523,
                                         columnNumber: 72
                                     }, void 0)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1518,
+                                lineNumber: 1520,
                                 columnNumber: 15
                             }, void 0),
-                            extra: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            extra: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                 children: [
-                                    buildStatus === 'idle' && (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                    buildStatus === 'idle' && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                         type: "primary",
                                         size: "small",
-                                        icon: (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
+                                        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PlayCircleOutlined, {}, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1527,
+                                            lineNumber: 1529,
                                             columnNumber: 61
                                         }, void 0),
                                         onClick: handleStartBuild,
@@ -5427,25 +5538,25 @@ const KnowledgeBuild = ()=>{
                                         children: "开始构建"
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1527,
+                                        lineNumber: 1529,
                                         columnNumber: 19
                                     }, void 0),
-                                    (buildStatus === 'running' || pipelineRunning) && (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                    (buildStatus === 'running' || pipelineRunning) && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                         danger: true,
                                         size: "small",
-                                        icon: (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
+                                        icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.CloseCircleOutlined, {}, void 0, false, {
                                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                            lineNumber: 1532,
+                                            lineNumber: 1534,
                                             columnNumber: 53
                                         }, void 0),
                                         onClick: handleReset,
                                         children: "取消"
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1532,
+                                        lineNumber: 1534,
                                         columnNumber: 19
                                     }, void 0),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                         size: "small",
                                         onClick: ()=>{
                                             const idx = STAGES.findIndex((s)=>s.key === activeStage);
@@ -5455,10 +5566,10 @@ const KnowledgeBuild = ()=>{
                                         children: "上一阶段"
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1534,
+                                        lineNumber: 1536,
                                         columnNumber: 17
                                     }, void 0),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                         size: "small",
                                         onClick: ()=>{
                                             const idx = STAGES.findIndex((s)=>s.key === activeStage);
@@ -5468,13 +5579,13 @@ const KnowledgeBuild = ()=>{
                                         children: "下一阶段"
                                     }, void 0, false, {
                                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                        lineNumber: 1538,
+                                        lineNumber: 1540,
                                         columnNumber: 17
                                     }, void 0)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                                lineNumber: 1525,
+                                lineNumber: 1527,
                                 columnNumber: 15
                             }, void 0),
                             style: {
@@ -5487,30 +5598,31 @@ const KnowledgeBuild = ()=>{
                             children: renderStageContent()
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeBuild/index.tsx",
-                            lineNumber: 1515,
+                            lineNumber: 1517,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "src/pages/KnowledgeBuild/index.tsx",
-                        lineNumber: 1514,
+                        lineNumber: 1516,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/pages/KnowledgeBuild/index.tsx",
-                lineNumber: 1507,
+                lineNumber: 1509,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/pages/KnowledgeBuild/index.tsx",
-        lineNumber: 1504,
+        lineNumber: 1506,
         columnNumber: 5
     }, this);
 };
-_s(KnowledgeBuild, "tU+cXtShfkV6x4IEdUmdbftf7A8=", false, function() {
+_s(KnowledgeBuild, "8WZ5w1q6F6cmZ3fTqUBr8QVnLHA=", false, function() {
     return [
         _antd.App.useApp,
+        _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,
         _crawlStore.useCrawlStore,

@@ -27,8 +27,8 @@ __mako_require__.e(exports, {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
-var _axios = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/axios/index.js"));
+var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _axios = _interop_require_default._(__mako_require__("node_modules/axios/index.js"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -66,7 +66,21 @@ const sendChatStream = (req, callbacks)=>{
         es.addEventListener('stage', (e)=>{
             try {
                 const data = JSON.parse(e.data);
-                if (data.content && callbacks.onStage) callbacks.onStage(data.content);
+                if (callbacks.onStage) {
+                    if (data.stage_id) callbacks.onStage({
+                        stage_id: data.stage_id,
+                        stage_name: data.stage_name || '',
+                        stage_index: data.stage_index ?? 0,
+                        total_stages: data.total_stages ?? 5,
+                        agent: data.agent || '',
+                        agent_action: data.agent_action || '',
+                        progress: data.progress ?? 0,
+                        timestamp: data.timestamp || Date.now(),
+                        status: data.progress !== undefined && data.progress >= 1.0 ? 'done' : 'running',
+                        trace: data.trace
+                    });
+                    else if (data.content) callbacks.onStage(data.content);
+                }
             } catch (err) {
                 console.error('[SSE] stage parse error:', err);
             }
@@ -107,6 +121,8 @@ const sendChatStream = (req, callbacks)=>{
             } catch  {
                 callbacks.onError('Server analysis error');
             }
+            doneFired = true;
+            es === null || es === void 0 || es.close();
         });
         es.onerror = ()=>{
             if (doneFired || aborted) {
@@ -180,9 +196,15 @@ const sendRiskStream = (req, callbacks)=>{
                                 var _callbacks_onStage;
                                 const { stage, content } = JSON.parse(raw);
                                 (_callbacks_onStage = callbacks.onStage) === null || _callbacks_onStage === void 0 || _callbacks_onStage.call(callbacks, stage, content);
+                            } else if (ev === 'entity_stats') {
+                                var _callbacks_onEntityStats;
+                                (_callbacks_onEntityStats = callbacks.onEntityStats) === null || _callbacks_onEntityStats === void 0 || _callbacks_onEntityStats.call(callbacks, JSON.parse(raw));
                             } else if (ev === 'community') {
                                 var _callbacks_onCommunity;
                                 (_callbacks_onCommunity = callbacks.onCommunity) === null || _callbacks_onCommunity === void 0 || _callbacks_onCommunity.call(callbacks, JSON.parse(raw));
+                            } else if (ev === 'risk_paths') {
+                                var _callbacks_onRiskPaths;
+                                (_callbacks_onRiskPaths = callbacks.onRiskPaths) === null || _callbacks_onRiskPaths === void 0 || _callbacks_onRiskPaths.call(callbacks, JSON.parse(raw));
                             } else if (ev === 'subgraph') {
                                 var _callbacks_onSubgraph;
                                 (_callbacks_onSubgraph = callbacks.onSubgraph) === null || _callbacks_onSubgraph === void 0 || _callbacks_onSubgraph.call(callbacks, JSON.parse(raw));

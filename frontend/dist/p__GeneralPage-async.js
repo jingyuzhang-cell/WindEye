@@ -21,7 +21,7 @@ __mako_require__.e(exports, {
 });
 var _export_star = __mako_require__("@swc/helpers/_/_export_star");
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
-var _g6pc = _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
+var _g6pc = /*#__PURE__*/ _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
 _g6pc.default.version = '4.8.23';
 var _default = _g6pc.default;
 var version = '4.8.23';
@@ -40,13 +40,13 @@ __mako_require__.d(exports, "default", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
 var _procomponents = __mako_require__("node_modules/@ant-design/pro-components/es/index.js");
 var _antd = __mako_require__("node_modules/antd/es/index.js");
-var _react = _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
-var _g6 = _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
+var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _g6 = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
 var _graphConfig = __mako_require__("src/pages/graphConfig.ts");
 var _layouts = __mako_require__("src/pages/KnowledgeGraph/layouts/index.ts");
 var prevRefreshReg;
@@ -58,8 +58,10 @@ self.$RefreshReg$ = (type, id)=>{
 };
 self.$RefreshSig$ = _reactrefresh.createSignatureFunctionForTransform;
 var _s = $RefreshSig$();
-const CANVAS_HEIGHT = 900;
+// 画布配置
+const CANVAS_HEIGHT = 900; // 增加总高度
 const LAYER_GAP = 50;
+// 为不同层分配不同的高度
 const LAYER_HEIGHTS = {
     0: 120,
     1: 300,
@@ -108,6 +110,7 @@ const NODE_TYPE_OPTIONS = Object.keys(NODE_STYLE_CONFIG).filter((k)=>k !== 'Unkn
         label: NODE_STYLE_CONFIG[k].label
     }));
 _c1 = NODE_TYPE_OPTIONS;
+// 辅助函数
 const parseRiskJson = (jsonStr)=>{
     try {
         let fixedStr = jsonStr.trim();
@@ -184,13 +187,13 @@ const drawSwimlanes = (graph, width)=>{
     });
     group.sort();
 };
-const CustomStatistic = ({ title, value })=>(0, _jsxdevruntime.jsxDEV)("div", {
+const CustomStatistic = ({ title, value })=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
         style: {
             padding: '2px 0',
             textAlign: 'center'
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     fontSize: '14px',
                     color: 'rgba(0,0,0,0.65)',
@@ -203,7 +206,7 @@ const CustomStatistic = ({ title, value })=>(0, _jsxdevruntime.jsxDEV)("div", {
                 lineNumber: 90,
                 columnNumber: 5
             }, this),
-            (0, _jsxdevruntime.jsxDEV)("div", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                 style: {
                     fontSize: '24px',
                     fontWeight: '600',
@@ -323,6 +326,7 @@ const GeneralPage = ()=>{
     };
     const loadLayerStatistics = async ()=>{
         try {
+            // Use unified summary-stats endpoint (B1) for total counts
             const response = await fetch('/api/v1/graph/summary-stats');
             const data = await response.json();
             if (data && data.total_nodes !== undefined) setLayerStats({
@@ -335,6 +339,7 @@ const GeneralPage = ()=>{
                     })) : []
             });
         } catch  {
+            // Fallback: use the enhanced /statistics?layer=all (B3)
             try {
                 const response = await fetch('/api/v1/graph/statistics');
                 const data = await response.json();
@@ -410,12 +415,21 @@ const GeneralPage = ()=>{
                 typeKey = labels.includes('COMPANY') ? 'COMPANY' : 'PERSON';
             } else if (labels.includes('Event')) {
                 layerIdx = 1;
+                // 判断是否为TIME节点
                 if (labels.includes('TIME')) typeKey = 'TIME';
                 else {
+                    // 区分主事件和子事件
                     const nodeName = props.name || props.title || '';
                     const nodeType = props.node_type || '';
                     const eventType = props.event_type || '';
-                    if (props.parent_event || nodeName.includes('子事件') || nodeType.includes('子') || eventType.includes('子') || props.is_sub_event === true || props.level === 'sub') typeKey = 'SUB_EVENT';
+                    // 通过多种方式判断是否为子事件
+                    if (props.parent_event || // 有父事件属性
+                    nodeName.includes('子事件') || // 名称包含"子事件"
+                    nodeType.includes('子') || // 节点类型包含"子"
+                    eventType.includes('子') || // 事件类型包含"子"
+                    props.is_sub_event === true || // 明确标记为子事件
+                    props.level === 'sub' // 层级标记为sub
+                    ) typeKey = 'SUB_EVENT';
                     else typeKey = 'EVENT';
                 }
             } else if (labels.includes('Feature')) {
@@ -427,11 +441,16 @@ const GeneralPage = ()=>{
             }
             const finalTypeKey = node.typeKey || typeKey;
             const nodeStyle = NODE_STYLE_CONFIG[finalTypeKey] || NODE_STYLE_CONFIG['Unknown'];
+            // 根据节点类型选择显示的属性
             let nodeName = '未知';
-            if (finalTypeKey === 'TIME') nodeName = props.id || props.time || props.name || '未知时间';
-            else if (finalTypeKey === 'RiskFactor') nodeName = props.e_id || props.factor_nm || props.name || '未知因子';
-            else if (finalTypeKey === 'RiskFeature') nodeName = props.id || props.feature_nm || props.name || '未知特征';
-            else nodeName = props.name || props.COMPANY_NM || props.title || '未知';
+            if (finalTypeKey === 'TIME') // TIME节点显示id属性
+            nodeName = props.id || props.time || props.name || '未知时间';
+            else if (finalTypeKey === 'RiskFactor') // 风险因子显示e_id属性
+            nodeName = props.e_id || props.factor_nm || props.name || '未知因子';
+            else if (finalTypeKey === 'RiskFeature') // 风险特征显示id属性
+            nodeName = props.id || props.feature_nm || props.name || '未知特征';
+            else // 其他节点显示常规属性
+            nodeName = props.name || props.COMPANY_NM || props.title || '未知';
             return {
                 ...node,
                 id: String(node.id),
@@ -603,16 +622,19 @@ const GeneralPage = ()=>{
                 })
             ]
         });
+        // 按层级分组节点
         const layerNodesMap = {};
         processedData.nodes.forEach((node)=>{
             const layer = node.layer || 0;
             if (!layerNodesMap[layer]) layerNodesMap[layer] = [];
             layerNodesMap[layer].push(node);
         });
+        // ─── 位置计算：三阶段统一管线 ──────────────────────────────
         const leftMargin = 150;
         const availableWidth = width - leftMargin * 2;
         const layerCenterX = leftMargin + availableWidth / 2;
         var nodePositions = new Map();
+        // 根据 typeKey 返回 sub-layer Y
         var getAssignedY = function(node) {
             var baseY = 0;
             for(var li = 0; li < (node.layer || 0); li++)baseY += LAYER_HEIGHTS[li] + LAYER_GAP;
@@ -632,6 +654,7 @@ const GeneralPage = ()=>{
                     return baseY + h / 2;
             }
         };
+        // --- Phase 1: 统一分配 Y（typeKey → sub-layer）+ even-spacing X 作为预热起点 ---
         [
             0,
             1,
@@ -648,6 +671,8 @@ const GeneralPage = ()=>{
                 });
             });
         });
+        // --- Phase 2: 逐层质心排序，减少跨层边交叉 ---
+        // 从 Layer 1（事件层，连接最密集）开始，向上下扩散
         var allIdNodes = processedData.nodes.map(function(n) {
             return {
                 id: n.id
@@ -685,6 +710,7 @@ const GeneralPage = ()=>{
                 if (pos) pos.x = total > 1 ? leftMargin + (i + 1) * spacing : layerCenterX;
             });
         });
+        // --- Phase 3: 约束力导向精炼（Y 锁定，X 自由）---
         var forceNodes = processedData.nodes.map(function(n) {
             var pos = nodePositions.get(n.id) || {
                 x: layerCenterX,
@@ -709,6 +735,7 @@ const GeneralPage = ()=>{
             gravity: 0.03,
             maxIterations: 80
         });
+        // 构建最终 nodesWithPosition
         var forcePosMap = new Map();
         forceNodes.forEach(function(n) {
             forcePosMap.set(n.id, {
@@ -741,6 +768,7 @@ const GeneralPage = ()=>{
             setSelectedNode(model);
             setDrawerVisible(true);
         });
+        // Double-click to expand neighbor nodes
         graph.on('node:dblclick', async (evt)=>{
             const item = evt.item;
             const model = item === null || item === void 0 ? void 0 : item.getModel();
@@ -751,6 +779,7 @@ const GeneralPage = ()=>{
                 const response = await fetch(`/api/v1/graph/expand/${nodeId}?depth=1&limit=100`);
                 const result = await response.json();
                 if (result.nodes && result.nodes.length > 0) {
+                    // Merge new nodes and edges with existing graph data
                     const existingNodeIds = new Set(processedData.nodes.map((n)=>n.id));
                     const existingEdgeIds = new Set(processedData.links.map((l)=>l.id));
                     const newNodes = result.nodes.filter((n)=>!existingNodeIds.has(n.id));
@@ -789,15 +818,15 @@ const GeneralPage = ()=>{
     }, [
         processedData
     ]);
-    return (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
         title: "四层知识图谱检索",
         children: [
-            (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                 style: {
                     marginBottom: 16
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                         gutter: [
                             16,
                             0
@@ -808,13 +837,13 @@ const GeneralPage = ()=>{
                             marginBottom: 16
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "1",
                                 style: {
                                     cursor: 'pointer'
                                 },
                                 onClick: ()=>loadFullGraph(),
-                                children: (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
                                     title: filterLayer ? "总节点数（点击取消筛选）" : "总节点数",
                                     value: layerStats.total
                                 }, void 0, false, {
@@ -827,9 +856,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 614,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "0 0 1px",
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         borderLeft: '1px solid #e8e8e8',
                                         height: '40px'
@@ -844,9 +873,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 617,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "1",
-                                children: (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
                                     title: "总关系数",
                                     value: layerStats.total_relationships || 0
                                 }, void 0, false, {
@@ -859,9 +888,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 618,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "0 0 1px",
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         borderLeft: '1px solid #e8e8e8',
                                         height: '40px'
@@ -876,9 +905,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 619,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "1",
-                                children: (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
                                     title: "当前节点数",
                                     value: processedData.nodes.length
                                 }, void 0, false, {
@@ -891,9 +920,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 620,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "0 0 1px",
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         borderLeft: '1px solid #e8e8e8',
                                         height: '40px'
@@ -908,9 +937,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 621,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "1",
-                                children: (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(CustomStatistic, {
                                     title: "当前关系数",
                                     value: processedData.links.length
                                 }, void 0, false, {
@@ -923,9 +952,9 @@ const GeneralPage = ()=>{
                                 lineNumber: 622,
                                 columnNumber: 11
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "0 0 1px",
-                                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         borderLeft: '1px solid #e8e8e8',
                                         height: '40px'
@@ -946,15 +975,15 @@ const GeneralPage = ()=>{
                                     label: layer.label
                                 };
                                 const isActive = filterLayer === layer.type;
-                                return (0, _jsxdevruntime.jsxDEV)(_react.default.Fragment, {
+                                return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_react.default.Fragment, {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                             flex: "1",
                                             style: {
                                                 cursor: 'pointer'
                                             },
                                             onClick: ()=>loadLayerFilter(layer.type),
-                                            children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     padding: '2px 0',
                                                     textAlign: 'center',
@@ -965,7 +994,7 @@ const GeneralPage = ()=>{
                                                     transition: 'all 0.2s'
                                                 },
                                                 children: [
-                                                    (0, _jsxdevruntime.jsxDEV)("div", {
+                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                         style: {
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -973,7 +1002,7 @@ const GeneralPage = ()=>{
                                                             marginBottom: 4
                                                         },
                                                         children: [
-                                                            (0, _jsxdevruntime.jsxDEV)("span", {
+                                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                 style: {
                                                                     width: 10,
                                                                     height: 10,
@@ -987,7 +1016,7 @@ const GeneralPage = ()=>{
                                                                 lineNumber: 640,
                                                                 columnNumber: 23
                                                             }, this),
-                                                            (0, _jsxdevruntime.jsxDEV)("span", {
+                                                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                 style: {
                                                                     fontSize: '14px',
                                                                     color: 'rgba(0,0,0,0.65)',
@@ -1005,7 +1034,7 @@ const GeneralPage = ()=>{
                                                         lineNumber: 639,
                                                         columnNumber: 21
                                                     }, this),
-                                                    (0, _jsxdevruntime.jsxDEV)("div", {
+                                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                         style: {
                                                             fontSize: '24px',
                                                             fontWeight: '600',
@@ -1028,9 +1057,9 @@ const GeneralPage = ()=>{
                                             lineNumber: 629,
                                             columnNumber: 17
                                         }, this),
-                                        index < layerStats.details.length - 1 && (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                        index < layerStats.details.length - 1 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                             flex: "0 0 1px",
-                                            children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     borderLeft: '1px solid #e8e8e8',
                                                     height: '40px'
@@ -1058,14 +1087,14 @@ const GeneralPage = ()=>{
                         lineNumber: 613,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)("div", {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             marginTop: 16,
                             paddingTop: 16,
                             borderTop: '1px solid #f0f0f0'
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     fontSize: 15,
                                     fontWeight: 600,
@@ -1078,7 +1107,7 @@ const GeneralPage = ()=>{
                                 },
                                 onClick: ()=>setShowDetailedStats(!showDetailedStats),
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
                                         style: {
                                             fontSize: 11,
                                             transition: 'transform 0.2s',
@@ -1096,7 +1125,7 @@ const GeneralPage = ()=>{
                                 lineNumber: 653,
                                 columnNumber: 11
                             }, this),
-                            showDetailedStats && (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                            showDetailedStats && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                                 gutter: 12,
                                 children: detailedStats.map((layer)=>{
                                     const layerColors = {
@@ -1111,14 +1140,14 @@ const GeneralPage = ()=>{
                                         'Feature': '#52c41a',
                                         'Regulation': '#722ed1'
                                     };
-                                    const nodeTypesContent = (0, _jsxdevruntime.jsxDEV)("div", {
+                                    const nodeTypesContent = /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         style: {
                                             maxHeight: 150,
                                             overflowY: 'auto',
                                             minWidth: 120,
                                             maxWidth: 200
                                         },
-                                        children: layer.node_types.length > 0 ? layer.node_types.map((type, idx)=>(0, _jsxdevruntime.jsxDEV)("div", {
+                                        children: layer.node_types.length > 0 ? layer.node_types.map((type, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     padding: '6px 12px',
                                                     fontSize: 12,
@@ -1137,7 +1166,7 @@ const GeneralPage = ()=>{
                                                 fileName: "src/pages/GeneralPage.tsx",
                                                 lineNumber: 679,
                                                 columnNumber: 23
-                                            }, this)) : (0, _jsxdevruntime.jsxDEV)("div", {
+                                            }, this)) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 padding: '8px 12px',
                                                 fontSize: 12,
@@ -1155,14 +1184,14 @@ const GeneralPage = ()=>{
                                         lineNumber: 676,
                                         columnNumber: 17
                                     }, this);
-                                    const relTypesContent = (0, _jsxdevruntime.jsxDEV)("div", {
+                                    const relTypesContent = /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                         style: {
                                             maxHeight: 150,
                                             overflowY: 'auto',
                                             minWidth: 120,
                                             maxWidth: 200
                                         },
-                                        children: layer.rel_types.length > 0 ? layer.rel_types.map((type, idx)=>(0, _jsxdevruntime.jsxDEV)("div", {
+                                        children: layer.rel_types.length > 0 ? layer.rel_types.map((type, idx)=>/*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                 style: {
                                                     padding: '6px 12px',
                                                     fontSize: 12,
@@ -1181,7 +1210,7 @@ const GeneralPage = ()=>{
                                                 fileName: "src/pages/GeneralPage.tsx",
                                                 lineNumber: 705,
                                                 columnNumber: 23
-                                            }, this)) : (0, _jsxdevruntime.jsxDEV)("div", {
+                                            }, this)) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 padding: '8px 12px',
                                                 fontSize: 12,
@@ -1199,9 +1228,9 @@ const GeneralPage = ()=>{
                                         lineNumber: 702,
                                         columnNumber: 17
                                     }, this);
-                                    return (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                         span: 6,
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                                             size: "small",
                                             style: {
                                                 background: layerColors[layer.layer_code] || '#fafafa',
@@ -1226,14 +1255,14 @@ const GeneralPage = ()=>{
                                                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
                                             },
                                             children: [
-                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                     style: {
                                                         textAlign: 'center',
                                                         marginBottom: 12,
                                                         paddingBottom: 10,
                                                         borderBottom: `2px solid ${layerBorderColors[layer.layer_code]}`
                                                     },
-                                                    children: (0, _jsxdevruntime.jsxDEV)("div", {
+                                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                         style: {
                                                             fontSize: 16,
                                                             fontWeight: 'bold',
@@ -1250,14 +1279,14 @@ const GeneralPage = ()=>{
                                                     lineNumber: 750,
                                                     columnNumber: 21
                                                 }, this),
-                                                (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                                     direction: "vertical",
                                                     size: 8,
                                                     style: {
                                                         width: '100%'
                                                     },
                                                     children: [
-                                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                             style: {
                                                                 display: 'flex',
                                                                 justifyContent: 'space-between',
@@ -1265,7 +1294,7 @@ const GeneralPage = ()=>{
                                                                 padding: '2px 0'
                                                             },
                                                             children: [
-                                                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                     style: {
                                                                         fontSize: 12,
                                                                         color: 'rgba(0,0,0,0.65)'
@@ -1276,7 +1305,7 @@ const GeneralPage = ()=>{
                                                                     lineNumber: 757,
                                                                     columnNumber: 25
                                                                 }, this),
-                                                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                     style: {
                                                                         fontSize: 20,
                                                                         fontWeight: 'bold',
@@ -1294,7 +1323,7 @@ const GeneralPage = ()=>{
                                                             lineNumber: 756,
                                                             columnNumber: 23
                                                         }, this),
-                                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                             style: {
                                                                 background: 'rgba(255,255,255,0.8)',
                                                                 padding: '6px 8px',
@@ -1305,14 +1334,14 @@ const GeneralPage = ()=>{
                                                                 border: '1px solid rgba(0,0,0,0.04)'
                                                             },
                                                             children: [
-                                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                     style: {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: 6
                                                                     },
                                                                     children: [
-                                                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                             style: {
                                                                                 fontSize: 11,
                                                                                 color: 'rgba(0,0,0,0.6)'
@@ -1323,7 +1352,7 @@ const GeneralPage = ()=>{
                                                                             lineNumber: 771,
                                                                             columnNumber: 27
                                                                         }, this),
-                                                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                             style: {
                                                                                 fontSize: 13,
                                                                                 fontWeight: 'bold',
@@ -1341,7 +1370,7 @@ const GeneralPage = ()=>{
                                                                     lineNumber: 770,
                                                                     columnNumber: 25
                                                                 }, this),
-                                                                (0, _jsxdevruntime.jsxDEV)(_antd.Popover, {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Popover, {
                                                                     content: nodeTypesContent,
                                                                     trigger: "click",
                                                                     placement: "bottomRight",
@@ -1352,7 +1381,7 @@ const GeneralPage = ()=>{
                                                                         padding: 0,
                                                                         borderRadius: 6
                                                                     },
-                                                                    children: (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
+                                                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
                                                                         style: {
                                                                             fontSize: 11,
                                                                             color: layerBorderColors[layer.layer_code],
@@ -1383,7 +1412,7 @@ const GeneralPage = ()=>{
                                                             lineNumber: 761,
                                                             columnNumber: 23
                                                         }, this),
-                                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                             style: {
                                                                 display: 'flex',
                                                                 justifyContent: 'space-between',
@@ -1391,7 +1420,7 @@ const GeneralPage = ()=>{
                                                                 padding: '2px 0'
                                                             },
                                                             children: [
-                                                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                     style: {
                                                                         fontSize: 12,
                                                                         color: 'rgba(0,0,0,0.65)'
@@ -1402,7 +1431,7 @@ const GeneralPage = ()=>{
                                                                     lineNumber: 801,
                                                                     columnNumber: 25
                                                                 }, this),
-                                                                (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                     style: {
                                                                         fontSize: 20,
                                                                         fontWeight: 'bold',
@@ -1420,7 +1449,7 @@ const GeneralPage = ()=>{
                                                             lineNumber: 800,
                                                             columnNumber: 23
                                                         }, this),
-                                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                             style: {
                                                                 background: 'rgba(255,255,255,0.8)',
                                                                 padding: '6px 8px',
@@ -1431,14 +1460,14 @@ const GeneralPage = ()=>{
                                                                 border: '1px solid rgba(0,0,0,0.04)'
                                                             },
                                                             children: [
-                                                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                                                     style: {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: 6
                                                                     },
                                                                     children: [
-                                                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                             style: {
                                                                                 fontSize: 11,
                                                                                 color: 'rgba(0,0,0,0.6)'
@@ -1449,7 +1478,7 @@ const GeneralPage = ()=>{
                                                                             lineNumber: 815,
                                                                             columnNumber: 27
                                                                         }, this),
-                                                                        (0, _jsxdevruntime.jsxDEV)("span", {
+                                                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                                                             style: {
                                                                                 fontSize: 13,
                                                                                 fontWeight: 'bold',
@@ -1467,7 +1496,7 @@ const GeneralPage = ()=>{
                                                                     lineNumber: 814,
                                                                     columnNumber: 25
                                                                 }, this),
-                                                                (0, _jsxdevruntime.jsxDEV)(_antd.Popover, {
+                                                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Popover, {
                                                                     content: relTypesContent,
                                                                     trigger: "click",
                                                                     placement: "bottomRight",
@@ -1478,7 +1507,7 @@ const GeneralPage = ()=>{
                                                                         padding: 0,
                                                                         borderRadius: 6
                                                                     },
-                                                                    children: (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
+                                                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.DownOutlined, {
                                                                         style: {
                                                                             fontSize: 11,
                                                                             color: layerBorderColors[layer.layer_code],
@@ -1544,27 +1573,27 @@ const GeneralPage = ()=>{
                 lineNumber: 612,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                 style: {
                     marginBottom: 16
                 },
-                children: (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
                     form: form,
                     layout: "vertical",
                     onFinish: handleSearch,
-                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                         gutter: 16,
                         align: "bottom",
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 flex: "1",
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                     label: "按节点名称查询",
                                     name: "keyword",
                                     style: {
                                         marginBottom: 0
                                     },
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Input, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Input, {
                                         placeholder: "输入任意节点名称（支持所有层级节点）",
                                         style: {
                                             height: 40
@@ -1584,18 +1613,18 @@ const GeneralPage = ()=>{
                                 lineNumber: 856,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 style: {
                                     width: 160
                                 },
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                     label: "检索层级",
                                     name: "searchLayer",
                                     style: {
                                         marginBottom: 0
                                     },
                                     initialValue: "all",
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                                         options: [
                                             {
                                                 value: 'all',
@@ -1636,18 +1665,18 @@ const GeneralPage = ()=>{
                                 lineNumber: 861,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                                 style: {
                                     width: 140
                                 },
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                                     label: "穿透深度",
                                     name: "layers",
                                     style: {
                                         marginBottom: 0
                                     },
                                     initialValue: 1,
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                                         options: [
                                             {
                                                 value: 1,
@@ -1684,12 +1713,12 @@ const GeneralPage = ()=>{
                                 lineNumber: 872,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                             type: "primary",
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/GeneralPage.tsx",
                                                 lineNumber: 879,
                                                 columnNumber: 46
@@ -1704,8 +1733,8 @@ const GeneralPage = ()=>{
                                             lineNumber: 879,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/GeneralPage.tsx",
                                                 lineNumber: 880,
                                                 columnNumber: 31
@@ -1723,10 +1752,10 @@ const GeneralPage = ()=>{
                                             lineNumber: 880,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                             title: "导出图谱PNG",
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.PictureOutlined, {}, void 0, false, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PictureOutlined, {}, void 0, false, {
                                                     fileName: "src/pages/GeneralPage.tsx",
                                                     lineNumber: 881,
                                                     columnNumber: 56
@@ -1745,10 +1774,10 @@ const GeneralPage = ()=>{
                                             lineNumber: 881,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                             title: "导出统计CSV",
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.FileExcelOutlined, {}, void 0, false, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.FileExcelOutlined, {}, void 0, false, {
                                                     fileName: "src/pages/GeneralPage.tsx",
                                                     lineNumber: 882,
                                                     columnNumber: 56
@@ -1794,20 +1823,20 @@ const GeneralPage = ()=>{
                 lineNumber: 853,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                 styles: {
                     body: {
                         padding: 0
                     }
                 },
-                children: (0, _jsxdevruntime.jsxDEV)("div", {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                     style: {
                         background: '#fff',
                         height: CANVAS_HEIGHT,
                         position: 'relative'
                     },
                     children: [
-                        loading && (0, _jsxdevruntime.jsxDEV)("div", {
+                        loading && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 position: 'absolute',
                                 top: 0,
@@ -1820,7 +1849,7 @@ const GeneralPage = ()=>{
                                 zIndex: 100,
                                 background: 'rgba(255,255,255,0.7)'
                             },
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
                                 size: "large",
                                 tip: "加载图谱数据..."
                             }, void 0, false, {
@@ -1833,20 +1862,20 @@ const GeneralPage = ()=>{
                             lineNumber: 892,
                             columnNumber: 13
                         }, this),
-                        !loading && processedData.nodes.length === 0 ? (0, _jsxdevruntime.jsxDEV)("div", {
+                        !loading && processedData.nodes.length === 0 ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '100%'
                             },
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                                 description: "暂无图谱数据",
                                 image: _antd.Empty.PRESENTED_IMAGE_SIMPLE,
-                                children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                     type: "primary",
                                     onClick: loadFullGraph,
-                                    icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                                    icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                         fileName: "src/pages/GeneralPage.tsx",
                                         lineNumber: 899,
                                         columnNumber: 70
@@ -1866,7 +1895,7 @@ const GeneralPage = ()=>{
                             fileName: "src/pages/GeneralPage.tsx",
                             lineNumber: 897,
                             columnNumber: 13
-                        }, this) : (0, _jsxdevruntime.jsxDEV)("div", {
+                        }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             ref: containerRef,
                             style: {
                                 width: '100%',
@@ -1889,25 +1918,25 @@ const GeneralPage = ()=>{
                 lineNumber: 889,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
                 title: "节点详情",
                 width: 380,
                 onClose: ()=>setDrawerVisible(false),
                 open: drawerVisible,
-                children: selectedNode ? (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                children: selectedNode ? /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                     direction: "vertical",
                     style: {
                         width: '100%'
                     },
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)("div", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
                                 marginBottom: 16
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     style: {
                                         width: 48,
                                         height: 48,
@@ -1927,9 +1956,9 @@ const GeneralPage = ()=>{
                                     lineNumber: 912,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)("div", {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                     children: [
-                                        (0, _jsxdevruntime.jsxDEV)("h3", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("h3", {
                                             style: {
                                                 margin: 0,
                                                 fontSize: 18
@@ -1940,7 +1969,7 @@ const GeneralPage = ()=>{
                                             lineNumber: 916,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: selectedNode.color,
                                             children: selectedNode.levelName
                                         }, void 0, false, {
@@ -1948,13 +1977,13 @@ const GeneralPage = ()=>{
                                             lineNumber: 917,
                                             columnNumber: 17
                                         }, this),
-                                        (0, _jsxdevruntime.jsxDEV)("div", {
+                                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                             style: {
                                                 marginTop: 12
                                             },
-                                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                                 type: "primary",
-                                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {}, void 0, false, {
+                                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {}, void 0, false, {
                                                     fileName: "src/pages/GeneralPage.tsx",
                                                     lineNumber: 921,
                                                     columnNumber: 27
@@ -2022,7 +2051,7 @@ const GeneralPage = ()=>{
                             lineNumber: 911,
                             columnNumber: 13
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                             column: 1,
                             bordered: true,
                             size: "small",
@@ -2030,12 +2059,14 @@ const GeneralPage = ()=>{
                                 var _PROPERTY_MAP_key;
                                 const val = selectedNode.properties[key];
                                 if (!val || val === null || val === undefined) return null;
+                                // 格式化属性名称
                                 const label = ((_PROPERTY_MAP_key = PROPERTY_MAP[key]) === null || _PROPERTY_MAP_key === void 0 ? void 0 : _PROPERTY_MAP_key.label) || key;
+                                // 格式化值
                                 let displayValue = String(val);
                                 if (typeof val === 'object') displayValue = JSON.stringify(val, null, 2);
-                                return (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: label,
-                                    children: (0, _jsxdevruntime.jsxDEV)("span", {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                                         style: {
                                             wordBreak: 'break-all'
                                         },
@@ -2061,7 +2092,7 @@ const GeneralPage = ()=>{
                     fileName: "src/pages/GeneralPage.tsx",
                     lineNumber: 910,
                     columnNumber: 11
-                }, this) : (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {}, void 0, false, {
+                }, this) : /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {}, void 0, false, {
                     fileName: "src/pages/GeneralPage.tsx",
                     lineNumber: 982,
                     columnNumber: 13
@@ -2134,7 +2165,7 @@ __mako_require__.d(exports, "barycenterSort", {
     }
 });
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -2224,7 +2255,7 @@ __mako_require__.d(exports, "constrainedForceLayout", {
     }
 });
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -2254,6 +2285,7 @@ function constrainedForceLayout(nodes, edges, layerCenterX, options = {}) {
     });
     for(var iter = 0; iter < maxIterations; iter++){
         var totalMovement = 0;
+        // N-body repulsion (O(n^2) — acceptable for < 200 nodes)
         for(var i = 0; i < nodes.length; i++)for(var j = i + 1; j < nodes.length; j++){
             var dx = nodes[j].x - nodes[i].x;
             var dy = nodes[j].assignedY - nodes[i].assignedY;
@@ -2263,6 +2295,7 @@ function constrainedForceLayout(nodes, edges, layerCenterX, options = {}) {
             nodes[i].x -= fx;
             nodes[j].x += fx;
         }
+        // Spring attraction along edges
         edgePairs.forEach(function(pair) {
             var dx = pair.target.x - pair.source.x;
             var dist = Math.max(Math.abs(dx), 1);
@@ -2270,6 +2303,7 @@ function constrainedForceLayout(nodes, edges, layerCenterX, options = {}) {
             pair.source.x += force * Math.sign(dx);
             pair.target.x -= force * Math.sign(dx);
         });
+        // Y constraint + center gravity
         nodes.forEach(function(n) {
             n.y = n.assignedY;
             var dx = layerCenterX - n.x;
@@ -2322,7 +2356,7 @@ __mako_require__.e(exports, {
     }
 });
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _barycenterSort = __mako_require__("src/pages/KnowledgeGraph/layouts/barycenterSort.ts");
 var _constrainedForce = __mako_require__("src/pages/KnowledgeGraph/layouts/constrainedForce.ts");
 var prevRefreshReg;

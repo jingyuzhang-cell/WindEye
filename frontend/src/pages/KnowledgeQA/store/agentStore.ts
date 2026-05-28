@@ -9,20 +9,21 @@ import type {
   RecommendationItem,
   RiskReport,
   RiskStage,
-  CommunityInfo,
+  CommunityResult,
+  PipelineStage,
 } from '../types/api'
 import { sendChatStream, sendRiskStream } from '../api/agent'
 
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-type RouteDecision = 'graph' | 'analysis' | 'clarify' | 'risk'
-type RightPanelMode = 'graph' | 'analysis' | 'risk'
+type RouteDecision = 'graph' | 'clarify' | 'risk'
+type RightPanelMode = 'graph' | 'risk'
 
-interface AnalysisResult {
-  analysis_text: string
-  echarts_config: any
-  raw_data: any[]
-  row_count?: number
+interface UploadedFileInfo {
+  filename: string
+  text: string
+  char_count: number
+  truncated: boolean
 }
 
 interface AgentStore {
@@ -37,17 +38,23 @@ interface AgentStore {
   pendingRecommendations: RecommendationItem[] | null
   clarifyMessage: string | null
   currentRoute: RouteDecision | null
-  analysisQuery: string | null
-  analysisResult: AnalysisResult | null
   activeRightPanel: RightPanelMode
 
   // Risk Report state
   riskReport: RiskReport | null
   riskStages: RiskStage[]
-  riskCommunity: CommunityInfo | null
+  riskCommunity: CommunityResult | null
 
+  // File upload state
+  uploadedFile: UploadedFileInfo | null
+  fileUploading: boolean
+
+  lastRiskQuery: string
   sendMessage: (query: string, rewrittenQuery?: string) => Promise<void>
   sendRiskQuery: (query: string, communityId?: number) => Promise<void>
+  retryRiskQuery: () => Promise<void>
+  uploadFile: (file: File) => Promise<void>
+  clearUploadedFile: () => void
   clearHistory: () => void
   setError: (error: string | null) => void
   clearRoute: () => void
@@ -65,19 +72,27 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   pendingRecommendations: null,
   clarifyMessage: null,
   currentRoute: null,
-  analysisQuery: null,
-  analysisResult: null,
   activeRightPanel: 'graph',
 
   riskReport: null,
   riskStages: [],
   riskCommunity: null,
 
+  uploadedFile: null,
+  fileUploading: false,
+
+  lastRiskQuery: '',
+
   sendMessage: async (query: string, rewrittenQuery?: string) => {
     if (get().isLoading) return
-    const { sessionId, roundId, messages } = get()
+    const { sessionId, roundId, messages, uploadedFile } = get()
     set({ roundId: roundId + 1 })
-    const backendQuery = rewrittenQuery || query
+    let backendQuery = rewrittenQuery || query
+
+    // Prepend uploaded file content to query
+    if (uploadedFile) {
+      backendQuery = `[上传文件: ${uploadedFile.filename}]\n文件内容:\n${uploadedFile.text}\n\n问题: ${backendQuery}`
+    }
 
     const userMsg: ChatMessage = {
       id: `user_${Date.now()}`,
@@ -87,10 +102,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     }
 
     const tempId = `asst_${Date.now()}`
-    const initialThinkingProcess: string[] = []
-    if (rewrittenQuery && rewrittenQuery !== query) {
-      initialThinkingProcess.push(`BFF intent recognition: optimized query to "${rewrittenQuery}"`)
-    }
 
     const assistantMsg: ChatMessage = {
       id: tempId,
@@ -98,7 +109,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       content: '',
       timestamp: Date.now(),
       isLoading: true,
-      thinkingProcess: initialThinkingProcess,
     }
 
     set((state) => ({
@@ -150,152 +160,13 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         riskCommunity: null,
         isLoading: true,
         currentSubgraph: null,
-        analysisResult: null,
       })
 
       await get().sendRiskQuery(backendQuery)
       return
     }
 
-    // Step 3: Analysis pipeline
-    if (route === 'analysis') {
-      set({
-        currentRoute: 'analysis',
-        activeRightPanel: 'analysis',
-        analysisQuery: backendQuery,
-        isLoading: true,
-        currentSubgraph: null,
-        analysisResult: null,
-      })
-
-      const maxRetries = 3
-      let retryCount = 0
-      let success = false
-
-      while (retryCount < maxRetries && !success) {
-        if (retryCount > 0) {
-          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 8000)
-          set((state) => ({
-            messages: state.messages.map((m) =>
-              m.id === tempId
-                ? { ...m, thinkingStatus: `连接中断，${delay / 1000}s 后重试 (${retryCount}/${maxRetries})...` }
-                : m
-            ),
-          }))
-          await new Promise((r) => setTimeout(r, delay))
-        }
-
-        try {
-          const resp = await fetch('/api/v1/chat/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: backendQuery }),
-          })
-
-          if (!resp.ok) throw new Error(`Analysis failed: ${resp.status}`)
-
-          const reader = resp.body?.getReader()
-          if (!reader) throw new Error('No reader available')
-
-          const decoder = new TextDecoder()
-          let buffer = ''
-          let pendingEvent: string | null = null
-          let accumulatedText = ''
-          let finalConfig = null
-          let finalData: any[] = []
-          let rowCount = 0
-          success = true
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() ?? ''
-
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed) continue
-
-              if (trimmed.startsWith('event:')) {
-                pendingEvent = trimmed.slice(6).trim()
-              } else if (trimmed.startsWith('data:')) {
-                const raw = trimmed.slice(5).trim()
-                const ev = pendingEvent
-                pendingEvent = null
-                if (!ev || !raw) continue
-
-                try {
-                  if (ev === 'stage') {
-                    const { content } = JSON.parse(raw)
-                    set((state) => ({
-                      messages: state.messages.map((m) =>
-                        m.id === tempId
-                          ? {
-                              ...m,
-                              thinkingStatus: content,
-                              thinkingProcess: [...(m.thinkingProcess || []), content],
-                            }
-                          : m
-                      ),
-                    }))
-                  } else if (ev === 'analysis_text') {
-                    const { chunk } = JSON.parse(raw)
-                    accumulatedText += chunk
-                    set((state) => ({
-                      messages: state.messages.map((m) =>
-                        m.id === tempId ? { ...m, content: accumulatedText } : m
-                      ),
-                    }))
-                  } else if (ev === 'echarts_config') {
-                    finalConfig = JSON.parse(raw)
-                  } else if (ev === 'raw_data') {
-                    finalData = JSON.parse(raw)
-                  } else if (ev === 'done') {
-                    const meta = JSON.parse(raw)
-                    rowCount = meta.row_count || 0
-                  } else if (ev === 'error') {
-                    const { error: errMsg } = JSON.parse(raw)
-                    throw new Error(errMsg || 'Analysis error')
-                  }
-                } catch (e) {
-                  console.error('[Store] Parse error in analysis stream:', e, raw)
-                }
-              }
-            }
-          }
-
-          set((state) => ({
-            analysisResult: {
-              analysis_text: accumulatedText,
-              echarts_config: finalConfig,
-              raw_data: finalData,
-              row_count: rowCount,
-            },
-            messages: state.messages.map((m) =>
-              m.id === tempId ? { ...m, isLoading: false, thinkingStatus: undefined } : m
-            ),
-            isLoading: false,
-          }))
-        } catch (err: any) {
-          retryCount++
-          console.error(`[Store] Analysis attempt ${retryCount} failed:`, err)
-          if (retryCount >= maxRetries) {
-            set((state) => ({
-              isLoading: false,
-              error: err.message,
-              messages: state.messages.map((m) =>
-                m.id === tempId ? { ...m, content: `Analysis failed after ${maxRetries} attempts: ${err.message}` } : m
-              ),
-            }))
-          }
-        }
-      }
-      return
-    }
-
-    // Step 4: Graph / recommend pipeline
+    // Step 3: Graph / recommend pipeline
     set({ activeRightPanel: 'graph' })
     const history = messages
       .filter((m) => m.role === 'user')
@@ -304,18 +175,48 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const cleanup = sendChatStream(
       { query: backendQuery, history, sessionId, roundId: roundId + 1 },
       {
-        onStage: (content) => {
-          set((state) => ({
-            messages: state.messages.map((m) =>
-              m.id === tempId
-                ? {
-                    ...m,
-                    thinkingStatus: content,
-                    thinkingProcess: [...(m.thinkingProcess || []), content],
-                  }
-                : m
-            ),
-          }))
+        onStage: (stage) => {
+          set((state) => {
+            const isStructured = typeof stage !== 'string'
+            const stageObj = isStructured ? (stage as PipelineStage) : null
+            const contentStr = isStructured
+              ? `[${stageObj!.stage_name}] ${stageObj!.agent_action}`
+              : (stage as string)
+
+            return {
+              messages: state.messages.map((m) =>
+                m.id === tempId
+                  ? {
+                      ...m,
+                      thinkingStatus: contentStr,
+                      pipelineStages: isStructured
+                        ? (() => {
+                            const prev = m.pipelineStages || []
+                            const idx = prev.findIndex(
+                              (ps) => ps.stage_id === stageObj!.stage_id
+                            )
+                            if (idx >= 0) {
+                              const updated = [...prev]
+                              updated[idx] = {
+                                ...stageObj!,
+                                status: stageObj!.progress >= 1.0 ? 'done' : ('running' as const),
+                              }
+                              return updated
+                            }
+                            return [
+                              ...prev,
+                              {
+                                ...stageObj!,
+                                status: stageObj!.progress >= 1.0 ? 'done' : ('running' as const),
+                              },
+                            ]
+                          })()
+                        : m.pipelineStages,
+                    }
+                  : m
+              ),
+            }
+          })
         },
 
         onCards: (cards) => {
@@ -394,6 +295,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
   sendRiskQuery: async (query: string, communityId?: number) => {
     const { sessionId, roundId } = get()
+    set({ lastRiskQuery: query })
     const tempId = `asst_${Date.now()}`
 
     const assistantMsg: ChatMessage = {
@@ -402,7 +304,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       content: '',
       timestamp: Date.now(),
       isLoading: true,
-      thinkingProcess: ['Risk Report: starting 5-agent pipeline...'],
     }
 
     set((state) => ({
@@ -425,7 +326,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 ? {
                     ...m,
                     thinkingStatus: content,
-                    thinkingProcess: [...(m.thinkingProcess || []), `[${stage}] ${content}`],
                   }
                 : m
             ),
@@ -433,7 +333,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         },
 
         onCommunity: (info) => {
-          set({ riskCommunity: info as CommunityInfo })
+          set({ riskCommunity: info as CommunityResult })
         },
 
         onSubgraph: (graph) => {
@@ -486,6 +386,13 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     )
   },
 
+  retryRiskQuery: async () => {
+    const { lastRiskQuery } = get()
+    if (lastRiskQuery) {
+      await get().sendRiskQuery(lastRiskQuery)
+    }
+  },
+
   clearHistory: () => {
     set({
       messages: [],
@@ -498,16 +405,48 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       pendingRecommendations: null,
       clarifyMessage: null,
       currentRoute: null,
-      analysisQuery: null,
-      analysisResult: null,
       riskReport: null,
       riskStages: [],
       riskCommunity: null,
       activeRightPanel: 'graph',
+      uploadedFile: null,
+      fileUploading: false,
+      lastRiskQuery: '',
     })
   },
 
+  uploadFile: async (file: File) => {
+    const MAX_SIZE = 10 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      set({ error: '文件过大（最大 10MB）', fileUploading: false })
+      return
+    }
+
+    set({ fileUploading: true, error: null })
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const resp = await fetch('/api/v1/chat/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await resp.json()
+      if (result.success) {
+        set({ uploadedFile: result.data, fileUploading: false })
+      } else {
+        set({ error: result.message || '文件上传失败', fileUploading: false })
+      }
+    } catch (err: any) {
+      set({ error: err.message || '文件上传失败', fileUploading: false })
+    }
+  },
+
+  clearUploadedFile: () => set({ uploadedFile: null }),
+
   setError: (error: string | null) => set({ error }),
 
-  clearRoute: () => set({ currentRoute: null, currentSubgraph: null, analysisQuery: null }),
+  clearRoute: () => set({ currentRoute: null, currentSubgraph: null }),
 }))

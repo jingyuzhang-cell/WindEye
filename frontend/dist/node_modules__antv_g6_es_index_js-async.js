@@ -21,7 +21,7 @@ __mako_require__.e(exports, {
 });
 var _export_star = __mako_require__("@swc/helpers/_/_export_star");
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
-var _g6pc = _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
+var _g6pc = /*#__PURE__*/ _interop_require_default._(_export_star._(__mako_require__("node_modules/@antv/g6-pc/es/index.js"), exports));
 _g6pc.default.version = '4.8.23';
 var _default = _g6pc.default;
 var version = '4.8.23';

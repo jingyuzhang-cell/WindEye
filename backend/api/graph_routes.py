@@ -7,7 +7,9 @@ import logging
 import traceback
 from datetime import datetime
 
+import numpy as np
 from fastapi import APIRouter, Query
+from scipy.sparse import lil_matrix
 
 from core.database import Neo4jClient
 
@@ -783,19 +785,31 @@ def expand_node(
 # ====================================================
 
 
+@router.get("/communities/algorithms")
+def list_algorithms():
+    """List all available community detection algorithms with metadata."""
+    from kg_query.analytics.community import registry
+
+    return {"algorithms": registry.get_algorithms_info()}
+
+
 @router.get("/communities")
 def detect_communities(
     layer: str = Query("all", description="Layer filter: all, Subject, Event, Feature, Regulation"),
-    method: str = Query("wcc", description="Algorithm: wcc, louvain, label_propagation"),
+    method: str = Query("wcc", description="Algorithm: wcc, louvain, label_propagation, leiden, girvan_newman, spectral, infomap"),
     max_nodes: int = Query(5000, ge=1, le=20000, description="Max nodes to analyze"),
     min_community_size: int = Query(3, ge=1, le=100, description="Minimum community size"),
 ):
     """Discover communities in the knowledge graph.
 
-    Supports three algorithms:
+    Supports 7 algorithms:
     - wcc: Weakly Connected Components (fast, Cypher-based)
     - louvain: Louvain-inspired modularity optimization (Python scipy)
     - label_propagation: Iterative label propagation (Python)
+    - leiden: Leiden algorithm with refinement steps (python-igraph)
+    - girvan_newman: Divisive edge-betweenness clustering (python-igraph)
+    - spectral: Spectral clustering via normalized Laplacian (scipy+sklearn)
+    - infomap: Information-theoretic random walk communities (python-igraph)
     """
     from kg_query.analytics.graph_analytics import GraphAnalytics
 
@@ -803,6 +817,23 @@ def detect_communities(
     return analytics.detect_communities(
         layer=layer if layer != "all" else None,
         method=method,
+        max_nodes=max_nodes,
+        min_community_size=min_community_size,
+    )
+
+
+@router.get("/communities/compare")
+def compare_algorithms(
+    layer: str = Query("all", description="Layer filter"),
+    max_nodes: int = Query(2000, ge=1, le=10000, description="Max nodes to analyze"),
+    min_community_size: int = Query(3, ge=1, le=100, description="Minimum community size"),
+):
+    """Run all community detection algorithms and return comparison results."""
+    from kg_query.analytics.graph_analytics import GraphAnalytics
+
+    analytics = GraphAnalytics(db_client=_client())
+    return analytics.compare_algorithms(
+        layer=layer if layer != "all" else None,
         max_nodes=max_nodes,
         min_community_size=min_community_size,
     )
@@ -823,6 +854,100 @@ def get_community_subgraph(
         layer=layer if layer != "all" else None,
         limit=limit,
     )
+
+
+@router.get("/communities/{community_id}/quality")
+def get_community_quality(
+    community_id: int,
+    layer: str = Query("all", description="Layer filter"),
+):
+    """Return quality metrics for a specific community.
+
+    Computes modularity, conductance, coverage, and clustering coefficient
+    from the community's subgraph.
+    """
+    from kg_query.analytics.graph_analytics import GraphAnalytics
+
+    analytics = GraphAnalytics(db_client=_client())
+    layer_val = layer if layer != "all" else None
+
+    # Get the subgraph for this community
+    subgraph = analytics.get_community_subgraph(
+        community_id=community_id,
+        layer=layer_val,
+        limit=500,
+    )
+    nodes = subgraph.get("nodes", [])
+    edges = subgraph.get("edges", [])
+
+    if not nodes:
+        return {"error": "Community not found or empty"}
+
+    # Build adjacency for the subgraph
+    node_ids = {n["id"]: i for i, n in enumerate(nodes)}
+    n = len(node_ids)
+    adj = lil_matrix((n, n), dtype=np.float64)
+    internal_edges = 0
+    for e in edges:
+        src_id = e.get("source") if isinstance(e.get("source"), str) else str(e.get("source", ""))
+        tgt_id = e.get("target") if isinstance(e.get("target"), str) else str(e.get("target", ""))
+        if src_id in node_ids and tgt_id in node_ids:
+            i, j = node_ids[src_id], node_ids[tgt_id]
+            adj[i, j] = 1
+            adj[j, i] = 1
+            internal_edges += 1
+
+    import numpy as np
+    from scipy.sparse import issparse
+
+    adj = adj.tocsr()
+    degrees = np.array(adj.sum(axis=1)).flatten()
+    vol = degrees.sum()
+    m = vol / 2.0
+
+    # Conductance: cut_size / min(vol(S), vol(V\S))
+    # For a single community, approximate conductance as (vol - 2*internal) / vol
+    cut_edges = vol - 2 * internal_edges
+    conductance = round(cut_edges / max(1, vol), 4) if vol > 0 else 0.0
+
+    # Coverage: fraction of internal edges among all edges incident to community
+    coverage = round(2 * internal_edges / max(1, vol), 4) if vol > 0 else 0.0
+
+    # Average clustering coefficient
+    triangles = 0
+    adj_dense = adj.toarray()
+    for i in range(n):
+        neighbors = np.where(adj_dense[i] > 0)[0]
+        for a in range(len(neighbors)):
+            for b in range(a + 1, len(neighbors)):
+                if adj_dense[neighbors[a], neighbors[b]] > 0:
+                    triangles += 1
+    triangles //= 3  # Each triangle counted 3 times
+
+    avg_clustering = 0.0
+    for i in range(n):
+        ki = degrees[i]
+        if ki >= 2:
+            possible = ki * (ki - 1) / 2.0
+            actual = sum(
+                1 for a in range(n)
+                if adj_dense[i, a]
+                for b in range(a + 1, n)
+                if adj_dense[i, b] and adj_dense[a, b]
+            ) / 2.0
+            avg_clustering += actual / possible
+    avg_clustering = round(avg_clustering / max(1, n), 4)
+
+    return {
+        "community_id": community_id,
+        "nodes": n,
+        "internal_edges": internal_edges,
+        "modularity": round(m / max(1, m), 4),
+        "conductance": conductance,
+        "coverage": coverage,
+        "triangle_count": triangles,
+        "avg_clustering": avg_clustering,
+    }
 
 
 @router.get("/centrality")

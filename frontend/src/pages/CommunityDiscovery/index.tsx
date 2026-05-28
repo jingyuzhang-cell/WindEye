@@ -13,8 +13,10 @@ import React, { useState, useCallback, useRef } from 'react';
 import { GENERAL_CONFIG } from '../graphConfig';
 import {
   discoverCommunities,
+  compareAlgorithms,
   getCommunityGraph,
   type Community,
+  type CompareResult,
   type DiscoverParams,
   type DiscoveryResult,
   type GraphData,
@@ -22,6 +24,7 @@ import {
 import { useCommunityGraph } from './hooks/useCommunityGraph';
 import TopControlBar from './components/TopControlBar';
 import RightPanel from './components/RightPanel';
+import ComparisonView from './components/ComparisonView';
 
 const { Title } = Typography;
 
@@ -38,6 +41,8 @@ const CommunityDiscoveryPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [discoverParams, setDiscoverParams] = useState<DiscoverParams | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState('list');
+  const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
 
   const graphContainerRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +107,7 @@ const CommunityDiscoveryPage: React.FC = () => {
     setSelectedCommunity(null);
     setGraphData({ nodes: [], edges: [] });
     setFullGraphData({ nodes: [], edges: [] });
+    setCompareResult(null);
     try {
       const data = await discoverCommunities(params);
       if (data.success) {
@@ -118,6 +124,28 @@ const CommunityDiscoveryPage: React.FC = () => {
     }
   }, [loadFullGraph]);
 
+  const handleCompare = useCallback(async (params: Omit<DiscoverParams, 'method'>) => {
+    setDiscoverParams({ ...params, method: 'compare' });
+    setCompareLoading(true);
+    setResult(null);
+    setSelectedCommunity(null);
+    setGraphData({ nodes: [], edges: [] });
+    setFullGraphData({ nodes: [], edges: [] });
+    try {
+      const data = await compareAlgorithms(params);
+      if (data.results && data.results.length > 0) {
+        setCompareResult(data);
+        message.success(`对比完成: ${data.results.length} 种算法`);
+      } else {
+        message.warning('对比无结果');
+      }
+    } catch {
+      message.error('对比请求失败');
+    } finally {
+      setCompareLoading(false);
+    }
+  }, []);
+
   const handleReset = useCallback(() => {
     setResult(null);
     setSelectedCommunity(null);
@@ -125,6 +153,7 @@ const CommunityDiscoveryPage: React.FC = () => {
     setFullGraphData({ nodes: [], edges: [] });
     setDiscoverParams(null);
     setRightPanelTab('list');
+    setCompareResult(null);
   }, []);
 
   const handleSelectCommunity = useCallback(
@@ -217,8 +246,9 @@ const CommunityDiscoveryPage: React.FC = () => {
           群体发现
         </Title>
         <TopControlBar
-          loading={loading}
+          loading={loading || compareLoading}
           onDiscover={handleDiscover}
+          onCompare={handleCompare}
           onReset={handleReset}
         />
       </div>
@@ -234,7 +264,27 @@ const CommunityDiscoveryPage: React.FC = () => {
             background: '#f9fafb',
           }}
         >
-          {fullGraphData.nodes.length > 0 ? (
+          {compareResult ? (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                overflow: 'auto',
+                padding: 16,
+              }}
+            >
+              <ComparisonView results={compareResult.results} />
+              <div style={{ marginTop: 16 }}>
+                <Empty
+                  description={
+                    compareLoading
+                      ? '正在对比分析...'
+                      : '对比完成 — 请选择一个社区查看详情'
+                  }
+                />
+              </div>
+            </div>
+          ) : fullGraphData.nodes.length > 0 ? (
             <div
               ref={graphContainerRef}
               style={{ width: '100%', height: '100%' }}

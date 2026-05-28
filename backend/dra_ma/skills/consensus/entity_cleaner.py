@@ -58,6 +58,8 @@ INTENT_TYPE_TO_LAYER: Dict[str, str] = {
     "individual": "Subject",
     "people": "Subject",
     "event": "Event",
+    "risk_event": "Event",
+    "risk event": "Event",
     "incident": "Event",
     "time": "Event",
     "risk": "Feature",

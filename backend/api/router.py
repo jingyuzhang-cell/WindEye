@@ -233,6 +233,12 @@ def create_routes(app, kg_system, risk_engine=None):
                         stage_name = update["stage"]
                         content = update.get("content", "")
                         yield f"event: stage\ndata: {_json.dumps({'stage': stage_name, 'content': content}, ensure_ascii=False)}\n\n"
+                    elif "entity_stats" in update:
+                        yield f"event: entity_stats\ndata: {_json.dumps(update['entity_stats'], ensure_ascii=False)}\n\n"
+                    elif "community" in update:
+                        yield f"event: community\ndata: {_json.dumps(update['community'], ensure_ascii=False)}\n\n"
+                    elif "risk_paths" in update:
+                        yield f"event: risk_paths\ndata: {_json.dumps(update['risk_paths'], ensure_ascii=False)}\n\n"
                     elif "output" in update:
                         output = update['output']
                         yield f"event: analysis_text\ndata: {_json.dumps({'chunk': output.get('markdown_report', '')}, ensure_ascii=False)}\n\n"
@@ -483,7 +489,6 @@ def create_routes(app, kg_system, risk_engine=None):
                     if "stage" in update:
                         stage_name = update["stage"]
                         if stage_name == "subgraph":
-                            # Emit subgraph data for frontend visualization
                             sub_data = {
                                 "nodes": update.get("nodes", []),
                                 "edges": update.get("edges", []),
@@ -491,6 +496,12 @@ def create_routes(app, kg_system, risk_engine=None):
                             yield f"event: subgraph\ndata: {_json.dumps(sub_data, ensure_ascii=False)}\n\n"
                         else:
                             yield f"event: stage\ndata: {_json.dumps({'stage': stage_name, 'content': update.get('content', '')}, ensure_ascii=False)}\n\n"
+                    elif "entity_stats" in update:
+                        yield f"event: entity_stats\ndata: {_json.dumps(update['entity_stats'], ensure_ascii=False)}\n\n"
+                    elif "community" in update:
+                        yield f"event: community\ndata: {_json.dumps(update['community'], ensure_ascii=False)}\n\n"
+                    elif "risk_paths" in update:
+                        yield f"event: risk_paths\ndata: {_json.dumps(update['risk_paths'], ensure_ascii=False)}\n\n"
                     elif "output" in update:
                         output = update["output"]
                         _save_report(output, query)

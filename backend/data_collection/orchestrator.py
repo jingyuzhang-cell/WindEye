@@ -119,6 +119,7 @@ class CrawlOrchestrator:
                 date_start=template.get("date_start"),
                 date_end=template.get("date_end"),
                 max_pages=template.get("max_pages", 5),
+                max_files=req.max_files if hasattr(req, 'max_files') else 0,
             )
             parsed = self.req_agent.parse_quick_mode(template_req)
             await asyncio.sleep(0.2)

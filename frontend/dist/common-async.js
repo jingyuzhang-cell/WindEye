@@ -13,19 +13,15 @@ __mako_require__.d(exports, "default", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
 var _jsxdevruntime = __mako_require__("node_modules/react/jsx-dev-runtime.js");
-var _react = _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
+var _react = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react/index.js"));
 var _antd = __mako_require__("node_modules/antd/es/index.js");
 var _icons = __mako_require__("node_modules/@ant-design/icons/es/index.js");
-var _g6 = _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
+var _g6 = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/@antv/g6/es/index.js"));
 var _procomponents = __mako_require__("node_modules/@ant-design/pro-components/es/index.js");
-var _graphConfig = __mako_require__(Object(function makoMissingModule() {
-    var e = new Error("Cannot find module '../graphConfig'");
-    e.code = "MODULE_NOT_FOUND";
-    throw e;
-}()));
-var _LayoutSwitcher = _interop_require_default._(__mako_require__("src/pages/KnowledgeGraph/components/LayoutSwitcher.tsx"));
+var _graphConfig = __mako_require__("src/pages/graphConfig.ts");
+var _LayoutSwitcher = /*#__PURE__*/ _interop_require_default._(__mako_require__("src/pages/KnowledgeGraph/components/LayoutSwitcher.tsx"));
 var prevRefreshReg;
 var prevRefreshSig;
 prevRefreshReg = self.$RefreshReg$;
@@ -57,6 +53,7 @@ const LayerGraphPage = ({ config })=>{
     const graphRef = (0, _react.useRef)(null);
     const expandedNodesRef = (0, _react.useRef)(new Set());
     const [form] = _antd.Form.useForm();
+    // ─── Data Loading ─────────────────────────────────────────────────
     const loadData = (0, _react.useCallback)(async (params, isSearch)=>{
         setLoading(true);
         setGraphError(null);
@@ -164,6 +161,7 @@ const LayerGraphPage = ({ config })=>{
         rawData,
         layerName
     ]);
+    // ─── Data Processing ──────────────────────────────────────────────
     const processedData = (0, _react.useMemo)(()=>{
         if (!rawData || !rawData.nodes || !rawData.nodes.length) return {
             nodes: [],
@@ -220,6 +218,7 @@ const LayerGraphPage = ({ config })=>{
         nodeStyles,
         relationLabels
     ]);
+    // ─── Layout Configuration ──────────────────────────────────────────
     var getLayoutConfig = function(layoutType, nodeCount) {
         switch(layoutType){
             case 'gForce':
@@ -283,6 +282,7 @@ const LayerGraphPage = ({ config })=>{
         'Feature': 2,
         'Regulation': 3
     };
+    // ─── G6 Graph ─────────────────────────────────────────────────────
     (0, _react.useEffect)(()=>{
         if (!containerRef.current || !processedData.nodes.length) return;
         if (graphRef.current) {
@@ -358,6 +358,7 @@ const LayerGraphPage = ({ config })=>{
         var g6Edges = processedData.links.map(function(l) {
             var edgeColor = '#d9d9d9';
             var edgeWidth = 1.5;
+            // Use EDGE_STYLE_MAP for color-coded edges based on node layer pairs
             var srcNode = g6Nodes.find(function(n) {
                 return n.id === l.source;
             });
@@ -417,10 +418,12 @@ const LayerGraphPage = ({ config })=>{
         processedData,
         currentLayout
     ]);
+    // ─── Initial Load ──────────────────────────────────────────────────
     (0, _react.useEffect)(()=>{
         loadFullGraph();
         loadDbStatistics();
     }, []);
+    // ─── Export ────────────────────────────────────────────────────────
     var handleExportPNG = (0, _react.useCallback)(function() {
         if (graphRef.current) graphRef.current.downloadFullImage(layerName + '-graph-' + Date.now(), 'image/png', {
             backgroundColor: '#fff',
@@ -451,6 +454,7 @@ const LayerGraphPage = ({ config })=>{
         dbStats,
         layerName
     ]);
+    // ─── Property Rendering ────────────────────────────────────────────
     var renderPropertyValue = function(key, value) {
         if (value === null || value === undefined) return '-';
         if (typeof value === 'object') try {
@@ -462,10 +466,10 @@ const LayerGraphPage = ({ config })=>{
         var propConfig = propertyMap[key];
         if (propConfig && propConfig.isRisk && strValue && strValue !== '[]' && strValue !== '{}') try {
             var parsed = JSON.parse(strValue);
-            if (Array.isArray(parsed) && parsed.length > 0) return (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+            if (Array.isArray(parsed) && parsed.length > 0) return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                 type: "link",
                 size: "small",
-                icon: (0, _jsxdevruntime.jsxDEV)(_icons.EyeOutlined, {}, void 0, false, {
+                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.EyeOutlined, {}, void 0, false, {
                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                     lineNumber: 416,
                     columnNumber: 21
@@ -488,26 +492,27 @@ const LayerGraphPage = ({ config })=>{
         } catch  {}
         return strValue.length > 100 ? strValue.substring(0, 100) + '...' : strValue;
     };
-    return (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
+    // ─── UI ────────────────────────────────────────────────────────────
+    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_procomponents.PageContainer, {
         header: {
             title: pageTitle,
             subTitle: layerName + '层知识图谱检索与可视化'
         },
         children: [
-            (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                 gutter: 16,
                 style: {
                     marginBottom: 16
                 },
                 children: [
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 6,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                 title: layerName + '层总节点数',
                                 value: dbStats.total,
-                                prefix: (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {}, void 0, false, {
+                                prefix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 443,
                                     columnNumber: 23
@@ -528,14 +533,14 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 438,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 6,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                 title: "图谱当前节点数",
                                 value: processedData.nodes.length,
-                                prefix: (0, _jsxdevruntime.jsxDEV)(_icons.AimOutlined, {}, void 0, false, {
+                                prefix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.AimOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 453,
                                     columnNumber: 23
@@ -555,14 +560,14 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 448,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 6,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                 title: "图谱当前关系数",
                                 value: processedData.links.length,
-                                prefix: (0, _jsxdevruntime.jsxDEV)(_icons.ExpandOutlined, {}, void 0, false, {
+                                prefix: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ExpandOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 462,
                                     columnNumber: 23
@@ -582,21 +587,21 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 457,
                         columnNumber: 9
                     }, this),
-                    (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: 6,
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
-                            children: (0, _jsxdevruntime.jsxDEV)("div", {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     display: 'flex',
                                     gap: 8,
                                     justifyContent: 'flex-end'
                                 },
                                 children: [
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                         title: "导出图谱PNG",
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.PictureOutlined, {}, void 0, false, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.PictureOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                                 lineNumber: 470,
                                                 columnNumber: 31
@@ -614,10 +619,10 @@ const LayerGraphPage = ({ config })=>{
                                         lineNumber: 469,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                         title: "导出统计CSV",
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.FileExcelOutlined, {}, void 0, false, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.FileExcelOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                                 lineNumber: 475,
                                                 columnNumber: 31
@@ -635,10 +640,10 @@ const LayerGraphPage = ({ config })=>{
                                         lineNumber: 474,
                                         columnNumber: 15
                                     }, this),
-                                    (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                                    /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                                         title: "刷新数据",
-                                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                            icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                            icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                                 fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                                 lineNumber: 481,
                                                 columnNumber: 25
@@ -680,21 +685,21 @@ const LayerGraphPage = ({ config })=>{
                 lineNumber: 437,
                 columnNumber: 7
             }, this),
-            dbStats.details.length > 0 && (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
+            dbStats.details.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Row, {
                 gutter: 16,
                 style: {
                     marginBottom: 16
                 },
                 children: dbStats.details.map(function(d) {
                     var color = nodeStyles[d.type] && nodeStyles[d.type].color || '#BFBFBF';
-                    return (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
+                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Col, {
                         span: Math.max(4, Math.floor(24 / dbStats.details.length)),
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                             size: "small",
                             style: {
                                 borderLeft: '3px solid ' + color
                             },
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Statistic, {
                                 title: d.label,
                                 value: d.value,
                                 valueStyle: {
@@ -721,24 +726,24 @@ const LayerGraphPage = ({ config })=>{
                 lineNumber: 496,
                 columnNumber: 9
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                 size: "small",
                 style: {
                     marginBottom: 16
                 },
-                children: (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form, {
                     form: form,
                     layout: "inline",
                     onFinish: handleSearch,
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                             name: "keyword",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Input.Search, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Input.Search, {
                                 placeholder: "输入节点名称搜索...",
                                 style: {
                                     width: 320
                                 },
-                                enterButton: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+                                enterButton: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 518,
                                     columnNumber: 28
@@ -756,10 +761,10 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 514,
                             columnNumber: 11
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
                             name: "layers",
                             initialValue: 2,
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Select, {
                                 style: {
                                     width: 120
                                 },
@@ -771,7 +776,7 @@ const LayerGraphPage = ({ config })=>{
                                     4,
                                     5
                                 ].map(function(n) {
-                                    return (0, _jsxdevruntime.jsxDEV)(Option, {
+                                    return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(Option, {
                                         value: n,
                                         children: [
                                             n,
@@ -793,11 +798,11 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 524,
                             columnNumber: 11
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
                                 htmlType: "submit",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.SearchOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 536,
                                     columnNumber: 60
@@ -814,9 +819,9 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 535,
                             columnNumber: 11
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Form.Item, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.ReloadOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 542,
                                     columnNumber: 21
@@ -847,7 +852,7 @@ const LayerGraphPage = ({ config })=>{
                 lineNumber: 512,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Card, {
                 size: "small",
                 bodyStyle: {
                     padding: 0
@@ -856,9 +861,9 @@ const LayerGraphPage = ({ config })=>{
                     marginBottom: 16,
                     overflow: 'hidden'
                 },
-                extra: (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
+                extra: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Space, {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_LayoutSwitcher.default, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_LayoutSwitcher.default, {
                             currentLayout: currentLayout,
                             onLayoutChange: function(layout) {
                                 setCurrentLayout(layout);
@@ -868,11 +873,11 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 561,
                             columnNumber: 13
                         }, void 0),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                             title: "适应画布",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 size: "small",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.AimOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.AimOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 568,
                                     columnNumber: 23
@@ -890,11 +895,11 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 565,
                             columnNumber: 13
                         }, void 0),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tooltip, {
                             title: "导出PNG",
-                            children: (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                            children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 size: "small",
-                                icon: (0, _jsxdevruntime.jsxDEV)(_icons.DownloadOutlined, {}, void 0, false, {
+                                icon: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.DownloadOutlined, {}, void 0, false, {
                                     fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                                     lineNumber: 575,
                                     columnNumber: 42
@@ -916,9 +921,9 @@ const LayerGraphPage = ({ config })=>{
                     lineNumber: 560,
                     columnNumber: 11
                 }, void 0),
-                title: (0, _jsxdevruntime.jsxDEV)("span", {
+                title: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.NodeIndexOutlined, {
                             style: {
                                 marginRight: 8
                             }
@@ -932,7 +937,7 @@ const LayerGraphPage = ({ config })=>{
                         "节点, ",
                         processedData.links.length,
                         "关系)",
-                        expanding && (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
+                        expanding && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
                             size: "small",
                             style: {
                                 marginLeft: 8
@@ -949,14 +954,14 @@ const LayerGraphPage = ({ config })=>{
                     columnNumber: 11
                 }, void 0),
                 children: [
-                    loading && (0, _jsxdevruntime.jsxDEV)("div", {
+                    loading && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             height: 500,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Spin, {
                             size: "large",
                             tip: "加载图谱数据中..."
                         }, void 0, false, {
@@ -969,7 +974,7 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 589,
                         columnNumber: 11
                     }, this),
-                    graphError && !loading && (0, _jsxdevruntime.jsxDEV)("div", {
+                    graphError && !loading && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             height: 500,
                             display: 'flex',
@@ -978,7 +983,7 @@ const LayerGraphPage = ({ config })=>{
                             justifyContent: 'center'
                         },
                         children: [
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     fontSize: 48,
                                     color: '#f5222d',
@@ -990,7 +995,7 @@ const LayerGraphPage = ({ config })=>{
                                 lineNumber: 612,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)("div", {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                                 style: {
                                     color: '#f5222d',
                                     marginBottom: 8,
@@ -1002,7 +1007,7 @@ const LayerGraphPage = ({ config })=>{
                                 lineNumber: 613,
                                 columnNumber: 13
                             }, this),
-                            (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
+                            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Button, {
                                 type: "primary",
                                 onClick: loadFullGraph,
                                 children: "重新加载"
@@ -1017,14 +1022,14 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 603,
                         columnNumber: 11
                     }, this),
-                    !loading && !graphError && processedData.nodes.length === 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+                    !loading && !graphError && processedData.nodes.length === 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         style: {
                             height: 500,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
                         },
-                        children: (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
+                        children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Empty, {
                             description: "暂无图谱数据，请尝试检索或刷新"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
@@ -1036,7 +1041,7 @@ const LayerGraphPage = ({ config })=>{
                         lineNumber: 624,
                         columnNumber: 11
                     }, this),
-                    !loading && !graphError && processedData.nodes.length > 0 && (0, _jsxdevruntime.jsxDEV)("div", {
+                    !loading && !graphError && processedData.nodes.length > 0 && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("div", {
                         ref: containerRef,
                         style: {
                             width: '100%',
@@ -1053,10 +1058,10 @@ const LayerGraphPage = ({ config })=>{
                 lineNumber: 555,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
-                title: (0, _jsxdevruntime.jsxDEV)("span", {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Drawer, {
+                title: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("span", {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_icons.InfoCircleOutlined, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_icons.InfoCircleOutlined, {
                             style: {
                                 marginRight: 8
                             }
@@ -1080,9 +1085,9 @@ const LayerGraphPage = ({ config })=>{
                     setDrawerVisible(false);
                     setSelectedNode(null);
                 },
-                children: selectedNode && (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
+                children: selectedNode && /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_jsxdevruntime.Fragment, {
                     children: [
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions, {
                             column: 1,
                             size: "small",
                             bordered: true,
@@ -1090,7 +1095,7 @@ const LayerGraphPage = ({ config })=>{
                                 marginBottom: 16
                             },
                             children: [
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: "节点ID",
                                     children: selectedNode.id
                                 }, void 0, false, {
@@ -1098,7 +1103,7 @@ const LayerGraphPage = ({ config })=>{
                                     lineNumber: 661,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: "节点名称",
                                     children: selectedNode.name
                                 }, void 0, false, {
@@ -1106,9 +1111,9 @@ const LayerGraphPage = ({ config })=>{
                                     lineNumber: 662,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: "节点类型",
-                                    children: (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                    children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                         color: selectedNode.color,
                                         children: selectedNode.typeKey
                                     }, void 0, false, {
@@ -1121,10 +1126,10 @@ const LayerGraphPage = ({ config })=>{
                                     lineNumber: 663,
                                     columnNumber: 15
                                 }, this),
-                                (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
+                                /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Descriptions.Item, {
                                     label: "标签",
                                     children: (selectedNode.labels || []).map(function(l) {
-                                        return (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
+                                        return /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Tag, {
                                             color: "blue",
                                             children: l
                                         }, l, false, {
@@ -1144,14 +1149,14 @@ const LayerGraphPage = ({ config })=>{
                             lineNumber: 660,
                             columnNumber: 13
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)("h4", {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)("h4", {
                             children: "属性"
                         }, void 0, false, {
                             fileName: "src/pages/KnowledgeGraph/components/LayerGraphPage.tsx",
                             lineNumber: 677,
                             columnNumber: 13
                         }, this),
-                        (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                        /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                             dataSource: Object.entries(selectedNode.properties || {}).map(function([key, value]) {
                                 return {
                                     key: key,
@@ -1194,7 +1199,7 @@ const LayerGraphPage = ({ config })=>{
                 lineNumber: 643,
                 columnNumber: 7
             }, this),
-            (0, _jsxdevruntime.jsxDEV)(_antd.Modal, {
+            /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Modal, {
                 title: detailTitle,
                 open: detailModalVisible,
                 onCancel: function() {
@@ -1202,7 +1207,7 @@ const LayerGraphPage = ({ config })=>{
                 },
                 footer: null,
                 width: 700,
-                children: (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
+                children: /*#__PURE__*/ (0, _jsxdevruntime.jsxDEV)(_antd.Table, {
                     dataSource: detailData,
                     columns: [
                         {
@@ -1293,8 +1298,8 @@ __mako_require__.d(exports, "default", {
 });
 var _interop_require_default = __mako_require__("@swc/helpers/_/_interop_require_default");
 var _interop_require_wildcard = __mako_require__("@swc/helpers/_/_interop_require_wildcard");
-var _reactrefresh = _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
-var _react = _interop_require_default._(__mako_require__("node_modules/react/index.js"));
+var _reactrefresh = /*#__PURE__*/ _interop_require_wildcard._(__mako_require__("node_modules/react-refresh/runtime.js"));
+var _react = /*#__PURE__*/ _interop_require_default._(__mako_require__("node_modules/react/index.js"));
 var _antd = __mako_require__("node_modules/antd/es/index.js");
 var prevRefreshReg;
 var prevRefreshSig;
@@ -1332,7 +1337,7 @@ var LAYOUT_OPTIONS = [
 ];
 var LayoutSwitcher = function(_a) {
     var currentLayout = _a.currentLayout, onLayoutChange = _a.onLayoutChange, disabled = _a.disabled;
-    return _react.default.createElement(_antd.Select, {
+    return /*#__PURE__*/ _react.default.createElement(_antd.Select, {
         value: currentLayout,
         onChange: onLayoutChange,
         options: LAYOUT_OPTIONS,

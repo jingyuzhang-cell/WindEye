@@ -1,44 +1,21 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { Input, Spin, Empty, Tag } from 'antd'
-import { SendOutlined, ClearOutlined } from '@ant-design/icons'
+import { Input, Spin, Empty, Tag, Typography, Upload, Button } from 'antd'
+import { SendOutlined, ClearOutlined, UploadOutlined, FileTextOutlined, CloseOutlined, LoadingOutlined } from '@ant-design/icons'
 import { EntityMessageBubble } from './EntityMessageBubble'
 import { RiskEntityCard } from './RiskEntityCard'
 import { ContextTagBar, ContextEntity } from './ContextTagBar'
 import type { ChatMessage, RecommendationItem } from '../types/api'
+import { useAgentStore } from '../store/agentStore'
 import { DESIGN_TOKENS } from '../styles/constants'
 
+const { Text } = Typography
 const { TextArea } = Input
-
-const Text: React.FC<{
-  type?: 'secondary' | 'danger' | 'warning' | 'success' | undefined
-  className?: string
-  children: React.ReactNode
-  strong?: boolean
-}> = ({ type, className = '', children, strong }) => {
-  const colorMap: Record<string, string> = {
-    secondary: '#71717a',
-    danger: '#ef4444',
-    warning: '#f59e0b',
-    success: '#10b981',
-  }
-  return (
-    <span
-      style={{
-        color: type ? colorMap[type] : DESIGN_TOKENS.TEXT_PRIMARY,
-        fontWeight: strong ? 600 : 400,
-      }}
-      className={className}
-    >
-      {children}
-    </span>
-  )
-}
 
 interface WorkspaceContainerProps {
   messages: ChatMessage[]
   isLoading: boolean
   pendingRecommendations: RecommendationItem[] | null
-  onSendMessage: (query: string) => void
+  onSendMessage: (query: string) => Promise<void>
   onClearHistory: () => void
   onEntityHover?: (entityId: string | null) => void
   onEntityClick?: (entityId: string, entityType: string) => void
@@ -64,6 +41,12 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<any>(null)
 
+  const uploadedFile = useAgentStore((s) => s.uploadedFile)
+  const fileUploading = useAgentStore((s) => s.fileUploading)
+  const uploadFile = useAgentStore((s) => s.uploadFile)
+  const clearUploadedFile = useAgentStore((s) => s.clearUploadedFile)
+  const storeError = useAgentStore((s) => s.error)
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
@@ -78,9 +61,13 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
     if (contextTags.length > 0) {
       fullQuery = `Context: ${contextTags.map(t => t.id).join(', ')}. Query: ${fullQuery}`
     }
-    setInput('')
-    await onSendMessage(fullQuery)
-    inputRef.current?.focus()
+    try {
+      await onSendMessage(fullQuery)
+      setInput('')
+      inputRef.current?.focus()
+    } catch {
+      // Keep input text on failure
+    }
   }, [input, isLoading, onSendMessage, graphInjectedEntity, contextTags])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -317,6 +304,64 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
           }}
         />
 
+        {/* 文件上传区域 */}
+        <div style={{ marginBottom: 8 }}>
+          {uploadedFile ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 10px',
+                background: '#f0f5ff',
+                borderRadius: 8,
+                border: '1px solid #d6e4ff',
+              }}
+            >
+              <FileTextOutlined style={{ color: '#2855D1', fontSize: 14 }} />
+              <span style={{ fontSize: 12, flex: 1, color: '#1e40af' }}>
+                {uploadedFile.filename}
+                <span style={{ color: '#64748b', marginLeft: 6 }}>
+                  ({uploadedFile.char_count} 字符{uploadedFile.truncated ? '，已截断' : ''})
+                </span>
+              </span>
+              {uploadedFile.truncated && (
+                <span style={{ fontSize: 11, color: '#fa8c16' }}>内容过长，已自动截取前 50,000 字符</span>
+              )}
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={clearUploadedFile}
+                style={{ color: '#94a3b8' }}
+              />
+            </div>
+          ) : (
+            <Upload
+              accept=".txt,.md,.docx,.pdf"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                uploadFile(file)
+                return false
+              }}
+              disabled={fileUploading || isLoading}
+            >
+              <Button
+                icon={fileUploading ? <LoadingOutlined /> : <UploadOutlined />}
+                size="small"
+                type="text"
+                disabled={fileUploading || isLoading}
+                style={{ fontSize: 12, color: '#64748b' }}
+              >
+                {fileUploading ? '上传中...' : '上传文本文件 (.txt .md .docx .pdf)'}
+              </Button>
+            </Upload>
+          )}
+          {storeError && (
+            <div style={{ fontSize: 11, color: '#f5222d', marginTop: 4, paddingLeft: 4 }}>{storeError}</div>
+          )}
+        </div>
+
         <div
           style={{
             background: '#FFFFFF',
@@ -349,7 +394,7 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
                 background: 'transparent',
                 padding: 0,
               }}
-              disabled={isLoading}
+              disabled={isLoading || fileUploading}
             />
             <button
               onClick={handleSend}
@@ -390,7 +435,7 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
             paddingLeft: 4,
           }}
         >
-          Enter to send · Shift+Enter for newline · Double-click graph node to add context
+          Enter 发送 · Shift+Enter 换行 · 双击图谱节点添加上下文
         </span>
       </div>
     </div>

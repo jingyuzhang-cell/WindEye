@@ -64,8 +64,13 @@ def create_chrome_driver(
     download_dir: Optional[str] = None,
     headless: bool = False,
     page_load_strategy: str = "normal",
+    page_load_timeout: float = 60.0,
 ) -> webdriver.Chrome:
-    """Create a Chrome WebDriver with consistent options and anti-detection."""
+    """Create a Chrome WebDriver with consistent options and anti-detection.
+
+    Sets page_load_timeout to prevent driver.get() from hanging indefinitely
+    on slow/unreachable sites (default 60s, configurable via env var).
+    """
     options = webdriver.ChromeOptions()
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-gpu")
@@ -113,6 +118,11 @@ def create_chrome_driver(
                 f"原始错误: {e}"
             ) from e
 
+    timeout = float(os.getenv("CHROME_PAGE_LOAD_TIMEOUT", str(page_load_timeout)))
+    driver.set_page_load_timeout(timeout)
+    driver.set_script_timeout(timeout)
+    logger.info("ChromeDriver page_load_timeout=%.0fs, script_timeout=%.0fs", timeout, timeout)
+
     _add_anti_detection(driver)
     return driver
 
@@ -120,6 +130,7 @@ def create_chrome_driver(
 def create_edge_driver(
     download_dir: Optional[str] = None,
     headless: bool = False,
+    page_load_timeout: float = 60.0,
 ) -> webdriver.Edge:
     """Create an Edge WebDriver with consistent options and anti-detection."""
     options = webdriver.EdgeOptions()
@@ -154,6 +165,10 @@ def create_edge_driver(
         driver = webdriver.Edge(service=EdgeService(edge_driver_path), options=options)
     else:
         driver = webdriver.Edge(options=options)
+
+    timeout = float(os.getenv("CHROME_PAGE_LOAD_TIMEOUT", str(page_load_timeout)))
+    driver.set_page_load_timeout(timeout)
+    driver.set_script_timeout(timeout)
 
     _add_anti_detection(driver)
     return driver

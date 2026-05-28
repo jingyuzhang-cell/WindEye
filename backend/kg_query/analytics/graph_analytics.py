@@ -1,17 +1,26 @@
-"""Graph analytics algorithms for community detection and pattern discovery."""
+"""Graph analytics algorithms for community detection and pattern discovery.
+
+Community detection algorithms live in the `community/` package and are
+accessed via the AlgorithmRegistry. This module retains subgraph retrieval,
+centrality, and cycle detection.
+"""
 
 from __future__ import annotations
 
 import logging
+import time
 from collections import defaultdict
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import lil_matrix
+
+from .community import registry
+from .community.utils import layer_filter
 
 logger = logging.getLogger(__name__)
 
-# Layer label mapping — mirrors graph_routes.py
+# Keep references for backward compatibility — these are used by other modules
 _LAYER_LABEL_MAP: dict[str, list[str]] = {
     "Subject": ["Subject", "COMPANY", "PERSON", "PFCOMPANY", "PFUND", "SECURITY"],
     "Event": ["Event", "EVENT", "TIME", "REGULATOR"],
@@ -27,51 +36,11 @@ def _layer_filter(layer: str | None) -> list[str]:
     return _ALL_VALID_LABELS
 
 
-class UnionFind:
-    """Disjoint Set Union for connected components."""
-
-    def __init__(self) -> None:
-        self._parent: dict[int, int] = {}
-        self._rank: dict[int, int] = {}
-
-    def add(self, x: int) -> None:
-        if x not in self._parent:
-            self._parent[x] = x
-            self._rank[x] = 0
-
-    def find(self, x: int) -> int:
-        path: list[int] = []
-        while self._parent[x] != x:
-            path.append(x)
-            x = self._parent[x]
-        for node in path:
-            self._parent[node] = x
-        return x
-
-    def union(self, x: int, y: int) -> None:
-        rx, ry = self.find(x), self.find(y)
-        if rx == ry:
-            return
-        if self._rank[rx] < self._rank[ry]:
-            self._parent[rx] = ry
-        elif self._rank[rx] > self._rank[ry]:
-            self._parent[ry] = rx
-        else:
-            self._parent[ry] = rx
-            self._rank[rx] += 1
-
-    def components(self) -> dict[int, list[int]]:
-        groups: dict[int, list[int]] = defaultdict(list)
-        for node in self._parent:
-            groups[self.find(node)].append(node)
-        return dict(groups)
-
-
 class GraphAnalytics:
     """Graph algorithms for the knowledge graph.
 
     Supported analyses:
-    - Community detection (WCC, Louvain, Label Propagation)
+    - Community detection (WCC, Louvain, LPA, Leiden, G-N, Spectral, Infomap)
     - Centrality metrics (PageRank, Betweenness)
     - Cycle detection (fund circular flows)
     """
@@ -79,7 +48,7 @@ class GraphAnalytics:
     def __init__(self, db_client: Any = None) -> None:
         self._db = db_client
 
-    # ── Community Detection ──────────────────────────────────────────
+    # ── Community Detection (registry dispatch) ──────────────────────
 
     def detect_communities(
         self,
@@ -88,27 +57,34 @@ class GraphAnalytics:
         max_nodes: int = 5000,
         min_community_size: int = 3,
     ) -> dict[str, Any]:
-        """Detect communities in the graph.
+        """Detect communities using the registered algorithm.
 
         Args:
             layer: Filter to layer (all/Subject/Event/Feature/Regulation).
-            method: Algorithm — "wcc", "louvain", or "label_propagation".
+            method: Algorithm name (wcc, louvain, label_propagation, leiden,
+                    girvan_newman, spectral, infomap).
             max_nodes: Max nodes to analyze.
             min_community_size: Filter out communities smaller than this.
 
         Returns:
             Dict with communities list and metadata.
         """
-        methods: dict[str, Callable] = {
-            "wcc": self._wcc_communities,
-            "louvain": self._louvain_communities,
-            "label_propagation": self._label_propagation_communities,
-        }
-        if method not in methods:
-            return {"success": False, "error": f"Unknown method: {method}"}
+        alg = registry.get(method)
+        if alg is None:
+            known = registry.names()
+            return {"success": False, "error": f"Unknown method: {method}. Known: {list(known)}"}
 
-        labels = _layer_filter(layer)
-        communities, modularity = methods[method](labels, max_nodes, min_community_size)
+        labels = layer_filter(layer)
+        t0 = time.perf_counter()
+        try:
+            communities, modularity = alg.detect(
+                self._db, labels, max_nodes, min_community_size
+            )
+        except Exception:
+            logger.exception("Algorithm %s failed", method)
+            return {"success": False, "error": f"Algorithm '{method}' failed"}
+
+        runtime_ms = round((time.perf_counter() - t0) * 1000)
 
         return {
             "success": True,
@@ -116,448 +92,49 @@ class GraphAnalytics:
             "modularity": round(modularity, 4),
             "communities_count": len(communities),
             "communities": communities,
+            "runtime_ms": runtime_ms,
         }
 
-    # ── WCC via Union-Find ───────────────────────────────────────────
+    def compare_algorithms(
+        self,
+        layer: str | None = None,
+        max_nodes: int = 2000,
+        min_community_size: int = 3,
+    ) -> dict[str, Any]:
+        """Run all registered algorithms and return comparison results."""
+        results = []
+        labels = layer_filter(layer)
 
-    def _wcc_communities(
-        self, labels: list[str], max_nodes: int, min_size: int
-    ) -> tuple[list[dict], float]:
-        if self._db is None:
-            return [], 0.0
-
-        label_conditions = " OR ".join([f"n:{lbl}" for lbl in labels])
-
-        query = f"""
-        MATCH (n)
-        WHERE {label_conditions}
-        WITH n LIMIT $max_nodes
-        MATCH (n)-[r]-(m)
-        WHERE {label_conditions} AND elementId(n) < elementId(m)
-        RETURN elementId(n) AS src, elementId(m) AS tgt, labels(m) AS m_labels
-        LIMIT $max_nodes * 3
-        """
-        try:
-            records, _ = self._db.execute_read_with_summary(
-                query, {"max_nodes": max_nodes}
-            )
-        except Exception:
-            logger.exception("WCC edge extraction failed")
-            return [], 0.0
-
-        # Union-Find on edges
-        uf = UnionFind()
-        edge_set: set[tuple[str, str]] = set()
-        for record in records:
-            src, tgt = record.get("src"), record.get("tgt")
-            if src and tgt:
-                uf.add(hash(src))
-                uf.add(hash(tgt))
-                uf.union(hash(src), hash(tgt))
-                edge_set.add((str(src), str(tgt)))
-
-        # Also add isolated nodes (single-node components)
-        try:
-            node_query = f"""
-            MATCH (n) WHERE {label_conditions}
-            WITH n LIMIT $max_nodes
-            RETURN elementId(n) AS nid, labels(n) AS lbls
-            """
-            node_records, _ = self._db.execute_read_with_summary(
-                node_query, {"max_nodes": max_nodes}
-            )
-        except Exception:
-            logger.exception("Node extraction failed")
-            node_records = []
-
-        node_info: dict[str, dict] = {}
-        for record in node_records:
-            nid = str(record.get("nid", ""))
-            lbls = record.get("lbls", [])
-            if nid:
-                node_info[hash(nid)] = {"id": nid, "labels": lbls, "name": ""}
-                uf.add(hash(nid))
-
-        # Resolve node names in a batch
-        if node_info:
+        for alg in registry.list_all():
+            t0 = time.perf_counter()
             try:
-                nids = list(node_info.values())[:500]
-                nid_list = [ni["id"] for ni in nids]
-                name_query = """
-                UNWIND $ids AS nid
-                MATCH (n) WHERE elementId(n) = nid
-                RETURN elementId(n) AS nid,
-                       coalesce(n.name, n.title, n.COMPANY_NM, n.factor_nm, n.feature_nm, n.regulation_name, '(unnamed)') AS name,
-                       labels(n) AS lbls
-                """
-                name_records, _ = self._db.execute_read_with_summary(
-                    name_query, {"ids": nid_list}
+                communities, modularity = alg.detect(
+                    self._db, labels, max_nodes, min_community_size
                 )
-                for rec in name_records:
-                    hid = hash(str(rec.get("nid", "")))
-                    if hid in node_info:
-                        node_info[hid]["name"] = str(rec.get("name", ""))
+                runtime_ms = round((time.perf_counter() - t0) * 1000)
+                results.append({
+                    "method": alg.name,
+                    "label": alg.label,
+                    "communities_count": len(communities),
+                    "modularity": round(modularity, 4),
+                    "runtime_ms": runtime_ms,
+                    "coverage": round(
+                        sum(c["size"] for c in communities) / max(1, max_nodes), 4
+                    ),
+                    "size_distribution": [c["size"] for c in communities[:20]],
+                })
             except Exception:
-                logger.exception("Name resolution failed")
+                logger.exception("Compare: %s failed", alg.name)
+                results.append({
+                    "method": alg.name,
+                    "label": alg.label,
+                    "communities_count": 0,
+                    "modularity": 0,
+                    "runtime_ms": 0,
+                    "error": f"{alg.name} failed",
+                })
 
-        components = uf.components()
-        return self._build_community_list(
-            components, node_info, edge_set, min_size
-        )
-
-    # ── Louvain-inspired ─────────────────────────────────────────────
-
-    def _louvain_communities(
-        self, labels: list[str], max_nodes: int, min_size: int
-    ) -> tuple[list[dict], float]:
-        if self._db is None:
-            return [], 0.0
-
-        label_conditions = " OR ".join([f"n:{lbl}" for lbl in labels])
-
-        edges_query = f"""
-        MATCH (n)-[r]->(m)
-        WHERE ({label_conditions}) AND ({label_conditions.replace('n:', 'm:')})
-        WITH n, m LIMIT $max_nodes * 2
-        RETURN elementId(n) AS src, elementId(m) AS tgt
-        """
-        try:
-            records, _ = self._db.execute_read_with_summary(
-                edges_query, {"max_nodes": max_nodes}
-            )
-        except Exception:
-            logger.exception("Louvain edge extraction failed")
-            return [], 0.0
-
-        if not records:
-            return [], 0.0
-
-        # Build node-to-index mapping
-        node_ids: list[str] = []
-        node_to_idx: dict[str, int] = {}
-        for rec in records:
-            src = str(rec.get("src", ""))
-            tgt = str(rec.get("tgt", ""))
-            if src and src not in node_to_idx:
-                node_to_idx[src] = len(node_ids)
-                node_ids.append(src)
-            if tgt and tgt not in node_to_idx:
-                node_to_idx[tgt] = len(node_ids)
-                node_ids.append(tgt)
-
-        n = len(node_ids)
-        if n < 2:
-            return [], 0.0
-
-        # Build sparse adjacency matrix
-        adj = lil_matrix((n, n), dtype=np.float64)
-        for rec in records:
-            src = str(rec.get("src", ""))
-            tgt = str(rec.get("tgt", ""))
-            if src in node_to_idx and tgt in node_to_idx:
-                i, j = node_to_idx[src], node_to_idx[tgt]
-                adj[i, j] = 1
-                adj[j, i] = 1
-
-        adj = adj.tocsr()
-        degrees = np.array(adj.sum(axis=1)).flatten()
-        m = degrees.sum() / 2.0
-        if m == 0:
-            return [], 0.0
-
-        # Greedy modularity optimization (single-level Louvain)
-        communities = np.arange(n, dtype=np.int64)
-        improved = True
-        for _ in range(50):
-            if not improved:
-                break
-            improved = False
-            order = np.random.permutation(n)
-            for node in order:
-                node_comm = communities[node]
-                neigh_indices = adj[node].indices
-                if len(neigh_indices) == 0:
-                    continue
-
-                # Compute modularity gain for joining each neighbor community
-                comm_gains: dict[int, float] = {}
-                k_i = degrees[node]
-                for nb in neigh_indices:
-                    nb_comm = communities[nb]
-                    if nb_comm == node_comm:
-                        continue
-                    # Modularity gain: ΔQ = [Σ_in + 2k_i,in] / 2m - [(Σ_tot + k_i) / 2m]²
-                    # Simplified: gain ≈ weight_to_comm / m - k_i * comm_degree / (2 * m²)
-                    if nb_comm not in comm_gains:
-                        comm_nodes = np.where(communities == nb_comm)[0]
-                        comm_total = degrees[comm_nodes].sum()
-                        comm_gains[nb_comm] = -k_i * comm_total / (2.0 * m * m)
-
-                # Add actual edge contributions
-                for nb in neigh_indices:
-                    nb_comm = communities[nb]
-                    if nb_comm != node_comm and nb_comm in comm_gains:
-                        comm_gains[nb_comm] += 1.0 / m
-
-                if comm_gains:
-                    best_comm = max(comm_gains, key=comm_gains.get)
-                    if comm_gains[best_comm] > 0:
-                        communities[node] = best_comm
-                        improved = True
-
-        # Map communities back
-        comm_groups: dict[int, list[int]] = defaultdict(list)
-        for idx, comm in enumerate(communities):
-            comm_groups[comm].append(idx)
-
-        # Build node_info dict for the community list
-        node_info: dict[int, dict] = {}
-        for idx, nid in enumerate(node_ids):
-            node_info[hash(nid)] = {"id": nid, "labels": [], "name": ""}
-
-        # Query node labels
-        try:
-            batch_size = 200
-            all_nids = list(node_ids)
-            for start in range(0, len(all_nids), batch_size):
-                batch = all_nids[start : start + batch_size]
-                lbl_query = """
-                UNWIND $ids AS nid
-                MATCH (n) WHERE elementId(n) = nid
-                RETURN elementId(n) AS nid, labels(n) AS lbls,
-                       coalesce(n.name, n.title, n.COMPANY_NM, n.factor_nm, n.feature_nm, n.regulation_name, '(unnamed)') AS name
-                """
-                lbl_records, _ = self._db.execute_read_with_summary(
-                    lbl_query, {"ids": batch}
-                )
-                for rec in lbl_records:
-                    hid = hash(str(rec.get("nid", "")))
-                    if hid in node_info:
-                        node_info[hid]["labels"] = [
-                            l for l in (rec.get("lbls") or []) if l in _ALL_VALID_LABELS
-                        ]
-                        node_info[hid]["name"] = str(rec.get("name", ""))
-        except Exception:
-            logger.exception("Label resolution failed")
-
-        # Build edge_set from adjacency
-        edge_set: set[tuple[str, str]] = set()
-        for rec in records:
-            src = str(rec.get("src", ""))
-            tgt = str(rec.get("tgt", ""))
-            if src and tgt:
-                edge_set.add(
-                    (src, tgt) if src < tgt else (tgt, src)
-                )
-
-        modularity = self._compute_modularity(adj, communities, degrees, m)
-        return self._build_community_list(
-            comm_groups, node_info, edge_set, min_size, node_to_idx, node_ids
-        ), modularity
-
-    # ── Label Propagation ────────────────────────────────────────────
-
-    def _label_propagation_communities(
-        self, labels: list[str], max_nodes: int, min_size: int
-    ) -> tuple[list[dict], float]:
-        """Simple label propagation using adjacency."""
-        if self._db is None:
-            return [], 0.0
-
-        label_conditions = " OR ".join([f"n:{lbl}" for lbl in labels])
-
-        edges_query = f"""
-        MATCH (n)-[r]-(m)
-        WHERE ({label_conditions}) AND ({label_conditions.replace('n:', 'm:')})
-        WITH n, m LIMIT $max_nodes * 2
-        RETURN elementId(n) AS src, elementId(m) AS tgt
-        """
-        try:
-            records, _ = self._db.execute_read_with_summary(
-                edges_query, {"max_nodes": max_nodes}
-            )
-        except Exception:
-            logger.exception("Label propagation edge extraction failed")
-            return [], 0.0
-
-        if not records:
-            return [], 0.0
-
-        node_set: set[str] = set()
-        adjacency: dict[str, set[str]] = defaultdict(set)
-        for rec in records:
-            src = str(rec.get("src", ""))
-            tgt = str(rec.get("tgt", ""))
-            if src and tgt:
-                node_set.add(src)
-                node_set.add(tgt)
-                adjacency[src].add(tgt)
-                adjacency[tgt].add(src)
-
-        node_list = list(node_set)
-        if not node_list:
-            return [], 0.0
-
-        nid_to_hash: dict[str, int] = {n: hash(n) for n in node_list}
-
-        # Initialize each node with its own label
-        node_labels = {node: i for i, node in enumerate(node_list)}
-
-        for _ in range(20):
-            changed = False
-            order = np.random.permutation(node_list)
-            for node in order:
-                neighbors = adjacency[node]
-                if not neighbors:
-                    continue
-                # Count labels among neighbors
-                label_counts: dict[int, int] = defaultdict(int)
-                for nb in neighbors:
-                    label_counts[node_labels[nb]] += 1
-                most_common = max(label_counts, key=label_counts.get)
-                if most_common != node_labels[node]:
-                    node_labels[node] = most_common
-                    changed = True
-            if not changed:
-                break
-
-        # Group by label
-        comm_groups: dict[int, list[int]] = defaultdict(list)
-        for node, label in node_labels.items():
-            comm_groups[label].append(nid_to_hash[node])
-
-        # Build node_info
-        node_info: dict[int, dict] = {}
-        try:
-            all_nids = list(node_set)
-            for start in range(0, len(all_nids), 200):
-                batch = all_nids[start : start + 200]
-                lbl_query = """
-                UNWIND $ids AS nid
-                MATCH (n) WHERE elementId(n) = nid
-                RETURN elementId(n) AS nid, labels(n) AS lbls,
-                       coalesce(n.name, n.title, n.COMPANY_NM, n.factor_nm, n.feature_nm, n.regulation_name, '(unnamed)') AS name
-                """
-                lbl_records, _ = self._db.execute_read_with_summary(
-                    lbl_query, {"ids": batch}
-                )
-                for rec in lbl_records:
-                    hid = hash(str(rec.get("nid", "")))
-                    node_info[hid] = {
-                        "id": str(rec.get("nid", "")),
-                        "labels": [
-                            l for l in (rec.get("lbls") or []) if l in _ALL_VALID_LABELS
-                        ],
-                        "name": str(rec.get("name", "")),
-                    }
-        except Exception:
-            logger.exception("Label resolution failed")
-
-        edge_set: set[tuple[str, str]] = set()
-        for src, tgt_set in adjacency.items():
-            for tgt in tgt_set:
-                if src < tgt:
-                    edge_set.add((src, tgt))
-
-        return self._build_community_list(comm_groups, node_info, edge_set, min_size), 0.0
-
-    # ── Helpers ──────────────────────────────────────────────────────
-
-    def _build_community_list(
-        self,
-        components: dict[int, list[int]],
-        node_info: dict[int, dict],
-        edge_set: set[tuple[str, str]],
-        min_size: int,
-        idx_to_nid: dict[int, str] | None = None,
-        node_ids: list[str] | None = None,
-    ) -> tuple[list[dict], float]:
-        """Convert component groups into the standard community dict format."""
-        communities = []
-        for cid, members in sorted(components.items(), key=lambda x: -len(x[1])):
-            if len(members) < min_size:
-                continue
-
-            members_set = set(members)
-            member_nids: set[str] = set()
-            for m in members:
-                info = node_info.get(m)
-                if info:
-                    member_nids.add(info["id"])
-                elif idx_to_nid and node_ids:
-                    # Try to resolve by numeric index
-                    for i, nid_val in enumerate(node_ids):
-                        if hash(nid_val) == m:
-                            member_nids.add(nid_val)
-                            break
-
-            # Count internal edges
-            internal_edges = 0
-            for src, tgt in edge_set:
-                if (
-                    (hash(src) in members_set or src in member_nids)
-                    and (hash(tgt) in members_set or tgt in member_nids)
-                ):
-                    internal_edges += 1
-
-            size = len(members)
-            max_possible = size * (size - 1) / 2.0
-            density = internal_edges / max_possible if max_possible > 0 else 0.0
-
-            # Label distribution
-            label_dist: dict[str, int] = defaultdict(int)
-            for m in members:
-                info = node_info.get(m)
-                lbls = info.get("labels", []) if info else []
-                for lbl in lbls:
-                    label_dist[lbl] += 1
-
-            # Top entities (by name)
-            top_entities = []
-            for m in members[:10]:
-                info = node_info.get(m)
-                if info:
-                    top_entities.append({
-                        "id": info["id"],
-                        "name": info.get("name", "(unnamed)"),
-                        "label": (info.get("labels") or ["Unknown"])[0],
-                    })
-
-            # All member IDs for subgraph retrieval (up to 500)
-            member_ids: list[str] = []
-            for m in members[:500]:
-                info = node_info.get(m)
-                if info and info.get("id"):
-                    member_ids.append(info["id"])
-
-            communities.append({
-                "community_id": len(communities),
-                "size": size,
-                "density": round(density, 4),
-                "internal_edges": internal_edges,
-                "label_distribution": dict(label_dist),
-                "top_entities": top_entities,
-                "member_ids": member_ids,
-            })
-
-        return communities, 0.0
-
-    def _compute_modularity(
-        self,
-        adj: csr_matrix,
-        communities: np.ndarray,
-        degrees: np.ndarray,
-        m: float,
-    ) -> float:
-        """Compute Newman-Girvan modularity Q."""
-        if m == 0:
-            return 0.0
-        q = 0.0
-        for i in range(adj.shape[0]):
-            for j in adj[i].indices:
-                if communities[i] == communities[j]:
-                    q += 1.0 - (degrees[i] * degrees[j]) / (2.0 * m)
-        return q / (2.0 * m)
+        return {"results": sorted(results, key=lambda r: -r["modularity"])}
 
     # ── Community Subgraph ───────────────────────────────────────────
 

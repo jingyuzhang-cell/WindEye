@@ -1,16 +1,83 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react'
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { PageContainer } from '@ant-design/pro-components'
-import { Segmented } from 'antd'
+import { Segmented, App } from 'antd'
 import { WorkspaceContainer } from './components/WorkspaceContainer'
 import { EnhancedGraphPanel, EnhancedGraphPanelHandle } from './components/EnhancedGraphPanel'
-import { AnalysisPanel } from './components/AnalysisPanel'
 import RiskReportPanel from './components/RiskReportPanel'
 import { ChatSidebar } from './components/ChatSidebar'
 import { useAgentStore } from './store/agentStore'
 import { useChatStore } from './store/chatStore'
 import { DESIGN_TOKENS } from './styles/constants'
 
+// Extract entity names from query text and match against graph nodes
+function extractSubjectEntityIds(query: string, nodes: { id: string; title?: string; name?: string; zh_name?: string }[]): string[] {
+  if (!query || nodes.length === 0) return []
+  const matched: string[] = []
+
+  for (const node of nodes) {
+    const nodeId = String(node.id)
+    const names = [node.title, node.name, node.zh_name, (node as any).zhTitle].filter(Boolean) as string[]
+    for (const name of names) {
+      if (name.length >= 2 && query.includes(name)) {
+        matched.push(nodeId)
+        break
+      }
+    }
+  }
+
+  // If no direct match, try extracting entities from query with common patterns
+  if (matched.length === 0) {
+    // Match《书名号》patterns
+    const bookMatches = query.match(/《([^》]{2,30})》/g)
+    if (bookMatches) {
+      for (const m of bookMatches) {
+        const name = m.replace(/[《》]/g, '')
+        for (const node of nodes) {
+          const nodeId = String(node.id)
+          const nodeNames = [node.title, node.name, node.zh_name, (node as any).zhTitle].filter(Boolean) as string[]
+          if (nodeNames.some((n) => n.includes(name) || name.includes(n))) {
+            if (!matched.includes(nodeId)) matched.push(nodeId)
+          }
+        }
+      }
+    }
+
+    // Match company name patterns (ending with 公司/集团/有限 etc)
+    if (matched.length === 0) {
+      const companyMatches = query.match(/([一-龥]{2,15}(?:有限|股份|集团|科技|实业|投资|控股)?(?:公司|企业|集团|中心|所))/g)
+      if (companyMatches) {
+        for (const name of companyMatches) {
+          for (const node of nodes) {
+            const nodeId = String(node.id)
+            const nodeNames = [node.title, node.name, node.zh_name, (node as any).zhTitle].filter(Boolean) as string[]
+            if (nodeNames.some((n) => n.includes(name) || name.includes(n.slice(0, 10)))) {
+              if (!matched.includes(nodeId)) matched.push(nodeId)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return matched
+}
+
+// Find 1-hop neighbor IDs for given node IDs
+function findNeighborIds(nodeIds: string[], edges: { source: string; target: string }[]): string[] {
+  if (nodeIds.length === 0 || edges.length === 0) return []
+  const idSet = new Set(nodeIds.map(String))
+  const neighbors = new Set<string>()
+  for (const e of edges) {
+    const src = String(e.source)
+    const tgt = String(e.target)
+    if (idSet.has(src) && !idSet.has(tgt)) neighbors.add(tgt)
+    if (idSet.has(tgt) && !idSet.has(src)) neighbors.add(src)
+  }
+  return Array.from(neighbors)
+}
+
 const KnowledgeQA: React.FC = () => {
+  const { message } = App.useApp()
   const {
     messages,
     currentSubgraph,
@@ -21,11 +88,11 @@ const KnowledgeQA: React.FC = () => {
     pendingRecommendations,
     clarifyMessage,
     activeRightPanel,
-    analysisResult,
     riskReport,
     riskStages,
     riskCommunity,
     error,
+    retryRiskQuery,
   } = useAgentStore()
 
   const { activeSessionId, updateCurrentSession, getActiveSession, createNewSession } =
@@ -54,7 +121,7 @@ const KnowledgeQA: React.FC = () => {
       const activeSession = getActiveSession()
       if (!activeSession) return
 
-      if (messages.length > 0 || currentSubgraph || analysisResult || riskReport) {
+      if (messages.length > 0 || currentSubgraph || riskReport) {
         let newTitle = activeSession.title
         if ((!newTitle || newTitle === '新会话') && messages.length > 0) {
           const firstUserMsg = messages.find((m) => m.role === 'user')
@@ -70,11 +137,6 @@ const KnowledgeQA: React.FC = () => {
           title: newTitle,
           workspaceState: {
             graphData: currentSubgraph,
-            chartOptions: analysisResult?.echarts_config,
-            stats: {
-              rawData: analysisResult?.raw_data,
-              rowCount: analysisResult?.row_count,
-            },
             riskReport,
             riskStages,
             riskCommunity,
@@ -87,7 +149,6 @@ const KnowledgeQA: React.FC = () => {
   }, [
     messages,
     currentSubgraph,
-    analysisResult,
     riskReport,
     activeSessionId,
     updateCurrentSession,
@@ -101,26 +162,20 @@ const KnowledgeQA: React.FC = () => {
     const session = getActiveSession()
     if (!session) return
 
+    // Migrate old 'analysis' panel setting to 'graph'
+    const savedPanel: string = session.workspaceState.riskReport
+      ? 'risk'
+      : session.workspaceState.graphData
+        ? 'graph'
+        : 'graph'
+
     useAgentStore.setState({
       messages: session.messages,
       currentSubgraph: session.workspaceState.graphData,
-      analysisResult: session.workspaceState.graphData
-        ? null
-        : {
-            analysis_text:
-              session.messages.find((m) => m.role === 'assistant' && m.content)?.content || '',
-            echarts_config: session.workspaceState.chartOptions,
-            raw_data: session.workspaceState.stats.rawData || [],
-            row_count: session.workspaceState.stats.rowCount || 0,
-          },
       riskReport: session.workspaceState.riskReport || null,
       riskStages: session.workspaceState.riskStages || [],
       riskCommunity: session.workspaceState.riskCommunity || null,
-      activeRightPanel: session.workspaceState.riskReport
-        ? 'risk'
-        : session.workspaceState.graphData
-          ? 'graph'
-          : 'analysis',
+      activeRightPanel: (savedPanel === 'analysis' ? 'graph' : savedPanel) as 'graph' | 'risk',
     })
 
     if (session.workspaceState.graphData && graphRef.current) {
@@ -132,9 +187,25 @@ const KnowledgeQA: React.FC = () => {
   // Update graph when subgraph changes
   useEffect(() => {
     if (currentSubgraph && graphRef.current) {
-      graphRef.current.refresh(currentSubgraph, alignmentFeatures)
-      const t = setTimeout(() => graphRef.current?.fitView(), 500)
-      return () => clearTimeout(t)
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+      const query = lastUserMsg?.content || ''
+
+      // Extract subject entity names from query and match against graph nodes
+      const subjectIds = extractSubjectEntityIds(query, currentSubgraph.nodes)
+      const neighborIds = findNeighborIds(subjectIds, currentSubgraph.edges)
+
+      graphRef.current.refresh(currentSubgraph, alignmentFeatures, subjectIds, neighborIds)
+
+      if (subjectIds.length > 0) {
+        const t = setTimeout(() => {
+          graphRef.current?.focusNode(subjectIds[0])
+          graphRef.current?.dimNonFocused(subjectIds, neighborIds)
+        }, 600)
+        return () => clearTimeout(t)
+      } else {
+        const t = setTimeout(() => graphRef.current?.fitView(), 500)
+        return () => clearTimeout(t)
+      }
     }
   }, [currentSubgraph, alignmentFeatures])
 
@@ -161,6 +232,64 @@ const KnowledgeQA: React.FC = () => {
     }
   }, [])
 
+  const handleJumpToGraph = useCallback(
+    (entityId: string, entityName: string, entityType: string) => {
+      useAgentStore.setState({ activeRightPanel: 'graph' })
+      if (graphRef.current) {
+        graphRef.current.searchAndExpand(entityId, entityType)
+      }
+    },
+    []
+  )
+
+  const handleAddMonitor = useCallback(
+    async (entityName: string, entityType: string) => {
+      try {
+        const resp = await fetch('/api/v1/risk/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reportId: `watch-${entityName}`, assignedDept: '风控部', entityType }),
+        })
+        if (resp.ok) {
+          const data = await resp.json()
+          message.success(`Monitor created: ${data?.data?.ticket_id || 'OK'}`)
+        } else {
+          message.error('Failed to create monitor ticket')
+        }
+      } catch {
+        message.error('Failed to create monitor ticket')
+      }
+    },
+    [message]
+  )
+
+  const handleGenerateTicket = useCallback(
+    async (recommendation: { action: string; department: string; urgency: string }) => {
+      try {
+        const reportId = useAgentStore.getState().riskReport?.report_id || 'risk-report'
+        const resp = await fetch('/api/v1/risk/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reportId, assignedDept: recommendation.department }),
+        })
+        if (resp.ok) {
+          const data = await resp.json()
+          message.success(`Ticket created: ${data?.data?.ticket_id || 'OK'}`)
+        } else {
+          message.error('Failed to create ticket')
+        }
+      } catch {
+        message.error('Failed to create ticket')
+      }
+    },
+    [message]
+  )
+
+  const lastQueryText = useMemo(() => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+    return lastUserMsg?.content || ''
+  }, [messages])
+
   const handleBFFSend = useCallback(
     async (query: string) => {
       const history = useAgentStore
@@ -174,7 +303,7 @@ const KnowledgeQA: React.FC = () => {
           query,
           history: JSON.stringify(history),
         })
-        const res = await fetch(`http://localhost:3001/api/rewrite?${params.toString()}`)
+        const res = await fetch(`/api/rewrite?${params.toString()}`)
         if (res.ok) {
           const { rewrittenQuery } = await res.json()
           await sendMessage(query, rewrittenQuery)
@@ -208,8 +337,8 @@ const KnowledgeQA: React.FC = () => {
   return (
     <PageContainer
       header={{
-        title: 'Knowledge Graph Q&A',
-        subTitle: 'Knowledge graph recommendation engine',
+        title: '知识图谱问答',
+        subTitle: '知识图谱风险分析引擎',
       }}
     >
       <div
@@ -298,7 +427,7 @@ const KnowledgeQA: React.FC = () => {
                   }}
                 />
                 <span style={{ fontSize: 12, color: '#64748B' }}>
-                  {apiHealthy === null ? 'Checking' : apiHealthy ? 'API Online' : 'API Offline'}
+                  {apiHealthy === null ? '检测中' : apiHealthy ? 'API 在线' : 'API 离线'}
                 </span>
               </div>
             </div>
@@ -317,9 +446,7 @@ const KnowledgeQA: React.FC = () => {
             {/* Left: Chat Panel */}
             <div
               style={{
-                width: 480,
-                minWidth: 360,
-                maxWidth: 560,
+                width: 'clamp(320px, 32vw, 520px)',
                 flexShrink: 0,
                 borderRadius: 20,
                 overflow: 'hidden',
@@ -396,13 +523,12 @@ const KnowledgeQA: React.FC = () => {
               >
                 <Segmented
                   options={[
-                    { label: 'Knowledge Graph', value: 'graph' },
-                    { label: 'Data Analysis', value: 'analysis' },
-                    { label: 'Risk Report', value: 'risk' },
+                    { label: '知识图谱', value: 'graph' },
+                    { label: '风险报告', value: 'risk' },
                   ]}
                   value={activeRightPanel}
                   onChange={(val) =>
-                    useAgentStore.setState({ activeRightPanel: val as any })
+                    useAgentStore.setState({ activeRightPanel: val as 'graph' | 'risk' })
                   }
                   size="middle"
                   style={{
@@ -421,9 +547,12 @@ const KnowledgeQA: React.FC = () => {
                     community={riskCommunity}
                     isLoading={isLoading}
                     error={error}
+                    onJumpToGraph={handleJumpToGraph}
+                    onAddMonitor={handleAddMonitor}
+                    onGenerateTicket={handleGenerateTicket}
+                    onRetry={retryRiskQuery}
+                    queryText={lastQueryText}
                   />
-                ) : activeRightPanel === 'analysis' ? (
-                  <AnalysisPanel onClose={() => useAgentStore.setState({ activeRightPanel: 'graph' })} />
                 ) : (
                   <EnhancedGraphPanel
                     ref={graphRef}

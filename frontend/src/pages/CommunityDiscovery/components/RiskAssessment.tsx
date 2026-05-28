@@ -3,10 +3,12 @@ import {
   AlertOutlined,
   WarningOutlined,
   CheckCircleOutlined,
+  ClusterOutlined,
 } from '@ant-design/icons';
-import { Card, Progress, Row, Col, Statistic, Tag, Typography } from 'antd';
-import React, { useMemo } from 'react';
-import type { Community } from '../service';
+import { Card, Progress, Row, Col, Statistic, Tag, Typography, Spin } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { Community, QualityMetrics } from '../service';
+import { getCommunityQuality } from '../service';
 
 const { Text } = Typography;
 
@@ -52,6 +54,16 @@ function deriveRiskLevel(community: Community): { level: string; score: number }
 
 const RiskAssessment: React.FC<RiskAssessmentProps> = ({ community }) => {
   const { level, score } = useMemo(() => deriveRiskLevel(community), [community]);
+  const [quality, setQuality] = useState<QualityMetrics | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+
+  useEffect(() => {
+    setQualityLoading(true);
+    getCommunityQuality(community.community_id)
+      .then(setQuality)
+      .catch(() => setQuality(null))
+      .finally(() => setQualityLoading(false));
+  }, [community.community_id]);
 
   const labelDist = community.label_distribution || {};
   const eventCount = Object.entries(labelDist)
@@ -98,18 +110,10 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ community }) => {
           <Statistic title="法规关联" value={regulationCount} valueStyle={{ fontSize: 20 }} />
         </Col>
         <Col span={12}>
-          <Statistic
-            title="群体规模"
-            value={community.size}
-            valueStyle={{ fontSize: 20 }}
-          />
+          <Statistic title="群体规模" value={community.size} valueStyle={{ fontSize: 20 }} />
         </Col>
         <Col span={12}>
-          <Statistic
-            title="密度"
-            value={community.density.toFixed(2)}
-            valueStyle={{ fontSize: 20 }}
-          />
+          <Statistic title="密度" value={community.density.toFixed(2)} valueStyle={{ fontSize: 20 }} />
         </Col>
       </Row>
 
@@ -121,6 +125,51 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ community }) => {
               ? '该群体存在一定风险，建议定期审查。'
               : '该群体风险较低，常规关注即可。'}
         </Text>
+      </div>
+
+      {/* Quality Metrics Section */}
+      <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#1a1a2e' }}>
+          <ClusterOutlined style={{ marginRight: 4 }} />
+          社区质量指标
+        </div>
+        {qualityLoading ? (
+          <div style={{ textAlign: 'center', padding: 12 }}><Spin size="small" /></div>
+        ) : quality ? (
+          <Row gutter={[8, 8]}>
+            <Col span={12}>
+              <Statistic
+                title="电导率"
+                value={quality.conductance}
+                valueStyle={{ fontSize: 18, color: quality.conductance < 0.3 ? '#52c41a' : '#faad14' }}
+              />
+              <Text type="secondary" style={{ fontSize: 10 }}>越低越好</Text>
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="覆盖率"
+                value={(quality.coverage * 100).toFixed(0) + '%'}
+                valueStyle={{ fontSize: 18, color: quality.coverage > 0.6 ? '#52c41a' : '#faad14' }}
+              />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="三角形数"
+                value={quality.triangle_count}
+                valueStyle={{ fontSize: 18 }}
+              />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="聚类系数"
+                value={quality.avg_clustering.toFixed(3)}
+                valueStyle={{ fontSize: 18, color: quality.avg_clustering > 0.3 ? '#52c41a' : '#999' }}
+              />
+            </Col>
+          </Row>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 11 }}>质量指标加载失败</Text>
+        )}
       </div>
     </Card>
   );

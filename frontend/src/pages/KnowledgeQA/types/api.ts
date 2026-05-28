@@ -155,6 +155,7 @@ export interface ChatMessage {
   thinkingStatus?: string
   thinkingProcess?: string[]
   isLoading?: boolean
+  pipelineStages?: PipelineStage[]
   data?: {
     rewriteResult?: QueryRewriteResult
     subgraph?: Subgraph
@@ -163,6 +164,22 @@ export interface ChatMessage {
     trace?: TraceContext
     echartsConfig?: Record<string, unknown>
   }
+}
+
+// ── Pipeline Progress types ──
+
+export interface PipelineStage {
+  stage_id: string
+  stage_name: string
+  stage_index: number
+  total_stages: number
+  agent: string
+  agent_action: string
+  progress: number
+  timestamp: number
+  status: 'pending' | 'running' | 'done' | 'error'
+  duration_ms?: number
+  trace?: Record<string, unknown>
 }
 
 export interface StreamCardsEvent {
@@ -216,13 +233,43 @@ export interface RiskRecommendation {
   reasoning: string
 }
 
+export interface EntityStats {
+  total_entities: number
+  entity_type_counts: Record<string, number>
+  top_entities: Array<{ name: string; type: string; id: string }>
+}
+
+export interface CommunityMember {
+  id: string
+  name: string
+  type: string
+}
+
+export interface CommunityItem {
+  community_id: number
+  size: number
+  members: CommunityMember[]
+  modularity?: number | null
+}
+
+export interface CommunityResult {
+  communities: CommunityItem[]
+  algorithm: string
+}
+
 export interface RiskReport {
+  report_id?: string
+  generated_at?: string
+  query_summary?: string
   executive_summary: string
+  entity_stats?: EntityStats
+  community_info?: CommunityResult
   risk_paths: RiskPath[]
   anomaly_findings: AnomalyFinding[]
   compliance_matches: ComplianceMatch[]
   overall_risk_level: 'high' | 'medium' | 'low'
   recommendations: RiskRecommendation[]
+  integrated_report?: string
   markdown_report: string
   subtasks_completed: number
   subgraph_summary: {
@@ -231,15 +278,35 @@ export interface RiskReport {
   }
   echarts_config?: any
   raw_data?: any[]
+  legal_basis?: string[]
+  penalty_cases?: PenaltyCase[]
+}
+
+export interface PenaltyCase {
+  case_name: string
+  case_number: string
+  regulation: string
+  penalty_amount: string
+  penalty_type: string
+  summary: string
+  source_url?: string
+}
+
+export interface ReportHistoryItem {
+  report_id: string
+  generated_at: string
+  query_summary: string
+  overall_risk_level: string
+  subtasks_completed: number
 }
 
 export interface RiskStage {
-  stage: 'planning' | 'retrieving' | 'analyzing' | 'compliance' | 'reporting'
+  stage: 'planning' | 'retrieving' | 'entity_stats' | 'community' | 'analyzing' | 'compliance' | 'reporting'
   content: string
 }
 
-export interface CommunityInfo {
-  community_id: number
-  size: number
-  top_entities: Array<{ id: string; name: string; label: string }>
+export interface CommunityInfo extends CommunityResult {
+  community_id?: number
+  size?: number
+  top_entities?: Array<{ id: string; name: string; label: string }>
 }

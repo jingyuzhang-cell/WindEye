@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   RecommendationItem,
   StreamReviewEvent,
+  PipelineStage,
 } from '../types/api'
 
 const client = axios.create({
@@ -26,7 +27,7 @@ export const sendChat = async (req: ChatRequest): Promise<ApiResponse> => {
 export const sendChatStream = (
   req: ChatRequest,
   callbacks: {
-    onStage?: (content: string) => void
+    onStage?: (stage: PipelineStage | string) => void
     onCards: (cards: RecommendationItem[]) => void
     onGraph: (graph: { nodes: any[]; edges: any[] }) => void
     onReview: (review: StreamReviewEvent) => void
@@ -54,8 +55,25 @@ export const sendChatStream = (
     es.addEventListener('stage', (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data)
-        if (data.content && callbacks.onStage) {
-          callbacks.onStage(data.content)
+        if (callbacks.onStage) {
+          // New structured format with machine-readable stage_id
+          if (data.stage_id) {
+            callbacks.onStage({
+              stage_id: data.stage_id,
+              stage_name: data.stage_name || '',
+              stage_index: data.stage_index ?? 0,
+              total_stages: data.total_stages ?? 5,
+              agent: data.agent || '',
+              agent_action: data.agent_action || '',
+              progress: data.progress ?? 0,
+              timestamp: data.timestamp || Date.now(),
+              status: data.progress !== undefined && data.progress >= 1.0 ? 'done' : 'running',
+              trace: data.trace,
+            } as PipelineStage)
+          } else if (data.content) {
+            // Backward-compat: old string-format stages
+            callbacks.onStage(data.content)
+          }
         }
       } catch (err) {
         console.error('[SSE] stage parse error:', err)
@@ -102,6 +120,8 @@ export const sendChatStream = (
       } catch {
         callbacks.onError('Server analysis error')
       }
+      doneFired = true
+      es?.close()
     })
 
     es.onerror = () => {
@@ -140,7 +160,9 @@ export interface RiskStreamRequest {
 
 export interface RiskStreamCallbacks {
   onStage?: (stage: string, content: string) => void
-  onCommunity?: (info: { community_id: number; size: number; top_entities: Array<{ id: string; name: string; label: string }> }) => void
+  onEntityStats?: (stats: import('../types/api').EntityStats) => void
+  onCommunity?: (info: import('../types/api').CommunityInfo) => void
+  onRiskPaths?: (paths: import('../types/api').RiskPath[]) => void
   onSubgraph?: (graph: { nodes: any[]; edges: any[] }) => void
   onReport?: (report: any) => void
   onDone?: () => void
@@ -214,8 +236,12 @@ export const sendRiskStream = (
               if (ev === 'stage') {
                 const { stage, content } = JSON.parse(raw)
                 callbacks.onStage?.(stage, content)
+              } else if (ev === 'entity_stats') {
+                callbacks.onEntityStats?.(JSON.parse(raw))
               } else if (ev === 'community') {
                 callbacks.onCommunity?.(JSON.parse(raw))
+              } else if (ev === 'risk_paths') {
+                callbacks.onRiskPaths?.(JSON.parse(raw))
               } else if (ev === 'subgraph') {
                 callbacks.onSubgraph?.(JSON.parse(raw))
               } else if (ev === 'report') {

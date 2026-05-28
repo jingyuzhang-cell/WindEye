@@ -1,4 +1,4 @@
-import { Alert, Progress, Steps } from 'antd';
+import { Alert, Progress, Statistic, Steps } from 'antd';
 import React, { useEffect, useRef } from 'react';
 import { useCrawlStore } from '../store/crawlStore';
 
@@ -16,6 +16,7 @@ const CrawlProgress: React.FC = () => {
   const stageMessage = useCrawlStore((s) => s.stageMessage);
   const logs = useCrawlStore((s) => s.logs);
   const error = useCrawlStore((s) => s.error);
+  const totalFilesDownloaded = useCrawlStore((s) => s.totalFilesDownloaded);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +40,17 @@ const CrawlProgress: React.FC = () => {
         size="small"
         style={{ marginBottom: 16 }}
       />
-      <Progress percent={Math.round(progress)} size="small" style={{ marginBottom: 16 }} />
+      <Progress percent={Math.round(progress)} size="small" style={{ marginBottom: 12 }} />
+      {stage === 'crawling' && totalFilesDownloaded > 0 && (
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <Statistic
+            title="已下载文件"
+            value={totalFilesDownloaded}
+            valueStyle={{ fontSize: 28, color: '#1890ff' }}
+            suffix="个"
+          />
+        </div>
+      )}
       {stageMessage && (
         <Alert
           type={error ? 'error' : 'info'}

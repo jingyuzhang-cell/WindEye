@@ -96,14 +96,26 @@ class RiskAnalysisEngine:
 
         yield {"stage": "retrieving", "content": f"检索完成: {len(node_list)} 个节点, {len(edge_list)} 条关系"}
 
+        # ── Stage 3: Entity Statistics ────────────────────────────
+        entity_stats = self._compute_entity_stats(node_list)
+        yield {"stage": "entity_stats", "content": f"实体识别: {entity_stats['total_entities']} 个实体, {len(entity_stats['entity_type_counts'])} 种类型"}
+        yield {"entity_stats": entity_stats}
+
+        # ── Stage 4: Community Discovery ──────────────────────────
+        community_info = self._compute_community_discovery(node_list, edge_list)
+        community_count = len(community_info.get("communities", []))
+        yield {"stage": "community", "content": f"群体发现: {community_count} 个群体"}
+        yield {"community": community_info}
+
         # ── Skill: RISK_ANALYZING (PersonaSelector for risk analysis) ──
         ctx = await self.skills.execute_hook(SkillHook.RISK_ANALYZING, ctx)
 
-        # ── Stage 3: Analyzing ────────────────────────────────────
+        # ── Stage 5: Analyzing ────────────────────────────────────
         risk_paths, anomalies, overall_assessment = await self._stage_analyzing(
             node_list, edge_list, trigger_event
         )
         yield {"stage": "analyzing", "content": f"分析完成: {len(risk_paths)} 条风险路径, {len(anomalies)} 处异常"}
+        yield {"risk_paths": risk_paths}
 
         # ── Skill: RISK_COMPLIANCE ──
         ctx.risk_paths = risk_paths
@@ -134,11 +146,14 @@ class RiskAnalysisEngine:
         yield {
             "output": {
                 "executive_summary": report.get("executive_summary", ""),
+                "entity_stats": entity_stats,
+                "community_info": community_info,
                 "risk_paths": risk_paths,
                 "anomaly_findings": anomalies,
                 "compliance_matches": compliance_matches,
                 "overall_risk_level": report.get("overall_risk_level", "medium"),
                 "recommendations": report.get("recommendations", []),
+                "integrated_report": report.get("markdown_report", ""),
                 "markdown_report": report.get("markdown_report", ""),
                 "subtasks_completed": len(subtasks),
                 "subgraph_summary": {
@@ -177,17 +192,30 @@ class RiskAnalysisEngine:
         yield {"stage": "retrieving", "content": f"图谱检索完成: {len(nodes)} 个节点, {len(edges)} 条关系"}
         yield {"stage": "subgraph", "nodes": nodes, "edges": edges}
 
-        # Stage 3: Analyze risk patterns from graph structure
+        # Stage 3: Entity statistics
+        await asyncio.sleep(0.2)
+        entity_stats = self._compute_entity_stats(nodes)
+        yield {"stage": "entity_stats", "content": f"实体统计完成: {entity_stats['total_entities']} 个实体"}
+        yield {"entity_stats": entity_stats}
+
+        # Stage 4: Community discovery
+        await asyncio.sleep(0.3)
+        community_info = self._compute_community_discovery(nodes, edges)
+        yield {"stage": "community", "content": f"群体发现完成: {len(community_info['communities'])} 个群体"}
+        yield {"community": community_info}
+
+        # Stage 5: Analyze risk patterns from graph structure
         await asyncio.sleep(0.5)
         risk_paths, anomalies = await self._demo_analyze(nodes, edges)
         yield {"stage": "analyzing", "content": f"风险分析完成: {len(risk_paths)} 条风险路径, {len(anomalies)} 处异常"}
+        yield {"risk_paths": risk_paths}
 
-        # Stage 4: Match regulations
+        # Stage 6: Match regulations
         await asyncio.sleep(0.4)
         compliance_matches = await self._demo_compliance(nodes, risk_paths, anomalies)
         yield {"stage": "compliance", "content": f"合规匹配完成: {len(compliance_matches)} 条法规匹配"}
 
-        # Stage 5: Generate report
+        # Stage 7: Generate report
         await asyncio.sleep(0.5)
         report = self._demo_report(query, nodes, edges, risk_paths, anomalies, compliance_matches)
         yield {"stage": "reporting", "content": "报告生成完成"}
@@ -195,13 +223,15 @@ class RiskAnalysisEngine:
         yield {
             "output": {
                 "executive_summary": report["executive_summary"],
+                "entity_stats": entity_stats,
+                "community_info": community_info,
                 "risk_paths": risk_paths,
                 "anomaly_findings": anomalies,
                 "compliance_matches": compliance_matches,
                 "overall_risk_level": report["overall_risk_level"],
                 "recommendations": report["recommendations"],
                 "markdown_report": report["markdown_report"],
-                "subtasks_completed": 4,
+                "subtasks_completed": 6,
                 "subgraph_summary": {
                     "node_count": len(nodes),
                     "edge_count": len(edges),
@@ -681,6 +711,107 @@ class RiskAnalysisEngine:
                 "风险信息": str(risk_info)[:100] if risk_info else "",
             })
         return rows
+
+    # ── Helper: Entity stats ──────────────────────────────────────
+
+    @staticmethod
+    def _compute_entity_stats(nodes: list[dict]) -> dict[str, Any]:
+        """Compute entity statistics from retrieved nodes."""
+        type_counts: dict[str, int] = {}
+        entity_list: list[dict] = []
+
+        for node in nodes:
+            labels = node.get("labels", [])
+            props = node.get("properties", {}) if isinstance(node.get("properties"), dict) else {}
+            node_id = props.get("id") or props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or str(props.get("_id", ""))
+            node_name = props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or props.get("title") or str(node_id)
+
+            for label in labels:
+                if label and label != "Resource":
+                    type_counts[label] = type_counts.get(label, 0) + 1
+                    entity_list.append({"name": str(node_name)[:50], "type": label, "id": str(node_id)})
+                    break  # count each node once by its primary label
+
+        # Sort entities by name uniqueness (prefer unique names)
+        seen_names: set[str] = set()
+        unique_entities: list[dict] = []
+        for e in entity_list:
+            if e["name"] not in seen_names:
+                seen_names.add(e["name"])
+                unique_entities.append(e)
+
+        return {
+            "total_entities": len(nodes),
+            "entity_type_counts": type_counts,
+            "top_entities": unique_entities[:10],
+        }
+
+    @staticmethod
+    def _compute_community_discovery(
+        nodes: list[dict], edges: list[dict],
+    ) -> dict[str, Any]:
+        """Run community detection on the retrieved subgraph using WCC."""
+        communities: list[dict] = []
+
+        if not nodes or len(nodes) < 2:
+            return {"communities": communities, "algorithm": "wcc"}
+
+        try:
+            # Build adjacency for Weakly Connected Components
+            node_ids: list[str] = []
+            node_map: dict[str, dict] = {}
+            for n in nodes:
+                props = n.get("properties", {}) if isinstance(n.get("properties"), dict) else {}
+                nid = str(props.get("id") or props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or id(n))
+                node_ids.append(nid)
+                labels = n.get("labels", [])
+                node_name = props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or props.get("title") or nid
+                node_map[nid] = {"id": nid, "name": str(node_name)[:50], "type": labels[0] if labels else "Unknown"}
+
+            # Union-Find for connected components
+            parent: dict[str, str] = {nid: nid for nid in node_ids}
+
+            def find(x: str) -> str:
+                while parent[x] != x:
+                    parent[x] = parent[parent[x]]
+                    x = parent[x]
+                return x
+
+            def union(a: str, b: str) -> None:
+                ra, rb = find(a), find(b)
+                if ra != rb:
+                    parent[ra] = rb
+
+            for e in edges:
+                src = str(e.get("source", ""))
+                tgt = str(e.get("target", ""))
+                if src in parent and tgt in parent:
+                    union(src, tgt)
+
+            # Group by component
+            groups: dict[str, list[str]] = {}
+            for nid in node_ids:
+                root = find(nid)
+                groups.setdefault(root, []).append(nid)
+
+            # Build community list (only groups with >= 2 members)
+            comm_id = 0
+            for members in groups.values():
+                if len(members) < 2:
+                    continue
+                member_details = [node_map[m] for m in members if m in node_map]
+                communities.append({
+                    "community_id": comm_id,
+                    "size": len(members),
+                    "members": member_details,
+                    "modularity": None,
+                })
+                comm_id += 1
+
+        except Exception as exc:
+            logger.exception("[community] Discovery failed: %s", exc)
+
+        return {"communities": communities, "algorithm": "wcc"}
 
     # ── Stage implementations ───────────────────────────────────────
 

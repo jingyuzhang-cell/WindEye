@@ -14,6 +14,7 @@ Skill System:
 import logging
 import asyncio
 import re
+import time
 from dataclasses import dataclass
 from typing import Dict, Any, AsyncGenerator, List
 
@@ -66,6 +67,29 @@ class DRAEngine:
         # ── Skill System ──
         self.skills = SkillManager(feature_flags)
         self._register_default_skills()
+
+    @staticmethod
+    def _make_stage(stage_id: str, stage_name: str, stage_index: int,
+                    total_stages: int = 5, agent: str = "", agent_action: str = "",
+                    progress: float = 0.0, **kwargs) -> Dict[str, Any]:
+        """Build a structured stage event for SSE streaming.
+
+        The frontend PipelineProgress component consumes these to render
+        the 5-stage progress bar with per-agent status bubbles.
+        """
+        stage = {
+            "stage_id": stage_id,
+            "stage_name": stage_name,
+            "stage_index": stage_index,
+            "total_stages": total_stages,
+            "agent": agent,
+            "agent_action": agent_action,
+            "progress": progress,
+            "timestamp": time.time(),
+        }
+        result: Dict[str, Any] = {"stage": stage}
+        result.update(kwargs)
+        return result
 
     def _register_default_skills(self) -> None:
         """Register the default Phase 1 skills.
@@ -130,7 +154,10 @@ class DRAEngine:
         ctx = SkillContext(query=query, history=history or [])
         ctx = await self.skills.execute_hook(SkillHook.PRE_INTENT, ctx)
 
-        yield {"stage": "1. [意图解析] 提取起点实体与探索限制..."}
+        yield self._make_stage(
+            "intent_parsing", "意图解析", 0, agent="IntentAgent",
+            agent_action="提取起点实体与探索限制...", progress=0.0,
+        )
 
         bracket_match = re.search(r"\[(.*?)\]", query)
         bracket_entity = bracket_match.group(1) if bracket_match else ""
@@ -187,7 +214,10 @@ class DRAEngine:
         gated_mode = ctx.gated_mode  # ComplexityClassifier may override
 
         if gated_mode == "simple" and entity:
-            yield {"stage": "1-hop 快速通道: 自适应门控判定为简单查询，跳过完整多智能体管道..."}
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="GatingRouter",
+                agent_action="自适应门控判定为简单查询，跳过完整多智能体管道...", progress=0.0,
+            )
 
             # Probe real KG schema
             chosen_rel = ""
@@ -264,9 +294,11 @@ class DRAEngine:
                         cypher = healed_cypher
                         smash_fixed = True
 
-            yield {
-                "stage": f"1-hop 快速通道完成: 关系='{chosen_rel}', 结果数={len(final_results)}",
-                "trace": {
+            yield self._make_stage(
+                "graph_retrieval", "图谱检索", 2, agent="ExecutorAgent",
+                agent_action=f"1-hop 快速通道完成: 关系='{chosen_rel}', 结果数={len(final_results)}",
+                progress=1.0,
+                trace={
                     "gated_mode": "1hop_fast",
                     "planner_count": 1,
                     "ensemble_temps": [0.1],
@@ -274,30 +306,102 @@ class DRAEngine:
                     "semantic_anchor": intent.Expected_Answer_Type,
                     "ablation": {k: v for k, v in self.ablation.__dict__.items() if v},
                 }
-            }
+            )
 
             best_cypher = cypher
             paths = [f"{entity} - {chosen_rel} - Target"] if chosen_rel else []
 
+            # ── Stage 3: Fact Verification ──
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="EntityCleaner",
+                agent_action="多层清洗链: 规则过滤 → 类型一致性检查...", progress=0.0,
+            )
+
+            # ── Skill: POST_AGGREGATE (EntityCleaner) ──
+            ctx.results = final_results
+            ctx = await self.skills.execute_hook(SkillHook.POST_AGGREGATE, ctx)
+            final_results = ctx.results
+
+            ec_meta = ctx.metadata.get("entity_cleaner", {})
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="EntityCleaner",
+                agent_action=f"清洗完成: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体",
+                progress=1.0,
+            )
+
+            # ── Stage 4: Answer Generation ──
+            yield self._make_stage(
+                "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+                agent_action="生成自然语言回答...", progress=0.0,
+            )
+
+            # ── Skill: PRE_NLG (PersonaSelector for NLG persona) ──
+            ctx = await self.skills.execute_hook(SkillHook.PRE_NLG, ctx)
+            nlg_persona = ctx.metadata.get("persona", {}).get("aggregator_persona", "")
+
+            if skip_nlg:
+                final_reasoning = f"最佳路径: {paths[0] if paths else 'N/A'}"
+            else:
+                final_reasoning = await AggregatorAgent.generate_response(
+                    query, final_results, [p for p in paths],
+                    system_prompt=nlg_persona
+                )
+
+            yield self._make_stage(
+                "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+                agent_action="回答生成完成", progress=1.0,
+            )
+
+            reasoning_log = f"**[多智能体对齐推理日志]**\n"
+            reasoning_log += f"- **门控路由**: 1-hop 快速通道\n"
+            reasoning_log += f"- **选择关系**: {chosen_rel}\n"
+            reasoning_log += f"- **结果数量**: {len(final_results)} 个实体\n"
+            if best_cypher:
+                reasoning_log += f"- **执行 Cypher**:\n```cypher\n{best_cypher}\n```"
+
+            recommendations = [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results]
+
+            # ── Build subgraph visualization ──
+            nodes_viz = []
+            edges_viz = []
+            if entity:
+                from kg_construction.ontology.ontology_registry import OntologyRegistry
+                viz_node_type = OntologyRegistry.get_node_label()
+                nodes_viz.append({"id": entity, "label": entity, "type": viz_node_type})
+                added_nodes = {entity}
+                for res_item in final_results[:20]:
+                    if res_item not in added_nodes:
+                        nodes_viz.append({"id": res_item, "label": res_item, "type": viz_node_type})
+                        added_nodes.add(res_item)
+                    edges_viz.append({"source": entity, "target": res_item, "type": chosen_rel})
+
             final_output = {
                 "data": {
                     "output": {
-                        "recommendations": [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results],
-                        "overallReasoning": f"[1-Hop Fast Path] 关系: {chosen_rel}, 结果: {len(final_results)} 个实体"
+                        "recommendations": recommendations,
+                        "overallReasoning": final_reasoning
                     },
-                    "subgraph": {"nodes": [], "edges": []}
+                    "subgraph": {
+                        "nodes": nodes_viz,
+                        "edges": edges_viz
+                    }
                 },
                 "metadata": {
                     "llm_cypher": best_cypher,
                     "smash_fixed": smash_fixed,
-                    "paths": paths
+                    "paths": paths,
+                    "reasoning_log": reasoning_log
                 }
             }
             yield {"output": final_output}
             return
 
         # ── Multi-hop: Full DRA-MA Pipeline ──
-        yield {"stage": f"2. [并发束搜索] 启动动态拓扑探索，最大跳数={hop}，束宽=3 (门控模式: {gated_mode})..."}
+        yield self._make_stage(
+            "path_planning", "路径规划", 1, agent="Planner",
+            agent_action=f"启动动态拓扑探索，最大跳数={hop}，束宽=3 (门控模式: {gated_mode})...",
+            progress=0.0,
+        )
 
         BEAM_SIZE = 3
         beams = [{"path": entity, "current_nodes": [entity], "score": 1.0, "is_frozen": False,
@@ -309,7 +413,11 @@ class DRAEngine:
             if not active_beams:
                 break
 
-            yield {"stage": f"   🔍 [Step {step+1}/{hop}] 并发探针扫描当前 {len(active_beams)} 个活跃分支的底层 Schema..."}
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="Probe",
+                agent_action=f"[Step {step+1}/{hop}] 并发探针扫描 {len(active_beams)} 个活跃分支的底层 Schema...",
+                progress=min(0.3 + step * 0.15, 0.8),
+            )
 
             async def get_cands(b):
                 return get_adjacent_relations(b["current_nodes"])
@@ -370,16 +478,18 @@ class DRAEngine:
                         f"[DynamicEnsemble] Beam {beam_idx} used full ensemble (3 planners)"
                     )
 
-            yield {
-                "stage": f"   🧠 [Step {step+1}/{hop}] 并发调用 LLM 进行意图剪枝与全局打分 (Dynamic Ensemble, {len(need_ensemble)}/{len(active_beams)} beams escalated)...",
-                "trace": {
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="Planner Ensemble",
+                agent_action=f"[Step {step+1}/{hop}] LLM 意图剪枝与全局打分 (Dynamic Ensemble, {len(need_ensemble)}/{len(active_beams)} beams escalated)...",
+                progress=min(0.5 + step * 0.15, 0.9),
+                trace={
                     "planner_count": len(self.planners),
                     "ensemble_temps": [p.temperature for p in self.planners],
                     "active_beams": len(active_beams),
                     "ensembled_beams": len(need_ensemble),
                     "step": step + 1,
                 }
-            }
+            )
 
             new_branches = [b for b in beams if b["is_frozen"]]
 
@@ -421,7 +531,11 @@ class DRAEngine:
             new_branches.sort(key=lambda x: x["score"], reverse=True)
             beams_to_fetch = new_branches[:BEAM_SIZE]
 
-            yield {"stage": f"   🚀 [Step {step+1}/{hop}] 并发执行物理跃迁并提取下一跳中间实体..."}
+            yield self._make_stage(
+                "graph_retrieval", "图谱检索", 2, agent="ExecutorAgent",
+                agent_action=f"[Step {step+1}/{hop}] 并发执行物理跃迁并提取下一跳中间实体...",
+                progress=0.3 + step * 0.2,
+            )
 
             async def fetch_nodes(b):
                 """Execute cypher for one beam. On failure, heal once and retry.
@@ -504,7 +618,10 @@ class DRAEngine:
                 logger.info(f"[BeamSearch] Early stop at step {step+1}: all beams frozen")
                 break
 
-        yield {"stage": "4. [分支校验] 完成束搜索，执行最终事实校验..."}
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="VerifierAgent",
+            agent_action="完成束搜索，执行最终事实校验...", progress=0.0,
+        )
 
         branch_results = []
         paths = []
@@ -562,7 +679,10 @@ class DRAEngine:
                     "healed_flag": b["healed_flag"]
                 })
 
-        yield {"stage": "5. [答案收束] 所有分支校验已完成，选中最佳推理路径..."}
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="VerifierAgent",
+            agent_action="所有分支校验已完成，选中最佳推理路径...", progress=0.7,
+        )
 
         # ── Skill: POST_VERIFY (FeedbackLoop — trigger re-plan on low scores) ──
         ctx.beams = branch_results
@@ -570,7 +690,10 @@ class DRAEngine:
 
         valid_branches = [b for b in branch_results if b["is_valid"] and b["results"]]
         if not valid_branches:
-            yield {"stage": "⚠️ 所有推理分支均未返回结果，启动1-Hop直接关系兜底..."}
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="SmashAgent",
+                agent_action="所有推理分支均未返回结果，启动1-Hop直接关系兜底...", progress=0.85,
+            )
 
             # 1-Hop fallback: single broad query returning ALL adjacent entities
             if entity:
@@ -602,7 +725,10 @@ class DRAEngine:
 
             valid_branches = [b for b in branch_results if b["is_valid"] and b["results"]]
             if not valid_branches:
-                yield {"stage": "⚠️ 1-Hop兜底也未返回结果，采用原始空分支..."}
+                yield self._make_stage(
+                    "fact_verification", "事实校验", 3, agent="SmashAgent",
+                    agent_action="1-Hop兜底也未返回结果，采用原始空分支...", progress=0.95,
+                )
                 valid_branches = branch_results
 
         valid_branches = sorted(valid_branches, key=lambda x: x.get("score", 0.0), reverse=True)
@@ -610,9 +736,11 @@ class DRAEngine:
         # ── Skill: PRE_AGGREGATE ──
         ctx = await self.skills.execute_hook(SkillHook.PRE_AGGREGATE, ctx)
 
-        yield {
-            "stage": "6. [答案聚合智能体] 融合多路径证据，使用最佳路径优先+共识补充策略，并进行终极语义定锚清洗...",
-            "trace": {
+        yield self._make_stage(
+            "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+            agent_action="融合多路径证据，最佳路径优先+共识补充策略，终极语义定锚清洗...",
+            progress=0.0,
+            trace={
                 "gated_mode": gated_mode,
                 "total_branches": len(branch_results),
                 "valid_branches": len(valid_branches),
@@ -622,7 +750,7 @@ class DRAEngine:
                 "ensemble_temps": [p.temperature for p in self.planners],
                 "ablation": {k: v for k, v in self.ablation.__dict__.items() if v},
             }
-        }
+        )
         final_results = await AggregatorAgent.aggregate_results(
             query, valid_branches,
             expected_answer_type=intent.Expected_Answer_Type
@@ -632,6 +760,13 @@ class DRAEngine:
         ctx.results = final_results
         ctx = await self.skills.execute_hook(SkillHook.POST_AGGREGATE, ctx)
         final_results = ctx.results
+
+        ec_meta = ctx.metadata.get("entity_cleaner", {})
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="EntityCleaner",
+            agent_action=f"清洗完成: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体",
+            progress=1.0,
+        )
 
         best_cyphers = [b["cypher"] for b in valid_branches if b.get("results")]
         best_cypher = best_cyphers[0] if best_cyphers else ""
@@ -649,13 +784,17 @@ class DRAEngine:
                 system_prompt=nlg_persona
             )
 
-        explanation = f"{final_reasoning}\n\n"
-        explanation += f"**[多智能体对齐推理日志]**\n"
-        explanation += f"- **门控路由**: {gated_mode}\n"
-        explanation += f"- **探索路径数**: {len(paths)} 条\n"
-        explanation += f"- **有效分支数**: {len([b for b in branch_results if b['is_valid']])} / {len(branch_results)}\n"
+        yield self._make_stage(
+            "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+            agent_action="回答生成完成", progress=1.0,
+        )
+
+        reasoning_log = f"**[多智能体对齐推理日志]**\n"
+        reasoning_log += f"- **门控路由**: {gated_mode}\n"
+        reasoning_log += f"- **探索路径数**: {len(paths)} 条\n"
+        reasoning_log += f"- **有效分支数**: {len([b for b in branch_results if b['is_valid']])} / {len(branch_results)}\n"
         if best_cypher:
-            explanation += f"- **执行 Cypher**:\n```cypher\n{best_cypher}\n```"
+            reasoning_log += f"- **执行 Cypher**:\n```cypher\n{best_cypher}\n```"
 
         recommendations = [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results]
 
@@ -681,7 +820,7 @@ class DRAEngine:
             "data": {
                 "output": {
                     "recommendations": recommendations,
-                    "overallReasoning": explanation
+                    "overallReasoning": final_reasoning
                 },
                 "subgraph": {
                     "nodes": nodes_viz,
@@ -691,7 +830,8 @@ class DRAEngine:
             "metadata": {
                 "llm_cypher": best_cypher,
                 "smash_fixed": any(b.get("healed_flag", 0) > 0 for b in branch_results),
-                "paths": paths
+                "paths": paths,
+                "reasoning_log": reasoning_log
             }
         }
 

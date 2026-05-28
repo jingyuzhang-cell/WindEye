@@ -1,4 +1,4 @@
-import { DatePicker, Select, Slider, Space } from 'antd';
+import { DatePicker, InputNumber, Select, Slider, Space } from 'antd';
 import React from 'react';
 import { useCrawlStore } from '../store/crawlStore';
 
@@ -22,11 +22,13 @@ const QuickInputPanel: React.FC = () => {
   const dataType = useCrawlStore((s) => s.dataType);
   const sources = useCrawlStore((s) => s.sources);
   const maxPages = useCrawlStore((s) => s.maxPages);
+  const maxFiles = useCrawlStore((s) => s.maxFiles);
   const setDataType = useCrawlStore((s) => s.setDataType);
   const setSources = useCrawlStore((s) => s.setSources);
   const setDateRange = useCrawlStore((s) => s.setDateRange);
   const setKeywords = useCrawlStore((s) => s.setKeywords);
   const setMaxPages = useCrawlStore((s) => s.setMaxPages);
+  const setMaxFiles = useCrawlStore((s) => s.setMaxFiles);
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -76,6 +78,18 @@ const QuickInputPanel: React.FC = () => {
       <div>
         <div style={{ marginBottom: 4, fontWeight: 500 }}>最大爬取页数: {maxPages}</div>
         <Slider min={1} max={50} value={maxPages} onChange={setMaxPages} />
+      </div>
+
+      <div>
+        <div style={{ marginBottom: 4, fontWeight: 500 }}>限制下载文件数 (0 = 不限)</div>
+        <InputNumber
+          min={0}
+          max={500}
+          value={maxFiles}
+          onChange={(v) => setMaxFiles(v || 0)}
+          style={{ width: '100%' }}
+          placeholder="0 表示不限制"
+        />
       </div>
     </Space>
   );

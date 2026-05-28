@@ -40,6 +40,7 @@ class RequirementParsingAgent:
             "date_end": request.date_end,
             "keywords": request.keywords,
             "max_pages": request.max_pages,
+            "max_files": request.max_files,
         }
 
     def parse_complex_mode(self, nl_query: str) -> dict:
@@ -116,5 +117,6 @@ class RequirementParsingAgent:
             "date_end": None,
             "keywords": keywords,
             "max_pages": 5,
+            "max_files": 0,
             "confidence": 0.3,
         }

@@ -1,10 +1,13 @@
 """Dify Workflow API Client — calls Dify extraction workflows via REST API.
 
-Each KG construction stage maps to a dedicated Dify workflow:
-  - subject_extraction    → DIFY_SUBJECT_WORKFLOW_ID
-  - event_extraction      → DIFY_EVENT_WORKFLOW_ID
-  - feature_extraction    → DIFY_FEATURE_WORKFLOW_ID
-  - regulation_linking    → DIFY_REGULATION_WORKFLOW_ID
+Each KG construction stage maps to a dedicated Dify workflow identified by its
+API key (each Dify App has its own API key in the Authorization header):
+  - subject_extraction    → DIFY_SUBJECT_API_KEY
+  - event_extraction      → DIFY_EVENT_API_KEY
+  - feature_extraction    → DIFY_FEATURE_API_KEY
+  - regulation_linking    → DIFY_REGULATION_API_KEY
+
+All stages fall back to DIFY_API_KEY if a per-stage key is not set.
 
 Each workflow accepts a text string input and returns a JSONL string of extracted
 nodes and relationships via the 'output_triples' output.
@@ -34,32 +37,31 @@ DEFAULT_TIMEOUT = 120.0
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0  # seconds
 
-# Stage → workflow-id env var mapping
-_STAGE_WORKFLOW_ENV_MAP: dict[str, str] = {
-    "subject_extraction": "DIFY_SUBJECT_WORKFLOW_ID",
-    "event_extraction": "DIFY_EVENT_WORKFLOW_ID",
-    "feature_extraction": "DIFY_FEATURE_WORKFLOW_ID",
-    "regulation_linking": "DIFY_REGULATION_WORKFLOW_ID",
+# Stage → per-stage API key env var mapping.
+# Each Dify App/workflow has its own API key; falls back to DIFY_API_KEY.
+_STAGE_API_KEY_ENV_MAP: dict[str, str] = {
+    "subject_extraction": "DIFY_SUBJECT_API_KEY",
+    "event_extraction": "DIFY_EVENT_API_KEY",
+    "feature_extraction": "DIFY_FEATURE_API_KEY",
+    "regulation_linking": "DIFY_REGULATION_API_KEY",
 }
 
 
 class DifyClient:
     """HTTP client for the Dify Workflow API.
 
-    Can be instantiated with a specific workflow_id, or use
-    run_workflow_for_stage() to auto-select the workflow by stage name.
+    Can be instantiated with a specific api_key, or use
+    run_workflow_for_stage() to auto-select the API key by stage name.
     """
 
     def __init__(
         self,
         api_key: str | None = None,
         base_url: str | None = None,
-        workflow_id: str | None = None,
         timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         self.api_key = api_key or os.getenv("DIFY_API_KEY", "")
         self.base_url = (base_url or os.getenv("DIFY_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
-        self.workflow_id = workflow_id or os.getenv("DIFY_REGULATION_WORKFLOW_ID", "")
         self.timeout = timeout
 
     # ── Stage-aware API ─────────────────────────────────────────────────
@@ -78,48 +80,46 @@ class DifyClient:
         Returns:
             List of parsed node/relationship dicts.
         """
-        env_var = _STAGE_WORKFLOW_ENV_MAP.get(stage)
+        env_var = _STAGE_API_KEY_ENV_MAP.get(stage)
         if not env_var:
-            logger.warning(f"Unknown stage '{stage}' — no workflow mapping.")
+            logger.warning(f"Unknown stage '{stage}' — no API key mapping.")
             return []
 
-        workflow_id = os.getenv(env_var, "")
-        if not workflow_id:
-            logger.warning(f"{env_var} not set — skipping {stage} extraction.")
+        # Per-stage API key, fall back to default DIFY_API_KEY
+        stage_api_key = os.getenv(env_var, "") or self.api_key
+        if not stage_api_key:
+            logger.warning(f"No API key for stage '{stage}' — set {env_var} or DIFY_API_KEY.")
             return []
 
-        return self._run_workflow(text, workflow_id, source_name)
+        return self._run_workflow(text, stage_api_key, source_name)
 
     # ── Public API ──────────────────────────────────────────────────────
 
     def run_workflow_sync(self, text: str, source_name: str = "pipeline") -> list[dict[str, Any]]:
         """Run the regulation extraction workflow (backward-compatible).
 
-        Delegates to _run_workflow with the instance's default workflow_id.
+        Delegates to _run_workflow with the instance's default api_key.
         """
-        return self._run_workflow(text, self.workflow_id, source_name)
+        return self._run_workflow(text, self.api_key, source_name)
 
     # ── Internal ───────────────────────────────────────────────────────
 
     def _run_workflow(
-        self, text: str, workflow_id: str, source_name: str = "pipeline"
+        self, text: str, api_key: str, source_name: str = "pipeline"
     ) -> list[dict[str, Any]]:
         """Run a Dify workflow synchronously with retry logic.
 
         Args:
             text: The input text to extract entities from.
-            workflow_id: The Dify workflow ID to invoke.
+            api_key: The Dify App API key (identifies which workflow to run).
             source_name: Identifier for the source (e.g. filename), used in logs.
 
         Returns:
             List of parsed dicts — each a node {"type":"node", ...} or
             relationship {"type":"relationship", ...}.
         """
-        if not self.api_key:
-            logger.warning("DIFY_API_KEY not set — skipping Dify extraction.")
-            return []
-        if not workflow_id:
-            logger.warning("Workflow ID not set — skipping Dify extraction.")
+        if not api_key:
+            logger.warning("No Dify API key provided — skipping extraction.")
             return []
 
         if not text or not text.strip():
@@ -128,7 +128,7 @@ class DifyClient:
 
         url = f"{self.base_url}/v1/workflows/run"
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         payload = {
