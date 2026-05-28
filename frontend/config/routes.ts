@@ -22,6 +22,9 @@ export default [
       },
     ],
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // Module C: 风险问答 (Developer C)
+  // ═══════════════════════════════════════════════════════════════════
   {
     path: '/welcome',
     name: 'welcome',
@@ -29,11 +32,23 @@ export default [
     component: './Welcome',
   },
   {
+    path: '/knowledge-qa',
+    name: 'knowledge-qa',
+    icon: 'message',
+    component: './KnowledgeQA',
+  },
+  // ═══════════════════════════════════════════════════════════════════
+  // Module A: 知识图谱构建 (Developer A)
+  // ═══════════════════════════════════════════════════════════════════
+  {
     path: '/knowledge-build',
     name: 'knowledge-build',
     icon: 'tool',
     component: './KnowledgeBuild',
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // Module B: 知识图谱展示 (Developer B)
+  // ═══════════════════════════════════════════════════════════════════
   {
     path: '/knowledge-graph',
     name: 'knowledge-graph',
@@ -65,17 +80,14 @@ export default [
     component: './RegulationPage',
   },
   {
-    path: '/knowledge-qa',
-    name: 'knowledge-qa',
-    icon: 'message',
-    component: './KnowledgeQA',
-  },
-  {
     path: '/community-discovery',
     name: 'community-discovery',
     icon: 'radarChart',
     component: './CommunityDiscovery',
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // End module routes
+  // ═══════════════════════════════════════════════════════════════════
   {
     path: '/',
     redirect: '/welcome',

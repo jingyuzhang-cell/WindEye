@@ -65,13 +65,21 @@ class AnalyzeRequest(BaseModel):
 def create_routes(app, kg_system, risk_engine=None):
     """Register all API routes on the FastAPI application."""
 
-    # ── Graph visualization routes (migrated from Flask server_Arua.py) ──
+    # ═══════════════════════════════════════════════════════════════
+    # Module B: 知识图谱展示 — Graph visualization routes
+    # ═══════════════════════════════════════════════════════════════
     from api.graph_routes import router as graph_router
     app.include_router(graph_router)
 
-    # ── Pipeline management routes ──
+    # ═══════════════════════════════════════════════════════════════
+    # Module A: 知识图谱构建 — Pipeline management routes
+    # ═══════════════════════════════════════════════════════════════
     from api.pipeline_routes import router as pipeline_router
     app.include_router(pipeline_router)
+
+    # ═══════════════════════════════════════════════════════════════
+    # Module C: 风险问答 — Chat / Risk analysis / Ticket routes
+    # ═══════════════════════════════════════════════════════════════
 
     @app.get("/health")
     def health(request: Request) -> dict[str, str]:
@@ -160,7 +168,13 @@ def create_routes(app, kg_system, risk_engine=None):
                 result = None
                 async for update in kg_system.handle_request(query=query, history=parsed_history, trace=trace):
                     if "stage" in update:
-                        yield f"event: stage\ndata: {_json.dumps({'content': update['stage']}, ensure_ascii=False)}\n\n"
+                        stage_data = update["stage"]
+                        if isinstance(stage_data, str):
+                            # Backward-compat: old string-format stages
+                            yield f"event: stage\ndata: {_json.dumps({'content': stage_data}, ensure_ascii=False)}\n\n"
+                        else:
+                            # New structured stage format with machine-readable fields
+                            yield f"event: stage\ndata: {_json.dumps(stage_data, ensure_ascii=False)}\n\n"
                     elif "output" in update:
                         result = update["output"]
 
@@ -360,7 +374,7 @@ def create_routes(app, kg_system, risk_engine=None):
                         ]
                         yield f"event: stage\ndata: {_json.dumps({'stage': 'retrieving', 'content': f'匹配到社区 #{matched_community["community_id"]} ({matched_community["size"]} 个节点)，开始风险分析...'}, ensure_ascii=False)}\n\n"
 
-                # Phase B: Run the 5-agent risk analysis pipeline
+                # Phase B: Run the risk analysis pipeline
                 async for update in engine.analyze_stream(
                     query=query,
                     focus_entities=focus_entities,
@@ -376,9 +390,20 @@ def create_routes(app, kg_system, risk_engine=None):
                             yield f"event: subgraph\ndata: {_json.dumps(sub_data, ensure_ascii=False)}\n\n"
                         else:
                             yield f"event: stage\ndata: {_json.dumps({'stage': stage_name, 'content': update.get('content', '')}, ensure_ascii=False)}\n\n"
+                    elif "entity_stats" in update:
+                        yield f"event: entity_stats\ndata: {_json.dumps(update['entity_stats'], ensure_ascii=False)}\n\n"
+                    elif "community" in update:
+                        yield f"event: community\ndata: {_json.dumps(update['community'], ensure_ascii=False)}\n\n"
+                    elif "risk_paths" in update:
+                        yield f"event: risk_paths\ndata: {_json.dumps(update['risk_paths'], ensure_ascii=False)}\n\n"
                     elif "output" in update:
                         output = update["output"]
-                        _save_report(output, query)
+                        report_id = _save_report(output, query) or f"RPT-{uuid4().hex[:8].upper()}"
+                        output.setdefault("report_id", report_id)
+                        output.setdefault("generated_at", __import__("datetime").datetime.now().isoformat())
+                        output.setdefault("query_summary", query[:200] if query else "")
+                        output.setdefault("legal_basis", [])
+                        output.setdefault("penalty_cases", [])
                         yield f"event: report\ndata: {_json.dumps(output, ensure_ascii=False)}\n\n"
                         yield f"event: done\ndata: {{}}\n\n"
 
@@ -493,7 +518,12 @@ def create_routes(app, kg_system, risk_engine=None):
                             yield f"event: stage\ndata: {_json.dumps({'stage': stage_name, 'content': update.get('content', '')}, ensure_ascii=False)}\n\n"
                     elif "output" in update:
                         output = update["output"]
-                        _save_report(output, query)
+                        report_id = _save_report(output, query) or f"RPT-{uuid4().hex[:8].upper()}"
+                        output.setdefault("report_id", report_id)
+                        output.setdefault("generated_at", __import__("datetime").datetime.now().isoformat())
+                        output.setdefault("query_summary", query[:200] if query else "")
+                        output.setdefault("legal_basis", [])
+                        output.setdefault("penalty_cases", [])
                         yield f"event: report\ndata: {_json.dumps(output, ensure_ascii=False)}\n\n"
                         yield f"event: done\ndata: {{}}\n\n"
 
@@ -777,3 +807,101 @@ def create_routes(app, kg_system, risk_engine=None):
             }}
         except Exception as exc:
             return {"success": False, "message": str(exc)}
+
+    # ── File Upload ───────────────────────────────────────────
+
+    @app.post("/api/v1/chat/upload")
+    async def upload_file(request: Request):
+        """Upload a text file (.txt/.md/.docx/.pdf) and return extracted text."""
+        import os
+        import tempfile
+
+        ALLOWED_EXTENSIONS = {'.txt', '.md', '.docx', '.pdf'}
+        BLOCKED_EXTENSIONS = {'.exe', '.bat', '.sh', '.com', '.dll', '.js', '.vbs', '.ps1', '.scr', '.msi', '.pif', '.cmd', '.cpl'}
+        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+        MAX_TEXT_LENGTH = 50000
+
+        content_type = request.headers.get("content-type", "")
+        if "multipart/form-data" not in content_type:
+            return {"success": False, "message": "请求格式错误，需要 multipart/form-data"}
+
+        form = await request.form()
+        file = form.get("file")
+        if file is None:
+            return {"success": False, "message": "未找到上传文件"}
+
+        filename = getattr(file, 'filename', 'unknown')
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext in BLOCKED_EXTENSIONS:
+            return {"success": False, "message": f"不支持的文件类型: {ext}"}
+
+        if ext not in ALLOWED_EXTENSIONS:
+            return {"success": False, "message": f"不支持的文件格式: {ext}，仅支持 .txt .md .docx .pdf"}
+
+        content = await file.read()
+
+        if len(content) > MAX_FILE_SIZE:
+            return {"success": False, "message": "文件过大（最大 10MB），请拆分后重试"}
+
+        # Magic number validation
+        if ext == '.pdf' and content[:4] != b'%PDF':
+            return {"success": False, "message": "文件内容与扩展名不匹配（非有效 PDF 文件）"}
+        if ext == '.docx' and content[:4] != b'PK\x03\x04':
+            return {"success": False, "message": "文件内容与扩展名不匹配（非有效 DOCX 文件）"}
+
+        text = ""
+        try:
+            if ext in ('.txt', '.md'):
+                try:
+                    text = content.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        text = content.decode('gbk')
+                    except Exception:
+                        return {"success": False, "message": "文件编码不支持，请使用 UTF-8 或 GBK 编码"}
+            elif ext == '.pdf':
+                with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                    tmp.write(content)
+                    tmp_path = tmp.name
+                try:
+                    from data_collection.file_import.pdf_parser import parse_pdf_hybrid
+                    text = parse_pdf_hybrid(tmp_path) or ""
+                finally:
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
+            elif ext == '.docx':
+                try:
+                    from docx import Document
+                    import io
+                    doc = Document(io.BytesIO(content))
+                    text = "\n".join(p.text for p in doc.paragraphs if p.text)
+                except ImportError:
+                    return {"success": False, "message": "python-docx 未安装，无法解析 .docx 文件"}
+                except Exception as e:
+                    return {"success": False, "message": f"DOCX 解析失败: {str(e)}"}
+        except Exception as e:
+            return {"success": False, "message": f"文件解析失败: {str(e)}"}
+
+        if not text or not text.strip():
+            return {"success": False, "message": "文件内容为空或无法提取文本"}
+
+        truncated = len(text) > MAX_TEXT_LENGTH
+        if truncated:
+            text = text[:MAX_TEXT_LENGTH]
+
+        return {
+            "success": True,
+            "data": {
+                "filename": filename,
+                "text": text,
+                "char_count": len(text),
+                "truncated": truncated,
+            },
+        }
+
+    # ═══════════════════════════════════════════════════════════════
+    # End Module C routes
+    # ═══════════════════════════════════════════════════════════════
