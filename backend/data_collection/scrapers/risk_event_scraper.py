@@ -30,8 +30,19 @@ def _scrape_sse(config: dict) -> dict:
     """上交所 — 风险事件公告 (股票交易异常波动/诉讼和仲裁/风险警示)."""
     source = config.get("source", "sse")
     max_pages = min(config.get("max_pages", 5), 50)
+    max_files = config.get("max_files", 0) or 0
+    date_start = config.get("date_start", "")
+    date_end = config.get("date_end", "")
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
+
+    if date_start or date_end:
+        logger.warning(
+            "SSE: date_start=%s date_end=%s — date filtering on SSE requires "
+            "interacting with the website's date picker (not yet implemented). "
+            "All pages within max_pages=%s will be scraped.",
+            date_start, date_end, max_pages,
+        )
 
     TYPE_MAP = {
         "股票交易异常波动和澄清": "13",
@@ -80,8 +91,15 @@ def _scrape_sse(config: dict) -> dict:
                 time.sleep(2)
                 files_before = set(os.listdir(save_dir))
                 pdf_links = driver.find_elements("xpath", "//a[contains(@href, '.pdf')]")
+                queued_before = len(rename_tasks)
                 seen_urls: set[str] = set()
                 for a_elem in pdf_links:
+                    # Check max_files per-file (before clicking more links)
+                    if max_files > 0:
+                        already_downloaded = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                        if already_downloaded + len(rename_tasks) - queued_before >= max_files:
+                            logger.info("SSE: reached max_files=%s, stopping on this page", max_files)
+                            break
                     pdf_url = a_elem.get_attribute("href")
                     if not pdf_url or pdf_url in seen_urls:
                         continue
@@ -121,6 +139,13 @@ def _scrape_sse(config: dict) -> dict:
                             pass
                 rename_tasks.clear()
 
+                # Per-page check: stop pagination if max_files already reached
+                if max_files > 0:
+                    current_count = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                    if current_count >= max_files:
+                        logger.info("SSE: reached max_files=%s (current=%s), stopping", max_files, current_count)
+                        break
+
                 if page < max_pages:
                     try:
                         candidates = [
@@ -152,8 +177,18 @@ def _scrape_szse(config: dict) -> dict:
     """深交所 — 自律监管措施."""
     source = config.get("source", "szse")
     max_pages = min(config.get("max_pages", 5), 50)
+    max_files = config.get("max_files", 0) or 0
+    date_start = config.get("date_start", "")
+    date_end = config.get("date_end", "")
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
+
+    if date_start or date_end:
+        logger.warning(
+            "SZSE: date_start=%s date_end=%s — date filtering not yet implemented. "
+            "All pages within max_pages=%s will be scraped.",
+            date_start, date_end, max_pages,
+        )
 
     driver = create_chrome_driver(download_dir=save_dir)
     try:
@@ -169,7 +204,14 @@ def _scrape_szse(config: dict) -> dict:
                 time.sleep(2)
                 files_before = set(os.listdir(save_dir))
                 rows = driver.find_elements("xpath", "//tbody/tr")
+                queued_before = len(rename_tasks)
                 for row in rows:
+                    # Check max_files per-file (before clicking more links)
+                    if max_files > 0:
+                        already_downloaded = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                        if already_downloaded + len(rename_tasks) - queued_before >= max_files:
+                            logger.info("SZSE: reached max_files=%s, stopping on this page", max_files)
+                            break
                     try:
                         title_elem = row.find_element("xpath", "./td[contains(@class, 'text-left')]")
                         a_elem = row.find_element("xpath", ".//a[@encode-open]")
@@ -209,6 +251,13 @@ def _scrape_szse(config: dict) -> dict:
                             pass
                 rename_tasks.clear()
 
+                # Per-page check: stop pagination if max_files already reached
+                if max_files > 0:
+                    current_count = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                    if current_count >= max_files:
+                        logger.info("SZSE: reached max_files=%s (current=%s), stopping", max_files, current_count)
+                        break
+
                 if page < max_pages:
                     try:
                         candidates = [
@@ -239,8 +288,18 @@ def _scrape_bse(config: dict) -> dict:
     """北交所 — 自律监管措施."""
     source = config.get("source", "bse")
     max_pages = min(config.get("max_pages", 5), 50)
+    max_files = config.get("max_files", 0) or 0
+    date_start = config.get("date_start", "")
+    date_end = config.get("date_end", "")
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
+
+    if date_start or date_end:
+        logger.warning(
+            "BSE: date_start=%s date_end=%s — date filtering not yet implemented. "
+            "All pages within max_pages=%s will be scraped.",
+            date_start, date_end, max_pages,
+        )
 
     driver = create_chrome_driver(download_dir=save_dir)
     try:
@@ -267,7 +326,14 @@ def _scrape_bse(config: dict) -> dict:
                 time.sleep(2)
                 files_before = set(os.listdir(save_dir))
                 pdf_links = driver.find_elements("xpath", "//a[contains(@href, '.pdf')]")
+                queued_before = len(rename_tasks)
                 for a_elem in pdf_links:
+                    # Check max_files per-file (before clicking more links)
+                    if max_files > 0:
+                        already_downloaded = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                        if already_downloaded + len(rename_tasks) - queued_before >= max_files:
+                            logger.info("BSE: reached max_files=%s, stopping on this page", max_files)
+                            break
                     try:
                         raw_title = a_elem.get_attribute("title") or a_elem.text
                         if not raw_title:
@@ -306,6 +372,13 @@ def _scrape_bse(config: dict) -> dict:
                         except OSError:
                             pass
                 rename_tasks.clear()
+
+                # Per-page check: stop pagination if max_files already reached
+                if max_files > 0:
+                    current_count = len([f for f in os.listdir(save_dir) if f.endswith(".pdf")])
+                    if current_count >= max_files:
+                        logger.info("BSE: reached max_files=%s (current=%s), stopping", max_files, current_count)
+                        break
 
                 if page < max_pages:
                     try:
@@ -378,6 +451,7 @@ def run_risk_event_demo(config: dict) -> dict:
     source_labels = {"sse": "上交所", "szse": "深交所", "bse": "北交所"}
     label = source_labels.get(source, source)
     max_pages = min(config.get("max_pages", 5), 50)
+    max_files = config.get("max_files", 0) or 0
 
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     ensure_dir(save_dir)
@@ -392,6 +466,8 @@ def run_risk_event_demo(config: dict) -> dict:
                 pass
 
     num_files = min(random.randint(8, 20), max_pages * 15)
+    if max_files > 0:
+        num_files = min(num_files, max_files)
     demo_companies = ["华泽钴镍", "康美药业", "乐视网", "獐子岛", "獐盛", "辅仁药业",
                        "ST保力", "易见股份", "恒大地产", "浪奇", "爱迪尔", "东方集团",
                        "中泰化学", "蓝盾股份", "富控互动", "金正大", "美尚生态"]

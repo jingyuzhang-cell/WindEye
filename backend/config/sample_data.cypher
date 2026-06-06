@@ -279,5 +279,234 @@ MATCH (rf3:RiskFeature {id:'F003'}), (r5:Regulation {regulation_id:'R005'}) CREA
 MATCH (rf4:RiskFeature {id:'F004'}), (r2:Regulation {regulation_id:'R002'}) CREATE (rf4)-[:COMPLIES_WITH]->(r2);
 MATCH (rf5:RiskFeature {id:'F005'}), (r2:Regulation {regulation_id:'R002'}) CREATE (rf5)-[:COMPLIES_WITH]->(r2);
 
+// ============================================================================
+// 群体 2: 恒达科技集团 (科技赛道 — 通过鑫达投资战略持股+周文博任职天元科技与华创系关联)
+// ============================================================================
+
+// ── 企业 ──
+CREATE (hd1:COMPANY:Subject {name: '恒达科技有限公司', COMPANY_NM: '恒达科技有限公司', ORGNUM: '91310000MA0000101', STATUS: '存续', REG_CAPITAL: '120000万', WARNING_NUM: 7, RISK_INFO: '[]'});
+CREATE (hd2:COMPANY:Subject {name: '恒达云服务有限公司', COMPANY_NM: '恒达云服务有限公司', ORGNUM: '91310000MA0000102', STATUS: '存续', REG_CAPITAL: '50000万', WARNING_NUM: 4, RISK_INFO: '[]'});
+CREATE (hd3:COMPANY:Subject {name: '恒达智能硬件有限公司', COMPANY_NM: '恒达智能硬件有限公司', ORGNUM: '91310000MA0000103', STATUS: '存续', REG_CAPITAL: '30000万', WARNING_NUM: 9, RISK_INFO: '[]'});
+
+// ── 自然人 ──
+CREATE (hp1:PERSON:Subject {name: '周文博', PERSON_NM: '周文博', POSITION: 'CEO', ID: '320000198504010006'});
+CREATE (hp2:PERSON:Subject {name: '林志远', PERSON_NM: '林志远', POSITION: 'CTO', ID: '320000198808150007'});
+
+// ── 投资与任职关系 ──
+MATCH (hd1:COMPANY {name:'恒达科技有限公司'}), (hd2:COMPANY {name:'恒达云服务有限公司'}) CREATE (hd1)-[:INVEST {ratio:'100%', amount:'50000万'}]->(hd2);
+MATCH (hd1:COMPANY {name:'恒达科技有限公司'}), (hd3:COMPANY {name:'恒达智能硬件有限公司'}) CREATE (hd1)-[:INVEST {ratio:'65%', amount:'19500万'}]->(hd3);
+MATCH (hd2:COMPANY {name:'恒达云服务有限公司'}), (hd3:COMPANY {name:'恒达智能硬件有限公司'}) CREATE (hd2)-[:GUARANTEE {amount:'8000万', start_date:'2024-08-01'}]->(hd3);
+
+MATCH (hp1:PERSON {name:'周文博'}), (hd1:COMPANY {name:'恒达科技有限公司'}) CREATE (hp1)-[:CONTROLLER]->(hd1);
+MATCH (hp1:PERSON {name:'周文博'}), (hd2:COMPANY {name:'恒达云服务有限公司'}) CREATE (hp1)-[:WORK {position:'执行董事'}]->(hd2);
+MATCH (hp2:PERSON {name:'林志远'}), (hd1:COMPANY {name:'恒达科技有限公司'}) CREATE (hp2)-[:WORK {position:'CTO'}]->(hd1);
+MATCH (hp2:PERSON {name:'林志远'}), (hd3:COMPANY {name:'恒达智能硬件有限公司'}) CREATE (hp2)-[:WORK {position:'技术顾问'}]->(hd3);
+
+// ── 时间节点 ──
+CREATE (ht1:TIME:Event {id:'2024-07-14', normalized_time:'2024-07-14'});
+CREATE (ht2:TIME:Event {id:'2024-11-08', normalized_time:'2024-11-08'});
+CREATE (ht3:TIME:Event {id:'2025-02-20', normalized_time:'2025-02-20'});
+
+// ── 事件 ──
+CREATE (he1:EVENT:Event {
+    name:'恒达科技数据泄露事件', title:'恒达科技数据泄露事件', EVENT_TITLE:'恒达科技数据泄露事件',
+    EVENT_DATE:'2024-07-14', EVENT_TYPE:'数据安全', IMPACT_LEVEL:'high',
+    action_type:'行政约谈', event_category:'安全',
+    text:'恒达云服务因未对用户数据进行有效脱敏处理，导致约120万条用户个人信息被泄露至暗网，网信办介入约谈。'
+});
+CREATE (he2:EVENT:Event {
+    name:'恒达智能硬件产品召回', title:'恒达智能硬件产品召回', EVENT_TITLE:'恒达智能硬件产品召回',
+    EVENT_DATE:'2024-11-08', EVENT_TYPE:'产品召回', IMPACT_LEVEL:'medium',
+    action_type:'责令召回', event_category:'质量',
+    text:'恒达智能硬件生产的智能门锁因安全漏洞被监管部门责令召回，涉及产品数量3.2万台，直接经济损失约4800万元。'
+});
+CREATE (he3:EVENT:Event {
+    name:'恒达科技对赌协议失败', title:'恒达科技对赌协议失败', EVENT_TITLE:'恒达科技对赌协议失败',
+    EVENT_DATE:'2025-02-20', EVENT_TYPE:'对赌失败', IMPACT_LEVEL:'high',
+    action_type:'股权回购', event_category:'金融',
+    text:'恒达科技因2024年度净利润未达到B轮融资对赌承诺的80%，触发股权回购条款，需向投资方支付约2.8亿元回购款。'
+});
+
+// ── 事件→公司 ──
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (hd2:COMPANY {name:'恒达云服务有限公司'}) CREATE (he1)-[:MENTION]->(hd2);
+MATCH (he2:EVENT {name:'恒达智能硬件产品召回'}), (hd3:COMPANY {name:'恒达智能硬件有限公司'}) CREATE (he2)-[:MENTION]->(hd3);
+MATCH (he3:EVENT {name:'恒达科技对赌协议失败'}), (hd1:COMPANY {name:'恒达科技有限公司'}) CREATE (he3)-[:MENTION]->(hd1);
+
+// ── 事件→时间 ──
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (ht1:TIME {id:'2024-07-14'}) CREATE (he1)-[:BELONG]->(ht1);
+MATCH (he2:EVENT {name:'恒达智能硬件产品召回'}), (ht2:TIME {id:'2024-11-08'}) CREATE (he2)-[:BELONG]->(ht2);
+MATCH (he3:EVENT {name:'恒达科技对赌协议失败'}), (ht3:TIME {id:'2025-02-20'}) CREATE (he3)-[:BELONG]->(ht3);
+
+// ── 事件因果链 ──
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (he3:EVENT {name:'恒达科技对赌协议失败'}) CREATE (he1)-[:CAUSE]->(he3);
+
+// ── 风险特征 ──
+CREATE (hrf1:RiskFeature:Feature {feature_type:'数据安全漏洞', feature_nm:'用户数据脱敏缺失', id:'F101', e_id:'E101', e_text:'恒达云服务未实施有效的用户数据脱敏和加密措施，存在严重的数据安全漏洞。'});
+CREATE (hrf2:RiskFeature:Feature {feature_type:'产品质量风险', feature_nm:'IoT安全缺陷', id:'F102', e_id:'E102', e_text:'恒达智能硬件产品存在固件安全缺陷，可被远程利用导致用户财产损失。'});
+CREATE (hrf3:RiskFeature:Feature {feature_type:'对赌协议风险', feature_nm:'业绩承诺未达标', id:'F103', e_id:'E103', e_text:'恒达科技B轮融资签订的对赌协议中业绩目标设定过于激进，实际完成率仅为承诺的52%。'});
+
+// ── 特征→公司 ──
+MATCH (hrf1:RiskFeature {id:'F101'}), (hd2:COMPANY {name:'恒达云服务有限公司'}) CREATE (hrf1)-[:REFLECTS]->(hd2);
+MATCH (hrf2:RiskFeature {id:'F102'}), (hd3:COMPANY {name:'恒达智能硬件有限公司'}) CREATE (hrf2)-[:REFLECTS]->(hd3);
+MATCH (hrf3:RiskFeature {id:'F103'}), (hd1:COMPANY {name:'恒达科技有限公司'}) CREATE (hrf3)-[:REFLECTS]->(hd1);
+
+// ── 事件→特征 ──
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (hrf1:RiskFeature {id:'F101'}) CREATE (he1)-[:TRIGGERS]->(hrf1);
+MATCH (he2:EVENT {name:'恒达智能硬件产品召回'}), (hrf2:RiskFeature {id:'F102'}) CREATE (he2)-[:TRIGGERS]->(hrf2);
+MATCH (he3:EVENT {name:'恒达科技对赌协议失败'}), (hrf3:RiskFeature {id:'F103'}) CREATE (he3)-[:TRIGGERS]->(hrf3);
+
+// ── 法规匹配 ──
+CREATE (hl1:Law:Regulation {regulation_title:'中华人民共和国网络安全法', regulation_name:'网络安全法', regulation_id:'L101', regulation_text:''});
+CREATE (hl2:Law:Regulation {regulation_title:'中华人民共和国个人信息保护法', regulation_name:'个人信息保护法', regulation_id:'L102', regulation_text:''});
+
+CREATE (hr1:Regulation:Regulation {regulation_title:'网络运营者应当采取技术措施和其他必要措施，保障网络安全、稳定运行', regulation_name:'网络安全法第21条', regulation_id:'R101'});
+CREATE (hr2:Regulation:Regulation {regulation_title:'个人信息处理者应当对其个人信息处理活动负责，并采取必要措施保障所处理的个人信息的安全', regulation_name:'个人信息保护法第9条', regulation_id:'R102'});
+
+// ── 法规→法律 ──
+MATCH (hr1:Regulation {regulation_id:'R101'}), (hl1:Law {regulation_name:'网络安全法'}) CREATE (hr1)-[:BELONG]->(hl1);
+MATCH (hr2:Regulation {regulation_id:'R102'}), (hl2:Law {regulation_name:'个人信息保护法'}) CREATE (hr2)-[:BELONG]->(hl2);
+
+// ── 合规匹配 ──
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (hr1:Regulation {regulation_id:'R101'}) CREATE (he1)-[:COMPLIES_WITH]->(hr1);
+MATCH (he1:EVENT {name:'恒达科技数据泄露事件'}), (hr2:Regulation {regulation_id:'R102'}) CREATE (he1)-[:COMPLIES_WITH]->(hr2);
+MATCH (he2:EVENT {name:'恒达智能硬件产品召回'}), (hr1:Regulation {regulation_id:'R101'}) CREATE (he2)-[:COMPLIES_WITH]->(hr1);
+
+// ── 特征→法规 ──
+MATCH (hrf1:RiskFeature {id:'F101'}), (hr2:Regulation {regulation_id:'R102'}) CREATE (hrf1)-[:COMPLIES_WITH]->(hr2);
+MATCH (hrf2:RiskFeature {id:'F102'}), (hr1:Regulation {regulation_id:'R101'}) CREATE (hrf2)-[:COMPLIES_WITH]->(hr1);
+
+// ============================================================================
+// 群体 3: 东方能源集团 (能源赛道 — 通过华创控股投资+马晓燕任职华创贸易+孙国栋与张明远合作与华创系关联)
+// ============================================================================
+
+// ── 企业 ──
+CREATE (df1:COMPANY:Subject {name: '东方能源集团有限公司', COMPANY_NM: '东方能源集团有限公司', ORGNUM: '91140000MA0000201', STATUS: '存续', REG_CAPITAL: '300000万', WARNING_NUM: 11, RISK_INFO: '[]'});
+CREATE (df2:COMPANY:Subject {name: '东方新能源开发有限公司', COMPANY_NM: '东方新能源开发有限公司', ORGNUM: '91140000MA0000202', STATUS: '存续', REG_CAPITAL: '80000万', WARNING_NUM: 6, RISK_INFO: '[]'});
+CREATE (df3:COMPANY:Subject {name: '东方电力销售有限公司', COMPANY_NM: '东方电力销售有限公司', ORGNUM: '91140000MA0000203', STATUS: '存续', REG_CAPITAL: '40000万', WARNING_NUM: 14, RISK_INFO: '[]'});
+
+// ── 自然人 ──
+CREATE (fp1:PERSON:Subject {name: '孙国栋', PERSON_NM: '孙国栋', POSITION: '董事长', ID: '140000197203150008'});
+CREATE (fp2:PERSON:Subject {name: '马晓燕', PERSON_NM: '马晓燕', POSITION: '财务总监', ID: '140000198111220009'});
+
+// ── 投资与任职关系 ──
+MATCH (df1:COMPANY {name:'东方能源集团有限公司'}), (df2:COMPANY {name:'东方新能源开发有限公司'}) CREATE (df1)-[:INVEST {ratio:'80%', amount:'64000万'}]->(df2);
+MATCH (df1:COMPANY {name:'东方能源集团有限公司'}), (df3:COMPANY {name:'东方电力销售有限公司'}) CREATE (df1)-[:INVEST {ratio:'55%', amount:'22000万'}]->(df3);
+MATCH (df2:COMPANY {name:'东方新能源开发有限公司'}), (df3:COMPANY {name:'东方电力销售有限公司'}) CREATE (df2)-[:GUARANTEE {amount:'12000万', start_date:'2024-05-10'}]->(df3);
+
+MATCH (fp1:PERSON {name:'孙国栋'}), (df1:COMPANY {name:'东方能源集团有限公司'}) CREATE (fp1)-[:CONTROLLER]->(df1);
+MATCH (fp1:PERSON {name:'孙国栋'}), (df2:COMPANY {name:'东方新能源开发有限公司'}) CREATE (fp1)-[:WORK {position:'董事长'}]->(df2);
+MATCH (fp2:PERSON {name:'马晓燕'}), (df1:COMPANY {name:'东方能源集团有限公司'}) CREATE (fp2)-[:WORK {position:'财务总监'}]->(df1);
+MATCH (fp2:PERSON {name:'马晓燕'}), (df3:COMPANY {name:'东方电力销售有限公司'}) CREATE (fp2)-[:WORK {position:'财务负责人'}]->(df3);
+
+// ── 时间节点 ──
+CREATE (ft1:TIME:Event {id:'2024-04-22', normalized_time:'2024-04-22'});
+CREATE (ft2:TIME:Event {id:'2024-09-30', normalized_time:'2024-09-30'});
+CREATE (ft3:TIME:Event {id:'2025-01-15', normalized_time:'2025-01-15'});
+
+// ── 事件 ──
+CREATE (fe1:EVENT:Event {
+    name:'东方能源环保处罚事件', title:'东方能源环保处罚事件', EVENT_TITLE:'东方能源环保处罚事件',
+    EVENT_DATE:'2024-04-22', EVENT_TYPE:'行政处罚', IMPACT_LEVEL:'high',
+    action_type:'罚款停产', event_category:'环保',
+    text:'东方能源集团因燃煤电厂脱硫设施运行异常导致二氧化硫排放超标3倍，被生态环境部门处以罚款1200万元并责令停产整顿3个月。'
+});
+CREATE (fe2:EVENT:Event {
+    name:'东方新能源补贴被追回', title:'东方新能源补贴被追回', EVENT_TITLE:'东方新能源补贴被追回',
+    EVENT_DATE:'2024-09-30', EVENT_TYPE:'补贴追回', IMPACT_LEVEL:'medium',
+    action_type:'追回补贴', event_category:'监管',
+    text:'东方新能源因光伏项目实际装机容量与申报材料不一致，被国家能源局追回可再生能源补贴资金约6500万元。'
+});
+CREATE (fe3:EVENT:Event {
+    name:'东方电力销售电价垄断', title:'东方电力销售电价垄断', EVENT_TITLE:'东方电力销售电价垄断',
+    EVENT_DATE:'2025-01-15', EVENT_TYPE:'反垄断调查', IMPACT_LEVEL:'high',
+    action_type:'反垄断立案', event_category:'监管',
+    text:'东方电力销售被举报与区域内其他售电公司达成价格同盟，操纵工商业用电价格，国家市场监管总局已立案调查。'
+});
+
+// ── 事件→公司 ──
+MATCH (fe1:EVENT {name:'东方能源环保处罚事件'}), (df1:COMPANY {name:'东方能源集团有限公司'}) CREATE (fe1)-[:MENTION]->(df1);
+MATCH (fe2:EVENT {name:'东方新能源补贴被追回'}), (df2:COMPANY {name:'东方新能源开发有限公司'}) CREATE (fe2)-[:MENTION]->(df2);
+MATCH (fe3:EVENT {name:'东方电力销售电价垄断'}), (df3:COMPANY {name:'东方电力销售有限公司'}) CREATE (fe3)-[:MENTION]->(df3);
+
+// ── 事件→时间 ──
+MATCH (fe1:EVENT {name:'东方能源环保处罚事件'}), (ft1:TIME {id:'2024-04-22'}) CREATE (fe1)-[:BELONG]->(ft1);
+MATCH (fe2:EVENT {name:'东方新能源补贴被追回'}), (ft2:TIME {id:'2024-09-30'}) CREATE (fe2)-[:BELONG]->(ft2);
+MATCH (fe3:EVENT {name:'东方电力销售电价垄断'}), (ft3:TIME {id:'2025-01-15'}) CREATE (fe3)-[:BELONG]->(ft3);
+
+// ── 事件因果链 ──
+MATCH (fe1:EVENT {name:'东方能源环保处罚事件'}), (fe2:EVENT {name:'东方新能源补贴被追回'}) CREATE (fe1)-[:CAUSE]->(fe2);
+
+// ── 风险特征 ──
+CREATE (frf1:RiskFeature:Feature {feature_type:'环保合规风险', feature_nm:'排污超标', id:'F201', e_id:'E201', e_text:'东方能源集团燃煤发电项目环保设施运行不规范，存在持续性的废气排放超标问题。'});
+CREATE (frf2:RiskFeature:Feature {feature_type:'补贴依赖风险', feature_nm:'补贴申报不实', id:'F202', e_id:'E202', e_text:'东方新能源可再生能源补贴收入占营收比例高达43%，且存在申报材料与实际情况不符的合规隐患。'});
+CREATE (frf3:RiskFeature:Feature {feature_type:'市场垄断风险', feature_nm:'价格同盟操纵', id:'F203', e_id:'E203', e_text:'东方电力销售涉嫌与竞争对手达成横向垄断协议，固定工商业用电销售价格。'});
+
+// ── 特征→公司 ──
+MATCH (frf1:RiskFeature {id:'F201'}), (df1:COMPANY {name:'东方能源集团有限公司'}) CREATE (frf1)-[:REFLECTS]->(df1);
+MATCH (frf2:RiskFeature {id:'F202'}), (df2:COMPANY {name:'东方新能源开发有限公司'}) CREATE (frf2)-[:REFLECTS]->(df2);
+MATCH (frf3:RiskFeature {id:'F203'}), (df3:COMPANY {name:'东方电力销售有限公司'}) CREATE (frf3)-[:REFLECTS]->(df3);
+
+// ── 事件→特征 ──
+MATCH (fe1:EVENT {name:'东方能源环保处罚事件'}), (frf1:RiskFeature {id:'F201'}) CREATE (fe1)-[:TRIGGERS]->(frf1);
+MATCH (fe2:EVENT {name:'东方新能源补贴被追回'}), (frf2:RiskFeature {id:'F202'}) CREATE (fe2)-[:TRIGGERS]->(frf2);
+MATCH (fe3:EVENT {name:'东方电力销售电价垄断'}), (frf3:RiskFeature {id:'F203'}) CREATE (fe3)-[:TRIGGERS]->(frf3);
+
+// ── 法规匹配 ──
+CREATE (fl1:Law:Regulation {regulation_title:'中华人民共和国环境保护法', regulation_name:'环境保护法', regulation_id:'L201', regulation_text:''});
+CREATE (fl2:Law:Regulation {regulation_title:'中华人民共和国反垄断法', regulation_name:'反垄断法', regulation_id:'L202', regulation_text:''});
+
+CREATE (fr1_r:Regulation:Regulation {regulation_title:'排放污染物的企业事业单位和其他生产经营者，应当采取措施，防治在生产建设或者其他活动中产生的废气', regulation_name:'环境保护法第42条', regulation_id:'R201'});
+CREATE (fr2_r:Regulation:Regulation {regulation_title:'禁止具有竞争关系的经营者达成垄断协议，包括固定或者变更商品价格', regulation_name:'反垄断法第13条', regulation_id:'R202'});
+
+// ── 法规→法律 ──
+MATCH (fr1_r:Regulation {regulation_id:'R201'}), (fl1:Law {regulation_name:'环境保护法'}) CREATE (fr1_r)-[:BELONG]->(fl1);
+MATCH (fr2_r:Regulation {regulation_id:'R202'}), (fl2:Law {regulation_name:'反垄断法'}) CREATE (fr2_r)-[:BELONG]->(fl2);
+
+// ── 合规匹配 ──
+MATCH (fe1:EVENT {name:'东方能源环保处罚事件'}), (fr1_r:Regulation {regulation_id:'R201'}) CREATE (fe1)-[:COMPLIES_WITH]->(fr1_r);
+MATCH (fe3:EVENT {name:'东方电力销售电价垄断'}), (fr2_r:Regulation {regulation_id:'R202'}) CREATE (fe3)-[:COMPLIES_WITH]->(fr2_r);
+
+// ── 特征→法规 ──
+MATCH (frf1:RiskFeature {id:'F201'}), (fr1_r:Regulation {regulation_id:'R201'}) CREATE (frf1)-[:COMPLIES_WITH]->(fr1_r);
+MATCH (frf3:RiskFeature {id:'F203'}), (fr2_r:Regulation {regulation_id:'R202'}) CREATE (frf3)-[:COMPLIES_WITH]->(fr2_r);
+
+// ============================================================================
+// 跨群体连接 — 三个集团之间的公司与人物关系
+// 使得整体图连通，但内部连接密度远高于跨群体连接，Louvain 可识别社区边界
+// ============================================================================
+
+// ── 华创系 ↔ 恒达科技 ──
+// 鑫达投资 (华创系投资平台) 战略投资恒达科技
+MATCH (c4:COMPANY {name:'鑫达投资管理有限公司'}), (hd1:COMPANY {name:'恒达科技有限公司'})
+CREATE (c4)-[:INVEST {ratio:'12%', amount:'14400万'}]->(hd1);
+// 恒达云服务为海通金融提供技术支持担保
+MATCH (hd2:COMPANY {name:'恒达云服务有限公司'}), (c6:COMPANY {name:'海通金融服务有限公司'})
+CREATE (hd2)-[:GUARANTEE {amount:'5000万', start_date:'2024-01-15'}]->(c6);
+// 周文博 (恒达CEO) 曾任天元科技技术顾问
+MATCH (hp1:PERSON {name:'周文博'}), (c7:COMPANY {name:'天元科技发展有限公司'})
+CREATE (hp1)-[:WORK {position:'技术顾问'}]->(c7);
+
+// ── 华创系 ↔ 东方能源 ──
+// 华创控股战略投资东方新能源 (能源赛道布局)
+MATCH (c1:COMPANY {name:'华创控股集团有限公司'}), (df2:COMPANY {name:'东方新能源开发有限公司'})
+CREATE (c1)-[:INVEST {ratio:'18%', amount:'14400万'}]->(df2);
+// 中远建设与东方电力销售互保
+MATCH (c5:COMPANY {name:'中远建设工程有限公司'}), (df3:COMPANY {name:'东方电力销售有限公司'})
+CREATE (c5)-[:GUARANTEE {amount:'6000万', start_date:'2024-07-01'}]->(df3);
+// 马晓燕 (东方财务总监) 曾任华创贸易财务经理
+MATCH (fp2:PERSON {name:'马晓燕'}), (c3:COMPANY {name:'华创贸易有限责任公司'})
+CREATE (fp2)-[:WORK {position:'财务经理'}]->(c3);
+// 孙国栋与张明远商业关联
+MATCH (fp1:PERSON {name:'孙国栋'}), (p1:PERSON {name:'张明远'})
+CREATE (fp1)-[:COOPERATE {relation:'联合投资'}]->(p1);
+
+// ── 恒达科技 ↔ 东方能源 ──
+// 恒达科技为东方能源提供数字化转型云服务
+MATCH (hd1:COMPANY {name:'恒达科技有限公司'}), (df1:COMPANY {name:'东方能源集团有限公司'})
+CREATE (hd1)-[:COOPERATE {type:'数字化转型合作', start_date:'2024-03-01'}]->(df1);
+// 林志远 (恒达CTO) 兼任东方新能源技术顾问
+MATCH (hp2:PERSON {name:'林志远'}), (df2:COMPANY {name:'东方新能源开发有限公司'})
+CREATE (hp2)-[:WORK {position:'技术顾问'}]->(df2);
+
 RETURN '样本数据导入完成！' AS status,
-       '7家公司 + 5个自然人 + 7个事件 + 5个风险特征 + 6个风险因子 + 5条法规 + 5个处置动作' AS summary;
+       '13家公司 + 9个自然人 + 13个事件 + 11个风险特征 + 6个风险因子 + 9条法规 + 5个处置动作 (3个群体通过战略投资+人物关系形成连通图)' AS summary;

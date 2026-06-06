@@ -1,9 +1,9 @@
-"""Data Source Matching Agent — map structured requirements to scraper configs."""
+"""Data Source Matcher — map structured requirements to scraper configs."""
 
 from __future__ import annotations
 
 
-class SourceMatchingAgent:
+class SourceMatcher:
     """Match parsed requirements to available scraper configurations."""
 
     SOURCE_CAPABILITIES = {
@@ -44,6 +44,7 @@ class SourceMatchingAgent:
                         parsed_requirements.get("max_pages", 5),
                         caps.get("max_pages", 10),
                     ),
+                    "max_files": parsed_requirements.get("max_files", 0),
                 }
 
         return {

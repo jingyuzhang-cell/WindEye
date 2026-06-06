@@ -1,6 +1,6 @@
-"""Multi-Agent Collaborative Crawling Orchestrator.
+"""Collaborative Crawling Orchestrator.
 
-Integrates 4 specialized agents for intelligent web crawling.
+Integrates 4 specialized modules for intelligent web crawling.
 Yields SSE events for real-time progress streaming.
 Supports 3 modes: QUICK (no LLM), COMPLEX (LLM parsing), TEMPLATE (predefined).
 Supports DEMO_MODE for testing without Selenium WebDrivers.
@@ -17,10 +17,10 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from api.crawl_schemas import CrawlTaskRequest, DataType
-from data_collection.agents.exception_agent import ExceptionHandlingAgent
-from data_collection.agents.quality_agent import QualityAssessmentAgent
-from data_collection.agents.requirement_agent import RequirementParsingAgent
-from data_collection.agents.source_matching_agent import SourceMatchingAgent
+from data_collection.agents.exception_agent import RetryHandler
+from data_collection.agents.quality_agent import QualityAssessor
+from data_collection.agents.requirement_agent import RequirementParser
+from data_collection.agents.source_matching_agent import SourceMatcher
 from data_collection.scrapers import DEMO_SCRAPER_REGISTRY, SCRAPER_REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -74,16 +74,16 @@ CRAWL_TEMPLATES = {
 
 
 class CrawlOrchestrator:
-    """Multi-agent orchestration for intelligent web crawling."""
+    """Orchestration for intelligent web crawling with SSE streaming."""
 
     def __init__(self, demo_mode: bool | None = None):
         if demo_mode is None:
             demo_mode = os.getenv("CRAWL_DEMO_MODE", "true").lower() == "true"
         self.demo_mode = demo_mode
-        self.req_agent = RequirementParsingAgent()
-        self.match_agent = SourceMatchingAgent()
-        self.quality_agent = QualityAssessmentAgent()
-        self.exception_agent = ExceptionHandlingAgent()
+        self.req_parser = RequirementParser()
+        self.source_matcher = SourceMatcher()
+        self.quality_assessor = QualityAssessor()
+        self.retry_handler = RetryHandler()
         mode_label = "DEMO (mock data, no WebDriver)" if self.demo_mode else "REAL (Chrome/Edge WebDriver)"
         logger.info("CrawlOrchestrator initialized in %s mode", mode_label)
 
@@ -92,7 +92,7 @@ class CrawlOrchestrator:
         return [{"id": t["id"], "label": t["label"], "data_type": t.get("data_type")} for t in CRAWL_TEMPLATES.values()]
 
     async def execute(self, req: CrawlTaskRequest) -> AsyncGenerator[dict, None]:
-        """Execute multi-agent crawl pipeline, yielding SSE events."""
+        """Execute crawl pipeline, yielding SSE events."""
         task_id = f"crawl_{uuid.uuid4().hex[:12]}"
         started_at = datetime.now(timezone.utc).isoformat()
         registry = DEMO_SCRAPER_REGISTRY if self.demo_mode else SCRAPER_REGISTRY
@@ -104,7 +104,7 @@ class CrawlOrchestrator:
         yield {"event": "stage", "data": {"stage": "parsing", "progress": 5, "message": "需求解析中..."}}
 
         if req.mode.value == "quick":
-            parsed = self.req_agent.parse_quick_mode(req)
+            parsed = self.req_parser.parse_quick_mode(req)
             await asyncio.sleep(0.2)
         elif req.mode.value == "template":
             template = CRAWL_TEMPLATES.get(req.template_id, {})
@@ -119,13 +119,14 @@ class CrawlOrchestrator:
                 date_start=template.get("date_start"),
                 date_end=template.get("date_end"),
                 max_pages=template.get("max_pages", 5),
+                max_files=req.max_files if hasattr(req, 'max_files') else 0,
             )
-            parsed = self.req_agent.parse_quick_mode(template_req)
+            parsed = self.req_parser.parse_quick_mode(template_req)
             await asyncio.sleep(0.2)
         else:
             yield {"event": "stage", "data": {"stage": "parsing", "progress": 10, "message": "LLM解析自然语言需求..."}}
             try:
-                parsed = await asyncio.to_thread(self.req_agent.parse_complex_mode, req.natural_language_query or "")
+                parsed = await asyncio.to_thread(self.req_parser.parse_complex_mode, req.natural_language_query or "")
                 parsed["mode"] = "complex"
                 await asyncio.sleep(0.3)
             except Exception as e:
@@ -137,7 +138,7 @@ class CrawlOrchestrator:
         # Stage 2: Data Source Matching
         await asyncio.sleep(0.3)
         yield {"event": "stage", "data": {"stage": "matching", "progress": 25, "message": "匹配数据源..."}}
-        matched = self.match_agent.match(parsed)
+        matched = self.source_matcher.match(parsed)
         scraper_configs = matched.get("scraper_configs", {})
         await asyncio.sleep(0.2)
         yield {"event": "stage", "data": {"stage": "matching", "progress": 30, "message": f"匹配到 {matched['total_sources']} 个数据源"}}
@@ -159,7 +160,7 @@ class CrawlOrchestrator:
                     result = scraper_fn(src_config)
                     await asyncio.sleep(0.5)
                 else:
-                    result = await self.exception_agent.execute_with_retry(scraper_fn, src_config)
+                    result = await self.retry_handler.execute_with_retry(scraper_fn, src_config)
             except Exception as e:
                 result = {"source": src_key, "files_downloaded": 0, "records": 0, "save_dir": "", "error": str(e)}
             all_results.append(result)
@@ -168,7 +169,7 @@ class CrawlOrchestrator:
         # Stage 4: Quality Assessment
         await asyncio.sleep(0.3)
         yield {"event": "stage", "data": {"stage": "assessing", "progress": 85, "message": "质量评估中..."}}
-        quality_results = [self.quality_agent.assess(r) for r in all_results]
+        quality_results = [self.quality_assessor.assess(r) for r in all_results]
         overall_quality = sum(q["quality_score"] for q in quality_results) / max(len(quality_results), 1)
         await asyncio.sleep(0.2)
         yield {"event": "stage", "data": {"stage": "assessing", "progress": 90, "message": f"质量评分: {overall_quality:.0%}"}}

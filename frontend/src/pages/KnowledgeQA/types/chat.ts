@@ -2,12 +2,6 @@ import { ChatMessage, Subgraph, RiskReport, RiskStage, CommunityInfo } from './a
 
 export interface WorkspaceState {
   graphData: Subgraph | null;
-  chartOptions: any;
-  stats: {
-    rowCount?: number;
-    rawData?: any[];
-    [key: string]: any;
-  };
   riskReport: RiskReport | null;
   riskStages: RiskStage[];
   riskCommunity: CommunityInfo | null;

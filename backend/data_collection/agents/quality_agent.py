@@ -1,11 +1,11 @@
-"""Quality Assessment Agent — validate crawl results for completeness and integrity."""
+"""Quality Assessor — validate crawl results for completeness and integrity."""
 
 from __future__ import annotations
 
 import os
 
 
-class QualityAssessmentAgent:
+class QualityAssessor:
     """Validate crawl results."""
 
     def assess(self, crawl_result: dict) -> dict:

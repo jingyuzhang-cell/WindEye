@@ -12,6 +12,9 @@ import pytest
 # Ensure backend/ is on sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Prevent Neo4jClient.from_env() from failing at import time during tests
+os.environ.setdefault("NEO4J_PASSWORD", "fake-for-testing")
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: real scraping with network (requires Chrome/WebDriver)")

@@ -14,6 +14,7 @@ from typing import List, Dict, Any
 from dra_ma.agents.layer1_perception.intent_agent import IntentObject
 from dra_ma.agents.layer3_execution.cypher_utils import call_llm
 from dra_ma.agents.layer4_consensus.reward import calculate_jaccard_similarity
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,17 @@ class IntentPlannerAgent:
                     decision["score"] = 0.0
 
             selected = sorted(selected, key=lambda x: x.get("score", 0.0), reverse=True)
+
+            top_candidates = selected[:5]
+            agent_trace("PlannerAgent", "CANDIDATES", top_candidates=top_candidates)
+
+            if selected:
+                top = selected[0]
+                agent_trace("PlannerAgent", "SELECTED",
+                    selected_relation=top.get("relation", ""),
+                    score=top.get("score", 0.0),
+                    reason=str(top.get("reason", ""))[:200])
+
             return selected
 
         except Exception as e:

@@ -54,6 +54,7 @@ export function useCrawlSSE() {
                     store.addLog('info', `[${data.stage}] ${data.message}`);
                     break;
                   case 'source_result':
+                    store.addSourceResult(data.files_downloaded || 0);
                     store.addLog(
                       data.error ? 'error' : 'success',
                       `${data.source}: ${data.files_downloaded || 0} files, ${data.records || 0} records${data.error ? ' (error: ' + data.error + ')' : ''}`,

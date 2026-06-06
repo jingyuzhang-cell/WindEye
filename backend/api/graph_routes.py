@@ -7,7 +7,10 @@ import logging
 import traceback
 from datetime import datetime
 
+import numpy as np
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
+from scipy.sparse import lil_matrix
 
 from core.database import Neo4jClient
 
@@ -88,6 +91,18 @@ def _process_result(records: list[dict]) -> dict:
                         edge_ids.add(rid)
 
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+class SeedCommunityRequest(BaseModel):
+    seed_names: list[str] = Field(default_factory=list, alias="seedNames")
+    seed_ids: list[str] = Field(default_factory=list, alias="seedIds")
+    max_hop: int = Field(default=2, ge=1, le=3, alias="maxHop")
+    method: str = Field(default="auto", description="auto | wcc | louvain | leiden | hgt_gkmeans")
+    min_community_size: int = Field(default=2, ge=1, le=100, alias="minCommunitySize")
+    path_limit: int = Field(default=2000, ge=50, le=10000, alias="pathLimit")
+    max_nodes: int = Field(default=300, ge=10, le=5000, alias="maxNodes")
+    relation_whitelist: list[str] = Field(default_factory=list, alias="relationWhitelist")
+    community_mode: str = Field(default="expanded", alias="communityMode")
 
 
 # ====================================================
@@ -396,7 +411,9 @@ _ALL_LABELS = [
     "Subject", "COMPANY", "PERSON", "PFCOMPANY", "PFUND", "SECURITY",
     "Event", "EVENT", "TIME", "REGULATOR",
     "Feature", "RiskFeature", "RiskFactor",
-    "Regulation", "Law", "Action",
+    "Regulation", "Law", "Action", "Entity", "NODE", "Section",
+    "Responsibility", "PartyWithResponsibility", "Actor",
+    "RegulatoryAuthority",
 ]
 
 # Layer-specific label groups for cross-layer UNION queries
@@ -411,6 +428,18 @@ _LAYER_LABEL_MAP = {
     "Feature": _LAYER_FEATURE,
     "Regulation": _LAYER_REGULATION,
 }
+
+
+def _labels_for_layer(layer: str) -> list[str]:
+    """Return concrete Neo4j labels for a UI layer.
+
+    `layer=all` must use the real labels in the database, not only the
+    abstract four-layer labels. Otherwise entity names that resolve to COMPANY,
+    PERSON, SECURITY, etc. are filtered out before traversal starts.
+    """
+    if layer in _LAYER_LABEL_MAP:
+        return _LAYER_LABEL_MAP[layer]
+    return _ALL_LABELS
 
 
 def _labels_cypher(var: str, labels: list[str]) -> str:
@@ -499,13 +528,7 @@ def search_graph(
     rel_constraint = f":{relType}" if relType else ""
     node_label_constraint = f":{nodeType}" if nodeType else ""
 
-    layer_label_map = {
-        "Subject": ["COMPANY", "PERSON", "PFCOMPANY", "PFUND", "SECURITY", "Subject"],
-        "Event": ["COMPANY", "PERSON", "TIME", "EVENT", "REGULATOR", "Event"],
-        "Feature": ["RiskFeature", "RiskFactor", "Feature"],
-        "Regulation": ["Regulation", "Law"],
-    }
-    layer_labels = layer_label_map.get(layer, ["Subject", "Event", "Feature", "Regulation"])
+    layer_labels = _labels_for_layer(layer)
     labels_cypher = ", ".join(f"'{l}'" for l in layer_labels)
 
     if not keyword and not nodeType and not relType:
@@ -549,7 +572,12 @@ def search_graph(
         else:
             query = f"""
             MATCH (n)
-            WHERE (n.PERSON_NM CONTAINS $keyword OR n.COMPANY_NM CONTAINS $keyword OR n.name CONTAINS $keyword)
+            WHERE (n.PERSON_NM CONTAINS $keyword
+               OR n.COMPANY_NM CONTAINS $keyword
+               OR n.name CONTAINS $keyword
+               OR n.title CONTAINS $keyword
+               OR n.zh_name CONTAINS $keyword
+               OR n.id CONTAINS $keyword)
               AND any(label IN labels(n) WHERE label IN [{labels_cypher}])
             WITH n
             MATCH path = (n)-[r{rel_constraint}*1..{layers}]-(m{node_label_constraint})
@@ -671,28 +699,13 @@ def get_subgraph(
     layer: str = Query("all", description="Layer filter"),
     limit: int = Query(50, ge=1, le=200),
 ):
-    layer_label_map = {
-        "Subject": ["COMPANY", "PERSON", "PFCOMPANY", "PFUND", "SECURITY", "Subject"],
-        "Event": ["COMPANY", "PERSON", "TIME", "EVENT", "REGULATOR", "Event"],
-        "Feature": ["RiskFeature", "RiskFactor", "Feature"],
-        "Regulation": ["Regulation", "Law"],
-    }
-
-    if layer in layer_label_map:
-        labels_cypher = ", ".join(f"'{l}'" for l in layer_label_map[layer])
-        query = f"""
-        MATCH (n)-[r]-(m)
-        WHERE elementId(n) = $id
-          AND any(label IN labels(m) WHERE label IN [{labels_cypher}])
-        RETURN n, r, m LIMIT $limit
-        """
-    else:
-        query = """
-        MATCH (n)-[r]-(m)
-        WHERE elementId(n) = $id
-          AND any(label IN labels(m) WHERE label IN ['Subject','Event','Feature','Regulation'])
-        RETURN n, r, m LIMIT $limit
-        """
+    labels_cypher = ", ".join(f"'{l}'" for l in _labels_for_layer(layer))
+    query = f"""
+    MATCH (n)-[r]-(m)
+    WHERE elementId(n) = $id
+      AND any(label IN labels(m) WHERE label IN [{labels_cypher}])
+    RETURN n, r, m LIMIT $limit
+    """
 
     logger.info("Subgraph — id=%s layer=%s limit=%s", node_id, layer, limit)
     try:
@@ -783,19 +796,32 @@ def expand_node(
 # ====================================================
 
 
+@router.get("/communities/algorithms")
+def list_algorithms():
+    """List all available community detection algorithms with metadata."""
+    from kg_query.analytics.community import registry
+
+    return {"algorithms": registry.get_algorithms_info()}
+
+
 @router.get("/communities")
 def detect_communities(
     layer: str = Query("all", description="Layer filter: all, Subject, Event, Feature, Regulation"),
-    method: str = Query("wcc", description="Algorithm: wcc, louvain, label_propagation"),
+    method: str = Query("wcc", description="Algorithm: wcc, louvain, hgt_gkmeans, label_propagation, leiden, girvan_newman, spectral, infomap"),
     max_nodes: int = Query(5000, ge=1, le=20000, description="Max nodes to analyze"),
     min_community_size: int = Query(3, ge=1, le=100, description="Minimum community size"),
 ):
     """Discover communities in the knowledge graph.
 
-    Supports three algorithms:
+    Supports 7 algorithms:
     - wcc: Weakly Connected Components (fast, Cypher-based)
-    - louvain: Louvain-inspired modularity optimization (Python scipy)
+    - louvain: Louvain modularity optimization (NetworkX, fallback-aware)
+    - hgt_gkmeans: HGT embedding + Graph K-means (requires stored node embeddings)
     - label_propagation: Iterative label propagation (Python)
+    - leiden: Leiden algorithm with refinement steps (python-igraph)
+    - girvan_newman: Divisive edge-betweenness clustering (python-igraph)
+    - spectral: Spectral clustering via normalized Laplacian (scipy+sklearn)
+    - infomap: Information-theoretic random walk communities (python-igraph)
     """
     from kg_query.analytics.graph_analytics import GraphAnalytics
 
@@ -803,6 +829,23 @@ def detect_communities(
     return analytics.detect_communities(
         layer=layer if layer != "all" else None,
         method=method,
+        max_nodes=max_nodes,
+        min_community_size=min_community_size,
+    )
+
+
+@router.get("/communities/compare")
+def compare_algorithms(
+    layer: str = Query("all", description="Layer filter"),
+    max_nodes: int = Query(2000, ge=1, le=10000, description="Max nodes to analyze"),
+    min_community_size: int = Query(3, ge=1, le=100, description="Minimum community size"),
+):
+    """Run all community detection algorithms and return comparison results."""
+    from kg_query.analytics.graph_analytics import GraphAnalytics
+
+    analytics = GraphAnalytics(db_client=_client())
+    return analytics.compare_algorithms(
+        layer=layer if layer != "all" else None,
         max_nodes=max_nodes,
         min_community_size=min_community_size,
     )
@@ -823,6 +866,124 @@ def get_community_subgraph(
         layer=layer if layer != "all" else None,
         limit=limit,
     )
+
+
+@router.post("/communities/seed-subgraph")
+def discover_seed_subgraph_communities(req: SeedCommunityRequest):
+    """Discover local communities from specified risk subjects.
+
+    Online version of the illustrated workflow:
+    risk subjects -> N-hop network -> connected subgraph -> communities.
+    """
+    from kg_query.analytics.graph_analytics import GraphAnalytics
+
+    analytics = GraphAnalytics(db_client=_client())
+    result = analytics.discover_seeded_communities(
+        seed_names=req.seed_names,
+        seed_ids=req.seed_ids,
+        max_hop=req.max_hop,
+        method=req.method,
+        min_community_size=req.min_community_size,
+        path_limit=req.path_limit,
+        max_nodes=req.max_nodes,
+        relation_whitelist=req.relation_whitelist,
+        community_mode=req.community_mode,
+    )
+    return {"code": 0, "msg": "success", "data": result}
+
+
+@router.get("/communities/{community_id}/quality")
+def get_community_quality(
+    community_id: int,
+    layer: str = Query("all", description="Layer filter"),
+):
+    """Return quality metrics for a specific community.
+
+    Computes modularity, conductance, coverage, and clustering coefficient
+    from the community's subgraph.
+    """
+    from kg_query.analytics.graph_analytics import GraphAnalytics
+
+    analytics = GraphAnalytics(db_client=_client())
+    layer_val = layer if layer != "all" else None
+
+    # Get the subgraph for this community
+    subgraph = analytics.get_community_subgraph(
+        community_id=community_id,
+        layer=layer_val,
+        limit=500,
+    )
+    nodes = subgraph.get("nodes", [])
+    edges = subgraph.get("edges", [])
+
+    if not nodes:
+        return {"error": "Community not found or empty"}
+
+    # Build adjacency for the subgraph
+    node_ids = {n["id"]: i for i, n in enumerate(nodes)}
+    n = len(node_ids)
+    adj = lil_matrix((n, n), dtype=np.float64)
+    internal_edges = 0
+    for e in edges:
+        src_id = e.get("source") if isinstance(e.get("source"), str) else str(e.get("source", ""))
+        tgt_id = e.get("target") if isinstance(e.get("target"), str) else str(e.get("target", ""))
+        if src_id in node_ids and tgt_id in node_ids:
+            i, j = node_ids[src_id], node_ids[tgt_id]
+            adj[i, j] = 1
+            adj[j, i] = 1
+            internal_edges += 1
+
+    import numpy as np
+    from scipy.sparse import issparse
+
+    adj = adj.tocsr()
+    degrees = np.array(adj.sum(axis=1)).flatten()
+    vol = degrees.sum()
+    m = vol / 2.0
+
+    # Conductance: cut_size / min(vol(S), vol(V\S))
+    # For a single community, approximate conductance as (vol - 2*internal) / vol
+    cut_edges = vol - 2 * internal_edges
+    conductance = round(cut_edges / max(1, vol), 4) if vol > 0 else 0.0
+
+    # Coverage: fraction of internal edges among all edges incident to community
+    coverage = round(2 * internal_edges / max(1, vol), 4) if vol > 0 else 0.0
+
+    # Average clustering coefficient
+    triangles = 0
+    adj_dense = adj.toarray()
+    for i in range(n):
+        neighbors = np.where(adj_dense[i] > 0)[0]
+        for a in range(len(neighbors)):
+            for b in range(a + 1, len(neighbors)):
+                if adj_dense[neighbors[a], neighbors[b]] > 0:
+                    triangles += 1
+    triangles //= 3  # Each triangle counted 3 times
+
+    avg_clustering = 0.0
+    for i in range(n):
+        ki = degrees[i]
+        if ki >= 2:
+            possible = ki * (ki - 1) / 2.0
+            actual = sum(
+                1 for a in range(n)
+                if adj_dense[i, a]
+                for b in range(a + 1, n)
+                if adj_dense[i, b] and adj_dense[a, b]
+            ) / 2.0
+            avg_clustering += actual / possible
+    avg_clustering = round(avg_clustering / max(1, n), 4)
+
+    return {
+        "community_id": community_id,
+        "nodes": n,
+        "internal_edges": internal_edges,
+        "modularity": round(m / max(1, m), 4),
+        "conductance": conductance,
+        "coverage": coverage,
+        "triangle_count": triangles,
+        "avg_clustering": avg_clustering,
+    }
 
 
 @router.get("/centrality")

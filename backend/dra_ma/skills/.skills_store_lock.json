@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "markdown-converter": {
+      "name": "Markdown Converter",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=markdown-converter",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-03T06:00:07Z"
+    },
+    "pdf-fin-parse": {
+      "name": "pdf-fin-parse",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=pdf-fin-parse",
+      "source": "community",
+      "version": "1.0.2",
+      "installedAt": "2026-06-03T06:00:16Z"
+    },
+    "paddleocr-doc-parsing": {
+      "name": "PaddleOCR Document Parsing",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=paddleocr-doc-parsing",
+      "source": "community",
+      "version": "2.0.16",
+      "installedAt": "2026-06-03T06:00:45Z"
+    },
+    "document-skill": {
+      "name": "Document Skill",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=document-skill",
+      "source": "community",
+      "version": "1.0.2",
+      "installedAt": "2026-06-03T06:00:54Z"
+    },
+    "excel-parser-skill": {
+      "name": "excel-parser",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=excel-parser-skill",
+      "source": "community",
+      "version": "2.0.0",
+      "installedAt": "2026-06-03T06:01:03Z"
+    },
+    "web-search-skill": {
+      "name": "web-search-skill",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=web-search-skill",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-03T06:01:47Z"
+    },
+    "finance-omni-risk": {
+      "name": "Finance Omni Risk",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=finance-omni-risk",
+      "source": "community",
+      "version": "5.0.0",
+      "installedAt": "2026-06-03T06:01:55Z"
+    },
+    "finance-marketing-compliance": {
+      "name": "金融营销合规助手",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=finance-marketing-compliance",
+      "source": "community",
+      "version": "2.0.0",
+      "installedAt": "2026-06-03T06:02:04Z"
+    },
+    "china-data-compliance": {
+      "name": "china-data-compliance",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=china-data-compliance",
+      "source": "community",
+      "version": "2.3.0",
+      "installedAt": "2026-06-03T06:02:15Z"
+    },
+    "pe-compliance-expert-pro": {
+      "name": "私募合规",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=pe-compliance-expert-pro",
+      "source": "community",
+      "version": "1.0.2",
+      "installedAt": "2026-06-03T06:02:25Z"
+    },
+    "legal-hybrid-skill": {
+      "name": "智能法律助手",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=legal-hybrid-skill",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-03T06:02:33Z"
+    },
+    "markdown-exporter": {
+      "name": "Markdown Exporter",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=markdown-exporter",
+      "source": "community",
+      "version": "3.6.10",
+      "installedAt": "2026-06-03T06:05:14Z"
+    }
+  }
+}

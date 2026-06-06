@@ -1,50 +1,28 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { Input, Spin, Empty, Tag } from 'antd'
-import { SendOutlined, ClearOutlined } from '@ant-design/icons'
+import { Input, Spin, Empty, Tag, Typography, Upload, Button } from 'antd'
+import { SendOutlined, ClearOutlined, UploadOutlined, FileTextOutlined, CloseOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
 import { EntityMessageBubble } from './EntityMessageBubble'
 import { RiskEntityCard } from './RiskEntityCard'
 import { ContextTagBar, ContextEntity } from './ContextTagBar'
-import type { ChatMessage, RecommendationItem } from '../types/api'
+import type { ChatMessage, EntityCandidate, RecommendationItem } from '../types/api'
+import { useAgentStore } from '../store/agentStore'
 import { DESIGN_TOKENS } from '../styles/constants'
 
+const { Text } = Typography
 const { TextArea } = Input
-
-const Text: React.FC<{
-  type?: 'secondary' | 'danger' | 'warning' | 'success' | undefined
-  className?: string
-  children: React.ReactNode
-  strong?: boolean
-}> = ({ type, className = '', children, strong }) => {
-  const colorMap: Record<string, string> = {
-    secondary: '#71717a',
-    danger: '#ef4444',
-    warning: '#f59e0b',
-    success: '#10b981',
-  }
-  return (
-    <span
-      style={{
-        color: type ? colorMap[type] : DESIGN_TOKENS.TEXT_PRIMARY,
-        fontWeight: strong ? 600 : 400,
-      }}
-      className={className}
-    >
-      {children}
-    </span>
-  )
-}
 
 interface WorkspaceContainerProps {
   messages: ChatMessage[]
   isLoading: boolean
   pendingRecommendations: RecommendationItem[] | null
-  onSendMessage: (query: string) => void
+  onSendMessage: (query: string) => Promise<void>
   onClearHistory: () => void
   onEntityHover?: (entityId: string | null) => void
   onEntityClick?: (entityId: string, entityType: string) => void
   highlightedEntity?: string | null
   graphInjectedEntity?: { id: string; name: string; type: string } | null
   onClearGraphInject?: () => void
+  contextInjectedEntity?: { id: string; name: string; type: string; nonce?: number } | null
 }
 
 export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
@@ -58,14 +36,46 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
   highlightedEntity,
   graphInjectedEntity,
   onClearGraphInject,
+  contextInjectedEntity,
 }) => {
   const [input, setInput] = useState('')
   const [contextTags, setContextTags] = useState<ContextEntity[]>([])
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<any>(null)
 
+  const uploadedFile = useAgentStore((s) => s.uploadedFile)
+  const fileUploading = useAgentStore((s) => s.fileUploading)
+  const uploadFile = useAgentStore((s) => s.uploadFile)
+  const clearUploadedFile = useAgentStore((s) => s.clearUploadedFile)
+  const confirmEntityCandidate = useAgentStore((s) => s.confirmEntityCandidate)
+  const storeError = useAgentStore((s) => s.error)
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!contextInjectedEntity) return
+    setContextTags((prev) => {
+      if (prev.find((t) => t.id === contextInjectedEntity.id || t.label === contextInjectedEntity.name)) {
+        return prev
+      }
+      return [
+        ...prev,
+        {
+          id: contextInjectedEntity.id,
+          label: contextInjectedEntity.name,
+          type: contextInjectedEntity.type,
+        },
+      ]
+    })
+    inputRef.current?.focus()
+  }, [contextInjectedEntity])
+
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    if (distanceToBottom < 96) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
   }, [messages, isLoading])
 
   const handleSend = useCallback(async () => {
@@ -76,11 +86,15 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
       fullQuery = `[${graphInjectedEntity.name}] ${fullQuery}`
     }
     if (contextTags.length > 0) {
-      fullQuery = `Context: ${contextTags.map(t => t.id).join(', ')}. Query: ${fullQuery}`
+      fullQuery = `Context: ${contextTags.map(t => t.label || t.id).join(', ')}. Query: ${fullQuery}`
     }
-    setInput('')
-    await onSendMessage(fullQuery)
-    inputRef.current?.focus()
+    try {
+      await onSendMessage(fullQuery)
+      setInput('')
+      inputRef.current?.focus()
+    } catch {
+      // Keep input text on failure
+    }
   }, [input, isLoading, onSendMessage, graphInjectedEntity, contextTags])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -157,7 +171,7 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+      <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
         {messages.length === 0 ? (
           <div
             style={{
@@ -197,6 +211,50 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
                   }}
                   highlightedEntity={highlightedEntity}
                 />
+                {msg.role === 'assistant' && msg.data?.entityCandidates && (
+                  <div style={{ marginLeft: 44, marginBottom: 12 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        padding: 10,
+                        background: '#fff',
+                        border: '1px solid #dbeafe',
+                        borderRadius: 8,
+                        boxShadow: '0 6px 16px rgba(15, 23, 42, 0.06)',
+                        maxHeight: 260,
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {msg.data.entityCandidates.candidates.map((candidate: EntityCandidate, index: number) => (
+                        <Button
+                          key={`${candidate.kg_node_id || candidate.canonical_name}-${index}`}
+                          size="small"
+                          style={{
+                            height: 'auto',
+                            minHeight: 32,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            whiteSpace: 'normal',
+                            textAlign: 'left',
+                          }}
+                          onClick={() => {
+                            const payload = msg.data?.entityCandidates
+                            if (!payload) return
+                            confirmEntityCandidate(payload.alias, candidate, payload.originalQuery)
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{candidate.canonical_name}</span>
+                          <span style={{ marginLeft: 8, color: '#64748b', fontSize: 12 }}>
+                            {candidate.entity_type === 'PERSON' ? '人物' : '企业'} · {Math.round((candidate.confidence || 0) * 100)}%
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {msg.role === 'assistant' && (msg.data?.output || pendingRecommendations) && (
                   <div style={{ marginLeft: 44, marginBottom: 12 }}>
                     {pendingRecommendations && pendingRecommendations.length > 0 ? (
@@ -317,6 +375,76 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
           }}
         />
 
+        {/* 文件上传区域 */}
+        <div style={{ marginBottom: 8 }}>
+          {uploadedFile ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 10px',
+                background: '#f0f5ff',
+                borderRadius: 8,
+                border: '1px solid #d6e4ff',
+              }}
+            >
+              <FileTextOutlined style={{ color: '#2855D1', fontSize: 14 }} />
+              <span style={{ fontSize: 12, flex: 1, color: '#1e40af' }}>
+                {uploadedFile.filename}
+                <span style={{ color: '#64748b', marginLeft: 6 }}>
+                  ({uploadedFile.char_count} 字符{uploadedFile.truncated ? '，已截断' : ''})
+                </span>
+              </span>
+              {uploadedFile.truncated && (
+                <span style={{ fontSize: 11, color: '#fa8c16' }}>内容过长，已自动截取前 50,000 字符</span>
+              )}
+              <Button
+                type="primary"
+                size="small"
+                icon={<SearchOutlined />}
+                onClick={() => {
+                  onSendMessage('请分析该文件中的风险信息')
+                }}
+                disabled={isLoading}
+                style={{ fontSize: 12 }}
+              >
+                协同治理
+              </Button>
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={clearUploadedFile}
+                style={{ color: '#94a3b8' }}
+              />
+            </div>
+          ) : (
+            <Upload
+              accept=".txt,.md,.docx,.pdf"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                uploadFile(file)
+                return false
+              }}
+              disabled={fileUploading || isLoading}
+            >
+              <Button
+                icon={fileUploading ? <LoadingOutlined /> : <UploadOutlined />}
+                size="small"
+                type="text"
+                disabled={fileUploading || isLoading}
+                style={{ fontSize: 12, color: '#64748b' }}
+              >
+                {fileUploading ? '上传中...' : '上传文本文件 (.txt .md .docx .pdf)'}
+              </Button>
+            </Upload>
+          )}
+          {storeError && (
+            <div style={{ fontSize: 11, color: '#f5222d', marginTop: 4, paddingLeft: 4 }}>{storeError}</div>
+          )}
+        </div>
+
         <div
           style={{
             background: '#FFFFFF',
@@ -349,7 +477,7 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
                 background: 'transparent',
                 padding: 0,
               }}
-              disabled={isLoading}
+              disabled={isLoading || fileUploading}
             />
             <button
               onClick={handleSend}
@@ -390,7 +518,7 @@ export const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
             paddingLeft: 4,
           }}
         >
-          Enter to send · Shift+Enter for newline · Double-click graph node to add context
+          Enter 发送 · Shift+Enter 换行 · 双击图谱节点添加上下文
         </span>
       </div>
     </div>

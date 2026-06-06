@@ -13,6 +13,9 @@ from dra_ma.prompts.retriever_risk import RETRIEVER_SYSTEM_PROMPT, RETRIEVER_USE
 from dra_ma.prompts.analyst_risk import ANALYST_SYSTEM_PROMPT, ANALYST_USER_TEMPLATE
 from dra_ma.prompts.compliance_risk import COMPLIANCE_SYSTEM_PROMPT, COMPLIANCE_USER_TEMPLATE
 from dra_ma.prompts.reporter_risk import REPORTER_SYSTEM_PROMPT, REPORTER_USER_TEMPLATE
+from dra_ma.prompts.intent.unified_intent import UNIFIED_INTENT_SYSTEM_PROMPT, UNIFIED_INTENT_USER_TEMPLATE
+from dra_ma.prompts.risk.scoring_risk import SCORING_SYSTEM_PROMPT, SCORING_USER_TEMPLATE
+from dra_ma.prompts.risk.governance_risk import GOVERNANCE_SYSTEM_PROMPT, GOVERNANCE_USER_TEMPLATE
 
 
 class PromptLoader:
@@ -127,6 +130,10 @@ class PromptLoader:
         risk_paths: str,
         anomalies: str,
         compliance_matches: str,
+        scoring_result: str = "{}",
+        governance_plan: str = "{}",
+        evidence_chains: str = "{}",
+        resolved_entities: str = "[]",
     ) -> str:
         return REPORTER_USER_TEMPLATE.format(
             trigger_info=trigger_info,
@@ -134,7 +141,41 @@ class PromptLoader:
             risk_paths=risk_paths,
             anomalies=anomalies,
             compliance_matches=compliance_matches,
+            scoring_result=scoring_result,
+            governance_plan=governance_plan,
+            evidence_chains=evidence_chains,
+            resolved_entities=resolved_entities,
         )
+
+    # ── Unified Intent ────────────────────────────────────────────
+
+    @staticmethod
+    def render_intent_system() -> str:
+        return UNIFIED_INTENT_SYSTEM_PROMPT
+
+    @staticmethod
+    def render_intent_user(query: str) -> str:
+        return UNIFIED_INTENT_USER_TEMPLATE.format(query=query)
+
+    # ── Risk Scoring ──────────────────────────────────────────────
+
+    @staticmethod
+    def render_scoring_system() -> str:
+        return SCORING_SYSTEM_PROMPT
+
+    @staticmethod
+    def render_scoring_user(scoring_data: str) -> str:
+        return SCORING_USER_TEMPLATE.format(scoring_data=scoring_data)
+
+    # ── Governance ────────────────────────────────────────────────
+
+    @staticmethod
+    def render_governance_system() -> str:
+        return GOVERNANCE_SYSTEM_PROMPT
+
+    @staticmethod
+    def render_governance_user(governance_context: str) -> str:
+        return GOVERNANCE_USER_TEMPLATE.format(governance_context=governance_context)
 
 
 __all__ = [
@@ -143,5 +184,8 @@ __all__ = [
     "ANALYST_SYSTEM_PROMPT", "ANALYST_USER_TEMPLATE",
     "COMPLIANCE_SYSTEM_PROMPT", "COMPLIANCE_USER_TEMPLATE",
     "REPORTER_SYSTEM_PROMPT", "REPORTER_USER_TEMPLATE",
+    "UNIFIED_INTENT_SYSTEM_PROMPT", "UNIFIED_INTENT_USER_TEMPLATE",
+    "SCORING_SYSTEM_PROMPT", "SCORING_USER_TEMPLATE",
+    "GOVERNANCE_SYSTEM_PROMPT", "GOVERNANCE_USER_TEMPLATE",
     "PromptLoader",
 ]

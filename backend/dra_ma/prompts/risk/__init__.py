@@ -1,0 +1,9 @@
+from dra_ma.prompts.risk.scoring_risk import SCORING_SYSTEM_PROMPT, SCORING_USER_TEMPLATE
+from dra_ma.prompts.risk.governance_risk import GOVERNANCE_SYSTEM_PROMPT, GOVERNANCE_USER_TEMPLATE
+
+__all__ = [
+    "SCORING_SYSTEM_PROMPT",
+    "SCORING_USER_TEMPLATE",
+    "GOVERNANCE_SYSTEM_PROMPT",
+    "GOVERNANCE_USER_TEMPLATE",
+]

@@ -6,7 +6,7 @@ Endpoints:
     GET  /api/v1/pipeline/runs            — history of pipeline runs
     GET  /api/v1/pipeline/sources         — list available data sources
     GET  /api/v1/pipeline/crawl/templates — list crawl templates
-    POST /api/v1/pipeline/crawl/run       — trigger multi-agent crawl (SSE)
+    POST /api/v1/pipeline/crawl/run       — trigger crawl (SSE)
     POST /api/v1/pipeline/crawl/parse-nl  — parse NL query for crawl
     GET  /api/v1/pipeline/crawl/sources   — list crawl source capabilities
     GET  /api/v1/pipeline/crawl/tasks     — crawl task history
@@ -18,6 +18,7 @@ Env vars:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -254,7 +255,7 @@ async def trigger_pipeline_run(
     }
 
 
-# ── Multi-Agent Crawl Endpoints ──────────────────────────────────────────
+# ── Crawl Endpoints ─────────────────────────────────────────────────────
 
 
 @router.get("/crawl/templates")
@@ -270,8 +271,8 @@ async def list_crawl_templates():
 
 
 @router.post("/crawl/run")
-async def trigger_crawl(payload: CrawlTaskRequest):
-    """Trigger a multi-agent crawl task with SSE streaming progress.
+async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
+    """Trigger a crawl task with SSE streaming progress.
 
     Request body: CrawlTaskRequest JSON
     Response: SSE stream with events: start, stage, source_result, complete, error
@@ -280,6 +281,9 @@ async def trigger_crawl(payload: CrawlTaskRequest):
     - quick: Dropdown params only, no LLM cost
     - complex: Natural language query, LLM parses intent
     - template: Preset template, one-click crawl
+
+    Detects client disconnect and cancels the in-flight orchestrator to prevent
+    orphan ChromeDriver processes.
     """
     try:
         from data_collection.orchestrator import CrawlOrchestrator
@@ -292,23 +296,64 @@ async def trigger_crawl(payload: CrawlTaskRequest):
 
     async def event_generator():
         orchestrator = CrawlOrchestrator(demo_mode=demo_mode)
-        try:
-            async for event in orchestrator.execute(payload):
-                event_name = event.get("event", "message")
-                event_data = json.dumps(event.get("data", {}), ensure_ascii=False)
-                yield f"event: {event_name}\ndata: {event_data}\n\n"
+        execute_task: asyncio.Task | None = None
+        event_queue: asyncio.Queue = asyncio.Queue()
 
-            # Store completed task
-            _crawl_tasks.insert(0, {
-                "type": "crawl",
-                "task_id": event.get("data", {}).get("task_id", ""),
-                "mode": payload.mode.value,
-                "data_type": payload.data_type.value,
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-            })
-        except Exception as exc:
-            logger.exception("Crawl orchestrator failed")
-            yield f"event: error\ndata: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+        async def _run_orchestrator():
+            """Run orchestrator in a task so we can cancel on disconnect."""
+            try:
+                async for event in orchestrator.execute(payload):
+                    await event_queue.put(("event", event))
+                await event_queue.put(("done", None))
+            except Exception as exc:
+                logger.exception("Crawl orchestrator failed")
+                await event_queue.put(("error", str(exc)))
+
+        execute_task = asyncio.create_task(_run_orchestrator())
+        last_event = None
+
+        try:
+            while True:
+                # Check for client disconnect every 1s while waiting for events
+                try:
+                    kind, data = await asyncio.wait_for(event_queue.get(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if await request.is_disconnected():
+                        logger.warning("Crawl SSE client disconnected, cancelling orchestrator")
+                        execute_task.cancel()
+                        try:
+                            await execute_task
+                        except asyncio.CancelledError:
+                            pass
+                        return
+                    continue
+
+                if kind == "done":
+                    last_event = data
+                    # Store completed task
+                    _crawl_tasks.insert(0, {
+                        "type": "crawl",
+                        "task_id": last_event.get("data", {}).get("task_id", "") if last_event else "",
+                        "mode": payload.mode.value,
+                        "data_type": payload.data_type.value,
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    return
+                elif kind == "error":
+                    yield f"event: error\ndata: {json.dumps({'error': data}, ensure_ascii=False)}\n\n"
+                    return
+                elif kind == "event":
+                    last_event = data
+                    event_name = data.get("event", "message")
+                    event_data = json.dumps(data.get("data", {}), ensure_ascii=False)
+                    yield f"event: {event_name}\ndata: {event_data}\n\n"
+        finally:
+            if execute_task and not execute_task.done():
+                execute_task.cancel()
+                try:
+                    await execute_task
+                except asyncio.CancelledError:
+                    pass
 
     return StreamingResponse(
         event_generator(),
@@ -328,12 +373,12 @@ async def parse_natural_language(query: str = Query(..., description="Natural la
     Returns structured params for user confirmation.
     """
     try:
-        from data_collection.agents.requirement_agent import RequirementParsingAgent
+        from data_collection.agents.requirement_agent import RequirementParser
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"Agent module not available: {e}")
+        raise HTTPException(status_code=500, detail=f"Requirement parser not available: {e}")
 
-    agent = RequirementParsingAgent()
-    parsed = agent.parse_complex_mode(query)
+    parser = RequirementParser()
+    parsed = parser.parse_complex_mode(query)
     return {"success": True, "data": parsed}
 
 
@@ -341,12 +386,12 @@ async def parse_natural_language(query: str = Query(..., description="Natural la
 async def list_crawl_sources():
     """List available scraper sources with their capabilities (keywords, date_range, max_pages)."""
     try:
-        from data_collection.agents.source_matching_agent import SourceMatchingAgent
+        from data_collection.agents.source_matching_agent import SourceMatcher
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"Agent module not available: {e}")
+        raise HTTPException(status_code=500, detail=f"Source matcher not available: {e}")
 
-    agent = SourceMatchingAgent()
-    return {"sources": agent.SOURCE_CAPABILITIES}
+    matcher = SourceMatcher()
+    return {"sources": matcher.SOURCE_CAPABILITIES}
 
 
 @router.get("/crawl/tasks")

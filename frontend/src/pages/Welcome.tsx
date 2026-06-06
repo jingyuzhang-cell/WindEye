@@ -426,7 +426,7 @@ const mapReportToActivity = (r: RiskReportSummary): ActivityItem => {
     level,
     timestamp: r.created_at || '',
     relativeTime,
-    title: r.query?.length > 40 ? r.query.slice(0, 40) + '...' : (r.query || '风险分析报告'),
+    title: r.query?.length > 40 ? r.query.slice(0, 40) + '...' : (r.query || '协同治理报告'),
     description: r.executive_summary
       ? r.executive_summary.length > 80 ? r.executive_summary.slice(0, 80) + '...' : r.executive_summary
       : `${r.risk_path_count || 0} 条风险路径, ${r.anomaly_count || 0} 个异常, ${r.compliance_count || 0} 条合规匹配`,
@@ -724,7 +724,7 @@ const Welcome: React.FC = () => {
             trendData={trendRef.current.regulations} trendPct={trendPctRef.current.regulations} />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <KPICard title="风险报告" value={recentReports.length > 0 ? `${recentReports.length}` : '0'} icon={<FileTextOutlined />}
+          <KPICard title="治理报告" value={recentReports.length > 0 ? `${recentReports.length}` : '0'} icon={<FileTextOutlined />}
             color="#10B981" suffix="份" loading={summaryLoading}
             trendData={trendRef.current.reports} trendPct={trendPctRef.current.reports} />
         </Col>
@@ -824,13 +824,13 @@ const Welcome: React.FC = () => {
                 <QuickAction icon={<CloudDownloadOutlined />} title="数据采集" desc="多智能体协同网络爬虫" color="#EA580C" path="/data-collection" />
               </Col>
               <Col xs={12} sm={8} lg={4}>
-                <QuickAction icon={<MessageOutlined />} title="风险问答" desc="自然语言查询风险传导路径" color="#2563EB" path="/knowledge-qa" />
+                <QuickAction icon={<MessageOutlined />} title="协同治理" desc="自然语言查询风险传导路径" color="#2563EB" path="/knowledge-qa" />
               </Col>
               <Col xs={12} sm={8} lg={4}>
                 <QuickAction icon={<ClusterOutlined />} title="知识图谱" desc="浏览四层资本市场图谱网络" color="#2563EB" path="/knowledge-graph" />
               </Col>
               <Col xs={12} sm={8} lg={4}>
-                <QuickAction icon={<FileTextOutlined />} title="风险报告" desc="结构化风险分析与合规研判" color="#7C3AED" path="/knowledge-qa" />
+                <QuickAction icon={<FileTextOutlined />} title="治理报告" desc="结构化风险分析与合规研判" color="#7C3AED" path="/knowledge-qa" />
               </Col>
               <Col xs={12} sm={8} lg={4}>
                 <QuickAction icon={<ToolOutlined />} title="图谱构建" desc="ETL流水线与知识图谱构建" color="#10B981" path="/knowledge-build" />

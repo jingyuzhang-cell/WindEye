@@ -15,6 +15,10 @@ export default {
       target: 'http://localhost:8000',
       changeOrigin: true,
     },
+    '/health': {
+      target: 'http://localhost:8000',
+      changeOrigin: true,
+    },
   },
   /**
    * @name 详细的代理配置

@@ -6,6 +6,7 @@ from typing import List
 
 from dra_ma.agents.layer1_perception.intent_agent import IntentObject
 from dra_ma.agents.layer3_execution.cypher_utils import call_llm
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,11 @@ class VerifierAgent:
     @staticmethod
     async def verify(intent: IntentObject, cypher: str, results: List[str],
                      system_prompt: str = "") -> float:
+        agent_trace("VerifierAgent", "START",
+            cypher=str(cypher)[:300],
+            result_count=len(results) if results else 0,
+            semantic_anchor=intent.Expected_Answer_Type if hasattr(intent, 'Expected_Answer_Type') else "any")
+
         if not cypher or not results:
             logger.info("[VerifierAgent] Empty Cypher or results. Verification score = 0.0")
             return 0.0
@@ -100,6 +106,10 @@ class VerifierAgent:
                     f"[VerifierAgent] Hybrid fast-pass: skipping LLM verification "
                     f"({len(results)} results, type='{expected_type}')"
                 )
+                agent_trace("VerifierAgent", "DECISION",
+                    is_valid=True,
+                    raw_score=0.95,
+                    final_score=0.95)
                 return 0.95
 
         sample = results[:5]
@@ -127,6 +137,10 @@ class VerifierAgent:
             score = float(data.get("confidence_score", 0.0))
 
             final_score = score if is_valid else min(score, 0.1)
+            agent_trace("VerifierAgent", "DECISION",
+                is_valid=is_valid,
+                raw_score=score,
+                final_score=final_score)
             logger.info(f"[VerifierAgent] Verification: is_valid={is_valid}, score={score} -> final={final_score:.4f}")
             return final_score
 

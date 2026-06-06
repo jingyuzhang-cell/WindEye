@@ -13,8 +13,8 @@
 # 4. Delete the "文档提取器" (Document Extractor) node
 # 5. Reconnect: Start → 文本分块 (code node 17585314932320)
 # 6. Save and publish
-# 7. Copy the workflow ID from the URL and set DIFY_REGULATION_WORKFLOW_ID in .env
-# 8. Create an API key in Dify and set DIFY_API_KEY in .env
+# 7. Copy the workflow ID from the URL and set DIFY_REGULATION_API_KEY in .env
+# 8. Set DIFY_BASE_URL if using a self-hosted Dify instance
 #
 # === API CALL FORMAT ===
 # POST /v1/workflows/run

@@ -16,6 +16,7 @@ from dra_ma.skills.base import SkillContext, SkillHook
 from dra_ma.skills.registry import SkillManager
 from dra_ma.skills.consensus.persona_selector import PersonaSelector
 from dra_ma.skills.consensus.entity_cleaner import EntityCleaner
+from dra_ma.tools.community_discovery_tools import CommunityDiscoveryTool
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +97,32 @@ class RiskAnalysisEngine:
 
         yield {"stage": "retrieving", "content": f"检索完成: {len(node_list)} 个节点, {len(edge_list)} 条关系"}
 
+        # ── Stage 3: Entity Statistics ────────────────────────────
+        entity_stats = self._compute_entity_stats(node_list)
+        yield {"stage": "entity_stats", "content": f"实体识别: {entity_stats['total_entities']} 个实体, {len(entity_stats['entity_type_counts'])} 种类型"}
+        yield {"entity_stats": entity_stats}
+
+        # ── Stage 4: Community Discovery ──────────────────────────
+        community_info = self._compute_community_discovery(node_list, edge_list)
+        community_count = len(community_info.get("communities", []))
+        yield {"stage": "community", "content": f"群体发现: {community_count} 个群体"}
+        yield {"community": community_info}
+
+        # ── Entity→Community mapping ─────────────────────────────
+        entity_community_map = self._compute_entity_community_map(
+            entity_stats, community_info, node_list, edge_list,
+        )
+        yield {"entity_community_map": entity_community_map}
+
         # ── Skill: RISK_ANALYZING (PersonaSelector for risk analysis) ──
         ctx = await self.skills.execute_hook(SkillHook.RISK_ANALYZING, ctx)
 
-        # ── Stage 3: Analyzing ────────────────────────────────────
+        # ── Stage 5: Analyzing ────────────────────────────────────
         risk_paths, anomalies, overall_assessment = await self._stage_analyzing(
             node_list, edge_list, trigger_event
         )
         yield {"stage": "analyzing", "content": f"分析完成: {len(risk_paths)} 条风险路径, {len(anomalies)} 处异常"}
+        yield {"risk_paths": risk_paths}
 
         # ── Skill: RISK_COMPLIANCE ──
         ctx.risk_paths = risk_paths
@@ -134,11 +153,15 @@ class RiskAnalysisEngine:
         yield {
             "output": {
                 "executive_summary": report.get("executive_summary", ""),
+                "entity_stats": entity_stats,
+                "community_info": community_info,
+                "entity_community_map": entity_community_map,
                 "risk_paths": risk_paths,
                 "anomaly_findings": anomalies,
                 "compliance_matches": compliance_matches,
                 "overall_risk_level": report.get("overall_risk_level", "medium"),
                 "recommendations": report.get("recommendations", []),
+                "integrated_report": report.get("markdown_report", ""),
                 "markdown_report": report.get("markdown_report", ""),
                 "subtasks_completed": len(subtasks),
                 "subgraph_summary": {
@@ -177,17 +200,36 @@ class RiskAnalysisEngine:
         yield {"stage": "retrieving", "content": f"图谱检索完成: {len(nodes)} 个节点, {len(edges)} 条关系"}
         yield {"stage": "subgraph", "nodes": nodes, "edges": edges}
 
-        # Stage 3: Analyze risk patterns from graph structure
+        # Stage 3: Entity statistics
+        await asyncio.sleep(0.2)
+        entity_stats = self._compute_entity_stats(nodes)
+        yield {"stage": "entity_stats", "content": f"实体统计完成: {entity_stats['total_entities']} 个实体"}
+        yield {"entity_stats": entity_stats}
+
+        # Stage 4: Community discovery
+        await asyncio.sleep(0.3)
+        community_info = self._compute_community_discovery(nodes, edges)
+        yield {"stage": "community", "content": f"群体发现完成: {len(community_info['communities'])} 个群体"}
+        yield {"community": community_info}
+
+        # Entity→Community mapping
+        entity_community_map = self._compute_entity_community_map(
+            entity_stats, community_info, nodes, edges,
+        )
+        yield {"entity_community_map": entity_community_map}
+
+        # Stage 5: Analyze risk patterns from graph structure
         await asyncio.sleep(0.5)
         risk_paths, anomalies = await self._demo_analyze(nodes, edges)
         yield {"stage": "analyzing", "content": f"风险分析完成: {len(risk_paths)} 条风险路径, {len(anomalies)} 处异常"}
+        yield {"risk_paths": risk_paths}
 
-        # Stage 4: Match regulations
+        # Stage 6: Match regulations
         await asyncio.sleep(0.4)
         compliance_matches = await self._demo_compliance(nodes, risk_paths, anomalies)
         yield {"stage": "compliance", "content": f"合规匹配完成: {len(compliance_matches)} 条法规匹配"}
 
-        # Stage 5: Generate report
+        # Stage 7: Generate report
         await asyncio.sleep(0.5)
         report = self._demo_report(query, nodes, edges, risk_paths, anomalies, compliance_matches)
         yield {"stage": "reporting", "content": "报告生成完成"}
@@ -195,13 +237,16 @@ class RiskAnalysisEngine:
         yield {
             "output": {
                 "executive_summary": report["executive_summary"],
+                "entity_stats": entity_stats,
+                "community_info": community_info,
+                "entity_community_map": entity_community_map,
                 "risk_paths": risk_paths,
                 "anomaly_findings": anomalies,
                 "compliance_matches": compliance_matches,
                 "overall_risk_level": report["overall_risk_level"],
                 "recommendations": report["recommendations"],
                 "markdown_report": report["markdown_report"],
-                "subtasks_completed": 4,
+                "subtasks_completed": 6,
                 "subgraph_summary": {
                     "node_count": len(nodes),
                     "edge_count": len(edges),
@@ -211,19 +256,106 @@ class RiskAnalysisEngine:
             }
         }
 
+    # ── LLM-based entity extraction (follows IntentAgent multi-agent pattern) ──
+
+    _ENTITY_EXTRACTION_PROMPT = """你是一个金融风控知识图谱的实体提取专家（Entity Extraction Agent）。
+
+你的任务是从用户的自然语言查询中，提取出所有涉及的**实体名称**（如公司名、人名、事件名、法规名等）。
+
+【图谱领域】
+- 数据集: FinancialRegulatoryKG（金融监管知识图谱）
+- 实体类型: 公司/企业（COMPANY）、个人/人物（PERSON）、事件（EVENT）、风险特征（RiskFeature）、法规（Regulation/Law）、监管行动（Action）
+
+【提取规则】
+1. 人名：中文姓名（2-4个字），如"张明远"、"李四"
+2. 公司名：包含"公司"、"集团"、"有限"、"股份"、"企业"等后缀的实体名，如"鑫达投资管理有限公司"
+3. 事件/法规名：查询中明确提到的具体事件或法规名称
+4. 只提取查询中明确出现的实体名，不要凭空编造
+5. 如果查询中没有明确实体，返回空列表
+
+【输出格式】
+{{
+  "reasoning": "简要分析查询中提到的实体",
+  "entities": ["实体名1", "实体名2"]
+}}
+
+❌ 绝对禁止输出任何多余的解释文字，最终必须是合法的 JSON 字符串。"""
+
+    @classmethod
+    async def _extract_entities_llm(cls, query: str) -> list[str]:
+        """Extract entity names from query using LLM, following the IntentAgent pattern."""
+        try:
+            raw = await call_llm(
+                system=cls._ENTITY_EXTRACTION_PROMPT,
+                user=f"用户查询: {query}",
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            data = json.loads(raw)
+            entities = data.get("entities", [])
+            reasoning = data.get("reasoning", "")
+            if reasoning:
+                logger.info(f"[EntityExtraction] Reasoning: {reasoning[:200]}")
+            logger.info(f"[EntityExtraction] Extracted entities: {entities}")
+            return entities if isinstance(entities, list) else []
+        except Exception as exc:
+            logger.warning(f"[EntityExtraction] LLM extraction failed: {exc}, falling back to full query")
+            return [query.strip()]
+
+    # ── File content entity extraction ──
+
+    _FILE_ENTITY_EXTRACTION_PROMPT = """你是一个金融风控知识图谱的文档分析专家。
+
+你的任务是从上传的金融文档/新闻/报告中提取:
+1. 核心实体（公司名、人名、事件名、法规名）
+2. 风险信号（违规行为、处罚、异常交易、诉讼等）
+3. 文档摘要（100字以内）
+
+【提取规则】
+1. 只提取文档中明确出现的实体名，不要编造
+2. 风险信号应为具体可查证的事项
+3. 最多提取10个最关键实体
+4. 如果文档不包含金融风控相关内容，返回空列表
+
+【输出格式】
+{{
+  "summary": "文档摘要(100字以内)",
+  "entities": ["实体名1", "实体名2"],
+  "risk_signals": ["风险信号1", "风险信号2"],
+  "is_financial_risk_relevant": true/false
+}}
+
+禁止输出任何多余的解释文字，最终必须是合法的 JSON 字符串。"""
+
+    @classmethod
+    async def _extract_from_file_content_llm(cls, file_text: str) -> dict:
+        """Extract entities, risk signals, and summary from uploaded file content."""
+        truncated = file_text[:15000]
+        try:
+            raw = await call_llm(
+                system=cls._FILE_ENTITY_EXTRACTION_PROMPT,
+                user=f"文档内容:\n{truncated}",
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            data = json.loads(raw)
+            logger.info(
+                "[FileExtraction] Found %d entities, %d risk signals",
+                len(data.get("entities", [])), len(data.get("risk_signals", [])),
+            )
+            return data
+        except Exception as exc:
+            logger.warning(f"[FileExtraction] LLM extraction failed: {exc}")
+            return {"summary": "", "entities": [], "risk_signals": [], "is_financial_risk_relevant": False}
+
     async def _demo_retrieve(
         self, query: str, focus_entities: list[str], max_hop: int,
     ) -> tuple[list[dict], list[dict]]:
         """Search for entities by keyword, then expand to get connected subgraph."""
-        # Extract token from query (use the whole query as keyword)
+        # Extract entity keywords via LLM (follows IntentAgent multi-agent pattern)
         keywords = focus_entities[:]
         if not keywords:
-            for token in query.replace("，", ",").replace("、", ",").split(","):
-                token = token.strip().strip("。").strip()
-                if len(token) >= 2:
-                    keywords.append(token)
-            if not keywords:
-                keywords = [query.strip()]
+            keywords = await self._extract_entities_llm(query)
 
         all_nodes: dict[str, dict] = {}
         all_edges: dict[str, dict] = {}
@@ -232,8 +364,9 @@ class RiskAnalysisEngine:
             search_cypher = """
             MATCH (n)
             WHERE (n.name CONTAINS $kw OR n.COMPANY_NM CONTAINS $kw
-               OR n.title CONTAINS $kw OR n.factor_nm CONTAINS $kw
-               OR n.feature_nm CONTAINS $kw OR n.regulation_title CONTAINS $kw)
+               OR n.PERSON_NM CONTAINS $kw OR n.title CONTAINS $kw
+               OR n.factor_nm CONTAINS $kw OR n.feature_nm CONTAINS $kw
+               OR n.regulation_title CONTAINS $kw)
             WITH n LIMIT 5
             MATCH (n)-[r*1..%d]-(m)
             RETURN n, r, m LIMIT 200
@@ -681,6 +814,63 @@ class RiskAnalysisEngine:
                 "风险信息": str(risk_info)[:100] if risk_info else "",
             })
         return rows
+
+    # ── Helper: Entity stats ──────────────────────────────────────
+
+    @staticmethod
+    def _compute_entity_stats(nodes: list[dict]) -> dict[str, Any]:
+        """Compute entity statistics from retrieved nodes."""
+        type_counts: dict[str, int] = {}
+        entity_list: list[dict] = []
+
+        for node in nodes:
+            labels = node.get("labels", [])
+            props = node.get("properties", {}) if isinstance(node.get("properties"), dict) else {}
+            node_id = props.get("id") or props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or str(props.get("_id", ""))
+            node_name = props.get("name") or props.get("COMPANY_NM") or props.get("zh_name") or props.get("title") or str(node_id)
+
+            for label in labels:
+                if label and label != "Resource":
+                    type_counts[label] = type_counts.get(label, 0) + 1
+                    entity_list.append({"name": str(node_name)[:50], "type": label, "id": str(node_id)})
+                    break  # count each node once by its primary label
+
+        # Sort entities by name uniqueness (prefer unique names)
+        seen_names: set[str] = set()
+        unique_entities: list[dict] = []
+        for e in entity_list:
+            if e["name"] not in seen_names:
+                seen_names.add(e["name"])
+                unique_entities.append(e)
+
+        return {
+            "total_entities": len(nodes),
+            "entity_type_counts": type_counts,
+            "top_entities": unique_entities[:10],
+        }
+
+    @staticmethod
+    def _compute_community_discovery(
+        nodes: list[dict], edges: list[dict],
+    ) -> dict[str, Any]:
+        """Run community detection via CommunityDiscoveryTool (WCC/Louvain)."""
+        result = CommunityDiscoveryTool.detect_communities(nodes, edges, method="auto")
+        return {
+            "communities": result.get("communities", []),
+            "algorithm": result.get("algorithm", "wcc"),
+        }
+
+    @staticmethod
+    def _compute_entity_community_map(
+        entity_stats: dict[str, Any],
+        community_info: dict[str, Any],
+        nodes: list[dict],
+        edges: list[dict],
+    ) -> dict[str, Any]:
+        """Map entities to communities via CommunityDiscoveryTool."""
+        return CommunityDiscoveryTool.map_entities_to_communities(
+            entity_stats, community_info, nodes, edges,
+        )
 
     # ── Stage implementations ───────────────────────────────────────
 

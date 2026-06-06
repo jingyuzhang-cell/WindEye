@@ -13,6 +13,7 @@ from dra_ma.agents.layer3_execution.cypher_utils import (
     path_to_cypher,
     execute_cypher_and_extract,
 )
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,10 @@ class ExecutorAgent:
     @staticmethod
     def translate_to_cypher(path: str, expected_type: str = "") -> str:
         cypher = path_to_cypher(path, expected_type=expected_type)
+        agent_trace("ExecutorAgent", "COMPILE",
+            path=path,
+            expected_type=expected_type,
+            cypher=str(cypher)[:500])
         logger.info(f"[ExecutorAgent] Path '{path}' translated to: '{cypher}'")
         return cypher
 
@@ -65,7 +70,7 @@ class ExecutorAgent:
                     if res not in added:
                         nodes.append({"id": res, "label": res, "type": viz_node_type})
                         added.add(res)
-                    edges.append({"source": start_entity, "target": res, "type": "connected_to"})
+                    edges.append({"source": start_entity, "target": res, "type": ""})
 
             db_response = DBResponse(
                 is_valid=True,
@@ -74,6 +79,11 @@ class ExecutorAgent:
                 results=results,
                 error_log=""
             )
+            agent_trace("ExecutorAgent", "RESULT",
+                is_valid=True,
+                result_count=len(results),
+                node_count=len(nodes),
+                edge_count=len(edges))
             logger.info(f"[ExecutorAgent] Execution success. Retrieved {len(results)} items.")
             return db_response
 
@@ -84,6 +94,11 @@ class ExecutorAgent:
             else:
                 error_msg = str(e)
             logger.error(f"[ExecutorAgent] Execution failed: {error_msg}")
+            agent_trace("ExecutorAgent", "RESULT",
+                is_valid=False,
+                result_count=0,
+                node_count=0,
+                edge_count=0)
             return DBResponse(
                 is_valid=False,
                 is_empty=True,

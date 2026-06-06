@@ -1,10 +1,12 @@
 import React from 'react'
+import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RELATION_LABELS, EDGE_COLORS, RISK_LEVEL_VISUAL } from './graphStyles'
 
-interface LegendStats {
+export interface LegendStats {
   totalNodes: number
   totalEdges: number
   nodeCounts: Record<string, number>
   edgeCounts: Record<string, number>
+  riskLevelCounts?: Record<string, number>
 }
 
 export interface LegendPanelProps {
@@ -15,41 +17,6 @@ export interface LegendPanelProps {
 }
 
 const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n))
-
-const NODE_COLORS: Record<string, string> = {
-  COMPANY: '#FFC101',
-  PERSON: '#1890FF',
-  EVENT: '#FF6B6B',
-  SUB_EVENT: '#FF9999',
-  TIME: '#FF8C00',
-  RiskFeature: '#4CAF50',
-  RiskFactor: '#9C27B0',
-  Action: '#45B7D1',
-  Regulation: '#FFC101',
-  Law: '#1890FF',
-}
-
-const NODE_LABELS: Record<string, string> = {
-  COMPANY: 'Company',
-  PERSON: 'Person',
-  EVENT: 'Event',
-  SUB_EVENT: 'Sub Event',
-  TIME: 'Time',
-  RiskFeature: 'Risk Feature',
-  RiskFactor: 'Risk Factor',
-  Action: 'Action',
-  Regulation: 'Regulation',
-  Law: 'Law',
-}
-
-const REL_LABELS: Record<string, string> = {
-  TRIGGERS: 'Triggers',
-  REFLECTS: 'Reflects',
-  COMPLIES_WITH: 'Complies With',
-  MENTION: 'Mention',
-  CAUSE: 'Cause',
-  BELONG: 'Belong',
-}
 
 const LegendPanel: React.FC<LegendPanelProps> = ({
   stats,
@@ -69,15 +36,15 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
     <div style={styles.root}>
       <div style={styles.row}>
         <div style={styles.labelGroup}>
-          <span style={styles.rowLabel}>Nodes</span>
+          <span style={styles.rowLabel}>节点</span>
           <span style={styles.rowTotal}>({fmt(nodeCountTotal)})</span>
         </div>
         <div style={styles.divider} />
         <div style={styles.chips}>
-          {Object.keys(NODE_LABELS).map((type) => {
+          {Object.keys(NODE_TYPE_LABELS).map((type) => {
             const count = stats.nodeCounts[type] ?? 0
             if (count === 0) return null
-            const color = NODE_COLORS[type]
+            const color = NODE_TYPE_COLORS[type] || '#8c8c8c'
             const hidden = !visibleCategories.has(type)
             return (
               <div
@@ -96,7 +63,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
                   style={{ ...styles.chipDot, background: color, opacity: hidden ? 0.3 : 1 }}
                 />
                 <span style={styles.chipText}>
-                  {NODE_LABELS[type]} {fmt(count)}
+                  {NODE_TYPE_LABELS[type]} {fmt(count)}
                 </span>
               </div>
             )
@@ -107,14 +74,15 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
       {edgeCountTotal > 0 && (
         <div style={{ ...styles.row, marginTop: 6 }}>
           <div style={styles.labelGroup}>
-            <span style={styles.rowLabel}>Relations</span>
+            <span style={styles.rowLabel}>关系</span>
             <span style={styles.rowTotal}>({fmt(edgeCountTotal)})</span>
           </div>
           <div style={styles.divider} />
           <div style={styles.chips}>
             {Object.entries(stats.edgeCounts).map(([rel, count]) => {
               if (count === 0 || rel === 'UNKNOWN') return null
-              const label = REL_LABELS[rel] || rel
+              const label = RELATION_LABELS[rel] || rel
+              const color = EDGE_COLORS[rel] || '#8c8c8c'
               const hidden = isEdgeHidden(rel)
               return (
                 <div
@@ -124,13 +92,51 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
                   onClick={() => onToggle(rel)}
                   style={{
                     ...styles.edgeChip,
-                    borderColor: hidden ? '#e2e8f0' : '#cbd5e1',
-                    color: hidden ? '#94a3b8' : '#475569',
-                    background: hidden ? '#f8fafc' : '#ffffff',
+                    background: hidden ? `${color}08` : `${color}12`,
+                    borderColor: hidden ? `${color}15` : `${color}30`,
+                    color: hidden ? `${color}60` : color,
                   }}
                 >
+                  <span
+                    style={{ ...styles.chipDot, background: color, opacity: hidden ? 0.3 : 1 }}
+                  />
                   <span style={styles.chipText}>
                     {label} {fmt(count)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Risk level row */}
+      {stats.riskLevelCounts && Object.keys(stats.riskLevelCounts).length > 0 && (
+        <div style={{ ...styles.row, marginTop: 6 }}>
+          <div style={styles.labelGroup}>
+            <span style={styles.rowLabel}>风险</span>
+          </div>
+          <div style={styles.divider} />
+          <div style={styles.chips}>
+            {Object.entries(stats.riskLevelCounts).map(([level, count]) => {
+              const rv = RISK_LEVEL_VISUAL[level]
+              if (!rv) return null
+              return (
+                <div
+                  key={level}
+                  style={{
+                    ...styles.nodeChip,
+                    background: `${rv.border}12`,
+                    border: `1px solid ${rv.border}30`,
+                    color: rv.border,
+                    cursor: 'default',
+                  }}
+                >
+                  <span
+                    style={{ ...styles.chipDot, background: rv.border }}
+                  />
+                  <span style={styles.chipText}>
+                    {rv.label} {fmt(count)}
                   </span>
                 </div>
               )

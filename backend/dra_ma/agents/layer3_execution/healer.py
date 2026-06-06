@@ -18,6 +18,7 @@ from dra_ma.agents.layer3_execution.cypher_utils import (
     template_cypher,
     detemplate_cypher,
 )
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,9 @@ class SmashAgent:
             SmashAgent._cache[failed_template] = repaired_template
             logger.info(f"[SmashAgent] Cache SAVE! '{failed_template}' -> '{repaired_template}'")
 
+            agent_trace("SmashAgent", "REPAIR",
+                old_cypher=str(cypher)[:300],
+                repaired_cypher=str(repaired_cypher)[:500])
             logger.info(f"[SmashAgent] Proposed repaired Cypher: '{repaired_cypher}'")
             return repaired_cypher
         except Exception as e:
@@ -127,6 +131,10 @@ class SmashAgent:
         rewriting the query strategy — e.g. switching from undirected to directed
         matching, removing type filters, or inverting relation direction.
         """
+        agent_trace("SmashAgent", "START",
+            failed_cypher=str(cypher)[:300],
+            error_log=str(error_log)[:200])
+
         if not entity:
             bracket_match = re.search(r"\[(.*?)\]", question)
             if bracket_match:
@@ -155,6 +163,9 @@ class SmashAgent:
 
             reconstructed = extract_cypher_from_text(raw_response)
             reconstructed = auto_fix_simple_errors(reconstructed)
+            agent_trace("SmashAgent", "REPAIR",
+                old_cypher=str(cypher)[:300],
+                repaired_cypher=str(reconstructed)[:500])
             logger.info(f"[SmashAgent:Reconstruct] Reconstructed Cypher: '{reconstructed}'")
             return reconstructed
         except Exception as e:

@@ -51,12 +51,18 @@ class SkillHook(str, Enum):
     PRE_NLG = "pre_nlg"
     POST_NLG = "post_nlg"
 
-    # Risk Engine hooks
+    # Risk Engine hooks (legacy — still used by existing pipeline)
     RISK_PLANNING = "risk_planning"
     RISK_RETRIEVING = "risk_retrieving"
     RISK_ANALYZING = "risk_analyzing"
     RISK_COMPLIANCE = "risk_compliance"
     RISK_REPORTING = "risk_reporting"
+
+    # Unified pipeline stage hooks (used by UnifiedEngine)
+    GRAPH_ANALYTICS = "graph_analytics"
+    RISK_ANALYSIS = "risk_analysis"
+    RISK_SCORING = "risk_scoring"
+    RISK_GOVERNANCE = "risk_governance"
 
     # Global lifecycle
     ON_FAILURE = "on_failure"

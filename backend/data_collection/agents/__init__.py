@@ -1,20 +1,20 @@
-"""Multi-agent collaborative crawling agents.
+"""Collaborative crawling modules.
 
-Agents:
-- RequirementParsingAgent: NL → structured crawl parameters
-- SourceMatchingAgent: structured params → scraper configs
-- QualityAssessmentAgent: validate crawl results
-- ExceptionHandlingAgent: retry logic and fallback strategies
+Modules:
+- RequirementParser: NL → structured crawl parameters
+- SourceMatcher: structured params → scraper configs
+- QualityAssessor: validate crawl results
+- RetryHandler: retry logic and fallback strategies
 """
 
-from .requirement_agent import RequirementParsingAgent
-from .source_matching_agent import SourceMatchingAgent
-from .quality_agent import QualityAssessmentAgent
-from .exception_agent import ExceptionHandlingAgent
+from .requirement_agent import RequirementParser
+from .source_matching_agent import SourceMatcher
+from .quality_agent import QualityAssessor
+from .exception_agent import RetryHandler
 
 __all__ = [
-    "RequirementParsingAgent",
-    "SourceMatchingAgent",
-    "QualityAssessmentAgent",
-    "ExceptionHandlingAgent",
+    "RequirementParser",
+    "SourceMatcher",
+    "QualityAssessor",
+    "RetryHandler",
 ]

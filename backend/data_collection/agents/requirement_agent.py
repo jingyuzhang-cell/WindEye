@@ -1,4 +1,4 @@
-"""Requirement Parsing Agent — NL to structured crawl parameters.
+"""Requirement Parser — NL to structured crawl parameters.
 
 Quick mode: No LLM, just transform dropdown params.
 Complex mode: Uses DeepSeek LLM for NL parsing.
@@ -28,7 +28,7 @@ Output ONLY valid JSON with these keys:
 """
 
 
-class RequirementParsingAgent:
+class RequirementParser:
     """Parse user requirements into structured crawl parameters."""
 
     def parse_quick_mode(self, request: CrawlTaskRequest) -> dict:
@@ -40,6 +40,7 @@ class RequirementParsingAgent:
             "date_end": request.date_end,
             "keywords": request.keywords,
             "max_pages": request.max_pages,
+            "max_files": request.max_files,
         }
 
     def parse_complex_mode(self, nl_query: str) -> dict:
@@ -116,5 +117,6 @@ class RequirementParsingAgent:
             "date_end": None,
             "keywords": keywords,
             "max_pages": 5,
+            "max_files": 0,
             "confidence": 0.3,
         }

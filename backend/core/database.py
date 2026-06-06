@@ -172,13 +172,18 @@ class Neo4jClient:
     def serialize_relationship(rel: Any) -> dict[str, Any]:
         """Convert a Neo4j Relationship object to a frontend-ready dict.
 
-        Returns: {"id": element_id, "source": ..., "target": ..., "label": ..., "properties": {...}}
+        Returns: {"id": element_id, "source": ..., "target": ..., "label": ...,
+                  "relation": ..., "type": ..., "raw_type": ..., "properties": {...}}
         """
+        rel_type = rel.type
         return {
             "id": rel.element_id,
             "source": rel.start_node.element_id,
             "target": rel.end_node.element_id,
-            "label": rel.type,
+            "label": rel_type,
+            "relation": rel_type,
+            "type": rel_type,
+            "raw_type": rel_type,
             "properties": Neo4jClient.serialize_props(dict(rel)),
         }
 

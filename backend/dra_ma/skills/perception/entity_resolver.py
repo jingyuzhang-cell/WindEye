@@ -68,10 +68,17 @@ class EntityResolver(SkillBase):
                     f"strategy={diag.get('strategy', '?')})"
                 )
             elif match == candidate:
-                logger.info(
-                    f"[EntityResolver]   NO-MATCH: '{candidate}' not found in KG "
-                    f"(searched {diag.get('properties_searched', 0)} properties)"
-                )
+                if diag.get("found"):
+                    logger.info(
+                        f"[EntityResolver]   EXACT: '{candidate}' found in KG "
+                        f"(canonical name matches raw, "
+                        f"strategy={diag.get('strategy', '?')})"
+                    )
+                else:
+                    logger.info(
+                        f"[EntityResolver]   NO-MATCH: '{candidate}' not found in KG "
+                        f"(searched {diag.get('properties_searched', 0)} properties)"
+                    )
             else:
                 logger.info(f"[EntityResolver]   NULL: '{candidate}' returned None")
 

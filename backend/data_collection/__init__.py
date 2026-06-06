@@ -2,7 +2,7 @@
 
 Sub-modules:
 - scrapers:    Web crawlers (2 types: risk_event, risk_sentiment)
-- agents:      Multi-agent orchestration agents for intelligent crawling
+- agents:      Collaborative crawling modules for intelligent crawling
 - orchestrator: Crawl orchestrator with SSE streaming
 - api_sync:    REST API integration for official data interfaces
 - file_import: Offline file parsing (CSV, Excel, PDF, images)

@@ -225,6 +225,7 @@ const KnowledgeBuild: React.FC = () => {
   const crawlSources = useCrawlStore((s) => s.sources);
   const crawlKeywords = useCrawlStore((s) => s.keywords);
   const crawlMaxPages = useCrawlStore((s) => s.maxPages);
+  const crawlMaxFiles = useCrawlStore((s) => s.maxFiles);
   const crawlNlQuery = useCrawlStore((s) => s.nlQuery);
   const crawlParsedIntent = useCrawlStore((s) => s.parsedIntent);
   const crawlTemplateId = useCrawlStore((s) => s.templateId);
@@ -238,6 +239,7 @@ const KnowledgeBuild: React.FC = () => {
       sources: crawlSources.length > 0 ? crawlSources : undefined,
       keywords: crawlKeywords.length > 0 ? crawlKeywords : undefined,
       max_pages: crawlMaxPages,
+      max_files: crawlMaxFiles,
     };
     if (crawlMode === 'complex') {
       payload.natural_language_query = crawlNlQuery;

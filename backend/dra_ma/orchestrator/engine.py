@@ -14,6 +14,8 @@ Skill System:
 import logging
 import asyncio
 import re
+import json
+import time
 from dataclasses import dataclass
 from typing import Dict, Any, AsyncGenerator, List
 
@@ -36,8 +38,261 @@ from dra_ma.agents.layer3_execution.cypher_utils import db_client
 from dra_ma.agents.layer4_consensus.verifier import VerifierAgent
 from dra_ma.agents.layer4_consensus.aggregator import AggregatorAgent
 from dra_ma.agents.layer4_consensus.reward import calculate_total_reward
+from dra_ma.risk_engine.risk_engine import RiskAnalysisEngine
 
 logger = logging.getLogger(__name__)
+
+# ── Risk relation priority for Planner re-ranking ──────────────────────────
+
+RISK_RELATION_PRIORITY = {
+    "INVEST": 1.00, "GUARANTEE": 0.98, "CONTROL": 0.95,
+    "CONTROLLER": 0.95, "MENTION": 0.92, "REFLECTS": 0.90,
+    "WORK": 0.82, "SERVE": 0.82, "TRANSACTION": 0.88, "WARNING": 0.90,
+}
+
+
+def _extract_relation_name(dec: dict) -> str:
+    """从 Planner 决策中提取标准化关系名。
+
+    Planner 返回的 relation 字段格式不稳定，可能是：
+      - "INVEST"
+      - "`INVEST`"
+      - "INVEST (Samples: ...)"
+      - "鑫达投资 - INVEST - Target"
+    """
+    raw = (
+        dec.get("relation") or dec.get("rel")
+        or dec.get("relation_type") or dec.get("path")
+        or dec.get("path_text") or ""
+    )
+    text = str(raw).replace("`", "").upper()
+    for rel in RISK_RELATION_PRIORITY:
+        if rel in text:
+            return rel
+    return text.split()[0] if text else ""
+
+
+def _fallback_relation_decisions(probe_relations: list[str]) -> list[dict]:
+    """Build deterministic relation decisions from real KG probe output.
+
+    This keeps risk subgraph retrieval alive when the LLM planner is slow,
+    rate-limited, or returns malformed JSON.
+    """
+    decisions: list[dict] = []
+    seen: set[str] = set()
+    for raw in probe_relations:
+        rel = str(raw).split(" (Samples:")[0].replace("`", "").strip().upper()
+        if not rel or rel in seen:
+            continue
+        seen.add(rel)
+        decisions.append({
+            "relation": rel,
+            "score": RISK_RELATION_PRIORITY.get(rel, 0.5),
+            "reason": "deterministic fallback from Probe relations",
+            "source": "probe_fallback",
+        })
+    decisions.sort(key=lambda d: float(d.get("score", 0.0) or 0.0), reverse=True)
+    return decisions
+
+
+# ── Subgraph Normalization ───────────────────────────────────────────────────
+
+
+def _normalize_subgraph_node(node: dict) -> dict:
+    """Normalize a node from Shape A {id, label, type} or Shape B
+    {id, labels, properties} into a unified dict.
+
+    Every node is guaranteed to have: id, name, entity_type, type, labels, properties.
+    """
+    if not isinstance(node, dict):
+        return {
+            "id": str(node),
+            "name": str(node),
+            "entity_type": "Unknown",
+            "type": "Unknown",
+            "labels": [],
+            "properties": {},
+            "score": 1,
+            "title": str(node),
+        }
+
+    props = node.get("properties", {}) if isinstance(node.get("properties"), dict) else {}
+    labels_list = node.get("labels", []) or []
+
+    # Resolve entity_type: entity_type > type (non-empty/non-Resource) > labels first > props heuristics > "Unknown"
+    raw_type = node.get("entity_type") or node.get("type") or ""
+    entity_type = raw_type if (raw_type and raw_type != "Resource") else ""
+
+    if not entity_type and labels_list:
+        for lbl in labels_list:
+            if lbl and lbl != "Resource":
+                entity_type = lbl
+                break
+
+    if not entity_type and props:
+        if props.get("COMPANY_NM"):
+            entity_type = "COMPANY"
+        elif props.get("PERSON_NM"):
+            entity_type = "PERSON"
+        elif props.get("factor_nm") or props.get("feature_nm"):
+            entity_type = "RiskFactor"
+
+    if not entity_type:
+        preview_name = str(
+            node.get("name") or node.get("label")
+            or props.get("name") or props.get("COMPANY_NM")
+            or props.get("zh_name") or props.get("title") or ""
+        )
+        from dra_ma.utils.entity_heuristics import infer_entity_type_from_name
+        inferred = infer_entity_type_from_name(preview_name)
+        if inferred:
+            entity_type = inferred
+
+    if not entity_type:
+        entity_type = "Unknown"
+
+    # Resolve name
+    name = str(
+        node.get("name") or node.get("label")
+        or props.get("name") or props.get("COMPANY_NM")
+        or props.get("zh_name") or props.get("title")
+        or node.get("id") or ""
+    )
+
+    node_id = str(node.get("id") or props.get("element_id") or name or "")
+
+    return {
+        "id": node_id,
+        "name": name,
+        "entity_type": entity_type,
+        "type": entity_type,
+        "labels": labels_list,
+        "properties": props,
+        "score": props.get("score", node.get("score", 1)),
+        "title": props.get("title") or name,
+        "zh_name": props.get("zh_name"),
+        "overview": props.get("overview") or props.get("RISK_INFO", ""),
+        "risk_level": props.get("risk_level", node.get("risk_level")),
+        "popularity": props.get("popularity", node.get("popularity")),
+        "rating": props.get("rating", node.get("rating")),
+        "year": props.get("year", node.get("year")),
+    }
+
+
+def _normalize_subgraph_edge(edge: dict) -> dict:
+    """Normalize an edge from Shape A {source, target, type} or Shape B
+    {source, target, label} into a unified dict.
+
+    Every edge is guaranteed to have: id, source, target, relation, type, label, raw_type.
+    """
+    src = str(edge.get("source", edge.get("start", "")))
+    tgt = str(edge.get("target", edge.get("end", "")))
+    raw = edge.get("raw_type") or edge.get("relation") or edge.get("label") or edge.get("type")
+    rel = str(raw or "RELATED")
+    logger.info(
+        "[EdgeNormalize] before=(raw_type=%s relation=%s label=%s type=%s) after=%s src=%.20s tgt=%.20s",
+        edge.get("raw_type"), edge.get("relation"), edge.get("label"), edge.get("type"),
+        rel, src, tgt,
+    )
+    return {
+        "id": str(edge.get("id") or edge.get("element_id", "")),
+        "source": src,
+        "target": tgt,
+        "relation": rel,
+        "label": rel,
+        "type": rel,
+        "raw_type": str(raw) if raw else "",
+        "properties": edge.get("properties", {}) if isinstance(edge.get("properties"), dict) else {},
+        "confidence": edge.get("confidence"),
+    }
+
+
+# ── DRAEngine ───────────────────────────────────────────────────────────────
+
+def _node_name_candidates(node: dict) -> list[str]:
+    props = node.get("properties", {}) if isinstance(node.get("properties"), dict) else {}
+    raw_values = [
+        node.get("name"),
+        node.get("title"),
+        node.get("label"),
+        node.get("id"),
+        props.get("name"),
+        props.get("COMPANY_NM"),
+        props.get("PERSON_NM"),
+        props.get("title"),
+        props.get("zh_name"),
+    ]
+    seen: set[str] = set()
+    candidates: list[str] = []
+    for value in raw_values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            candidates.append(text)
+    return candidates
+
+
+def _hydrate_subgraph_node_properties(nodes: list[dict]) -> list[dict]:
+    """Attach full Neo4j properties to simplified ExecutorAgent graph nodes."""
+    names: list[str] = []
+    seen: set[str] = set()
+    for node in nodes:
+        for name in _node_name_candidates(node):
+            if name not in seen:
+                seen.add(name)
+                names.append(name)
+
+    if not names:
+        return nodes
+
+    cypher = """
+    MATCH (n)
+    WHERE coalesce(n.name, n.PERSON_NM, n.COMPANY_NM, n.title) IN $names
+    RETURN elementId(n) AS id, labels(n) AS labels, properties(n) AS properties
+    LIMIT 200
+    """
+    try:
+        rows = db_client.execute_read(cypher, {"names": names}, 10.0)
+    except Exception as exc:
+        logger.warning("[hydrate_subgraph_node_properties] lookup failed: %s", exc)
+        return nodes
+
+    hydrated_by_name: dict[str, dict] = {}
+    for row in rows or []:
+        raw = {
+            "id": row.get("id"),
+            "labels": row.get("labels", []) or [],
+            "properties": row.get("properties", {}) or {},
+        }
+        normalized = _normalize_subgraph_node(raw)
+        for name in _node_name_candidates(normalized):
+            hydrated_by_name[name] = normalized
+
+    if not hydrated_by_name:
+        return nodes
+
+    hydrated_nodes: list[dict] = []
+    for node in nodes:
+        match = next(
+            (hydrated_by_name.get(name) for name in _node_name_candidates(node) if hydrated_by_name.get(name)),
+            None,
+        )
+        if not match:
+            hydrated_nodes.append(node)
+            continue
+
+        node_props = node.get("properties", {}) if isinstance(node.get("properties"), dict) else {}
+        match_props = match.get("properties", {}) if isinstance(match.get("properties"), dict) else {}
+        hydrated_nodes.append({
+            **match,
+            **node,
+            "labels": node.get("labels") or match.get("labels", []),
+            "properties": {**match_props, **node_props},
+            "overview": node.get("overview") or match.get("overview", ""),
+            "risk_level": node.get("risk_level") or match.get("risk_level"),
+        })
+
+    return hydrated_nodes
 
 
 class DRAEngine:
@@ -66,6 +321,29 @@ class DRAEngine:
         # ── Skill System ──
         self.skills = SkillManager(feature_flags)
         self._register_default_skills()
+
+    @staticmethod
+    def _make_stage(stage_id: str, stage_name: str, stage_index: int,
+                    total_stages: int = 5, agent: str = "", agent_action: str = "",
+                    progress: float = 0.0, **kwargs) -> Dict[str, Any]:
+        """Build a structured stage event for SSE streaming.
+
+        The frontend PipelineProgress component consumes these to render
+        the 5-stage progress bar with per-agent status bubbles.
+        """
+        stage = {
+            "stage_id": stage_id,
+            "stage_name": stage_name,
+            "stage_index": stage_index,
+            "total_stages": total_stages,
+            "agent": agent,
+            "agent_action": agent_action,
+            "progress": progress,
+            "timestamp": time.time(),
+        }
+        result: Dict[str, Any] = {"stage": stage}
+        result.update(kwargs)
+        return result
 
     def _register_default_skills(self) -> None:
         """Register the default Phase 1 skills.
@@ -120,6 +398,379 @@ class DRAEngine:
             logger.error(f"expand_node failed: {e}")
             return {"nodes": [], "edges": []}
 
+    async def retrieve_evidence_subgraph(
+        self,
+        query: str,
+        entities: list[str] | None = None,
+        max_hops: int = 3,
+        intent_type: str = "graph_qa",
+        relation_focus: list[str] | None = None,
+        intent_obj=None,
+    ) -> Dict[str, Any]:
+        """Run full DRA pipeline but stop after Aggregator — return evidence-rich subgraph.
+
+        relation_focus: risk analysis focus relations, e.g.
+          ["INVEST","CONTROL","GUARANTEE","SERVE","TRANSACTION","WARNING"]
+          Pass None for graph_qa.
+
+        intent_obj: Pre-parsed IntentAgent result. When provided, skips the
+          duplicate IntentAgent.parse() call — UnifiedEngine passes this from
+          its Stage 1 classification.
+
+        Returns EvidenceSubgraph dict:
+            {nodes, edges, evidence_paths, cypher_records, verified_claims,
+             failed_queries, graph_summary, confidence, insufficient_entities}
+        """
+        from dra_ma.agents.layer1_perception.intent_agent import IntentAgent
+        from dra_ma.agents.layer2_beam_search.probe import get_adjacent_relations
+        from dra_ma.agents.layer2_beam_search.planner import IntentPlannerAgent
+        from dra_ma.agents.layer3_execution.compiler import ExecutorAgent
+        from dra_ma.agents.layer3_execution.healer import SmashAgent
+        from dra_ma.agents.layer4_consensus.verifier import VerifierAgent
+        from dra_ma.agents.layer4_consensus.aggregator import AggregatorAgent
+        from kg_construction.ontology.ontology_registry import OntologyRegistry
+
+        result: Dict[str, Any] = {
+            "nodes": [],
+            "edges": [],
+            "evidence_paths": [],
+            "cypher_records": [],
+            "verified_claims": [],
+            "failed_queries": [],
+            "graph_summary": {},
+            "confidence": 0.0,
+            "insufficient_entities": False,
+        }
+
+        if not entities or len(entities) == 0:
+            result["insufficient_entities"] = True
+            logger.info("[retrieve_evidence_subgraph] No entities provided, insufficient data")
+            return result
+
+        # Limit to first 5 entities for performance
+        focus_entities = entities[:5]
+        all_nodes: dict[str, dict] = {}
+        all_edges: dict[str, dict] = {}
+        evidence_paths: list[dict] = []
+        cypher_records: list[dict] = []
+        verified_claims: list[dict] = []
+        failed_queries: list[dict] = []
+
+        intent = intent_obj or await IntentAgent.parse(query, intent_hint=intent_type)
+        entity = focus_entities[0]
+
+        # Probe real KG schema
+        adj = await asyncio.to_thread(get_adjacent_relations, [entity])
+        probe_relations = adj if adj else []
+
+        relation_hint = relation_focus or []
+
+        if not probe_relations:
+            result["insufficient_entities"] = True
+            logger.info("[retrieve_evidence_subgraph] Probe returned empty for '%s'", entity)
+            return result
+
+        try:
+            # Beam search: plan Cypher paths for each focus entity
+            for ent_name in focus_entities:
+                decisions = await IntentPlannerAgent.dynamic_step_plan(
+                    query, ent_name, probe_relations, temperature=0.2,
+                )
+                planner_relations = [_extract_relation_name(dec) for dec in decisions]
+                only_stop = not decisions or all(rel in ("<END_OF_SEARCH>", "<BACKTRACK>", "") for rel in planner_relations)
+                if only_stop:
+                    decisions = _fallback_relation_decisions(probe_relations)
+                    logger.warning(
+                        "[retrieve_evidence_subgraph] Planner produced no usable relation for '%s'; "
+                        "using probe fallback relations=%s",
+                        ent_name,
+                        json.dumps([d["relation"] for d in decisions], ensure_ascii=False),
+                    )
+                if not decisions:
+                    continue
+
+                # ── Risk mode: filter + re-rank by relation priority ──
+                if intent_type == "risk_analysis" and relation_focus:
+                    focused = []
+                    others = []
+
+                    for dec in decisions:
+                        rel_name = _extract_relation_name(dec)
+                        base = float(dec.get("score", 0.0) or 0.0)
+                        dec["risk_boosted_score"] = base + RISK_RELATION_PRIORITY.get(rel_name, 0.0)
+                        if rel_name in RISK_RELATION_PRIORITY:
+                            focused.append(dec)
+                        else:
+                            others.append(dec)
+
+                    decisions = sorted(
+                        focused + others[:2],
+                        key=lambda d: float(d.get("risk_boosted_score", d.get("score", 0.0)) or 0.0),
+                        reverse=True,
+                    )
+
+                top_k = 5 if intent_type == "risk_analysis" else 3
+                top_decisions = decisions[:top_k]
+                for dec in top_decisions:
+                    rel = dec.get("relation", "")
+                    if rel == "<END_OF_SEARCH>":
+                        continue
+
+                    path_str = f"{ent_name} - {rel} - Target"
+                    cypher = ExecutorAgent.translate_to_cypher(
+                        path_str, expected_type=intent.Expected_Answer_Type,
+                    )
+
+                    try:
+                        db_res = await ExecutorAgent.execute(cypher, ent_name)
+                        if db_res and db_res.results:
+                            # Call Verifier to get confidence score
+                            if intent_type == "risk_analysis":
+                                # 风险模式：语义锚改为 "risk_evidence"，避免
+                                # organization 锚过滤掉 MENTION/WORK/REFLECTS
+                                original_type = intent.Expected_Answer_Type
+                                intent.Expected_Answer_Type = "risk_evidence"
+                                gnn_score = await VerifierAgent.verify(
+                                    intent, cypher, db_res.results,
+                                )
+                                intent.Expected_Answer_Type = original_type
+                                keep_path = True
+                                verifier_confidence = max(0.3, float(gnn_score or 0.0))
+                                kept_by = "risk_mode_result_exists"
+                            else:
+                                # 图谱问答模式：Verifier 作为硬过滤器
+                                gnn_score = await VerifierAgent.verify(
+                                    intent, cypher, db_res.results,
+                                )
+                                gnn_valid = float(gnn_score or 0.0) >= 0.4
+                                keep_path = bool(gnn_valid)
+                                verifier_confidence = float(gnn_score or 0.0)
+                                kept_by = "verifier"
+
+                            if keep_path:
+                                # Merge nodes/edges directly from db_res.subgraph
+                                sg = db_res.subgraph if db_res.subgraph else {"nodes": [], "edges": []}
+                                for node in sg.get("nodes", []):
+                                    node_id = str(node.get("id") or node.get("name") or node.get("label") or "")
+                                    if node_id and node_id not in all_nodes:
+                                        all_nodes[node_id] = node
+                                for edge in sg.get("edges", []):
+                                    # Inject the real relation type from the planner decision
+                                    # if the executor left the edge type empty
+                                    existing_type = (
+                                        edge.get("relation") or edge.get("type")
+                                        or edge.get("label") or edge.get("raw_type")
+                                    )
+                                    if not existing_type:
+                                        edge["relation"] = rel
+                                        edge["type"] = rel
+                                        edge["label"] = rel
+                                        edge["raw_type"] = rel
+                                    edge_key = (
+                                        str(edge.get("source") or ""),
+                                        str(edge.get("target") or ""),
+                                        str(edge.get("relation") or edge.get("type") or edge.get("label") or ""),
+                                    )
+                                    if edge_key not in all_edges:
+                                        all_edges[edge_key] = edge
+
+                                # Also try the broad Cypher expansion for richer subgraph
+                                try:
+                                    broad_cypher = self._build_subgraph_cypher(
+                                        ent_name, rel, max_hops,
+                                    )
+                                    broad_rows = await asyncio.to_thread(
+                                        db_client.execute_read, broad_cypher, None, 15.0,
+                                    )
+                                    n, e = RiskAnalysisEngine._collect_subgraph(broad_rows)
+                                    all_nodes.update(n)
+                                    all_edges.update(e)
+                                except Exception as broad_exc:
+                                    logger.warning(
+                                        "[retrieve_evidence_subgraph] Broad Cypher expansion failed "
+                                        "for entity='%s' rel='%s': %s", ent_name, rel, broad_exc
+                                    )
+
+                                cypher_records.append({
+                                    "entity": ent_name,
+                                    "cypher": cypher,
+                                    "relation": rel,
+                                    "result_count": len(db_res.results),
+                                    "is_valid": db_res.is_valid,
+                                    "is_empty": db_res.is_empty,
+                                    "verifier_score": verifier_confidence,
+                                })
+
+                                evidence_paths.append({
+                                    "entity": ent_name,
+                                    "relation": rel,
+                                    "path": path_str,
+                                    "cypher": cypher,
+                                    "result_count": len(db_res.results),
+                                    "score": dec.get("score", 0.0),
+                                    "verifier_score": verifier_confidence,
+                                    "confidence": verifier_confidence,
+                                    "kept_by": kept_by,
+                                })
+
+                            verified_claims.append({
+                                "claim": f"{ent_name} 通过 {rel} 关联到 {len(db_res.results)} 个节点",
+                                "cypher": cypher,
+                                "verifier_score": gnn_score,
+                                "confidence": min(0.9, 0.5 + verifier_confidence),
+                                "kept_by": kept_by,
+                            })
+                        else:
+                            failed_queries.append({
+                                "entity": ent_name,
+                                "cypher": cypher,
+                                "error": db_res.error_log if db_res else "No results",
+                            })
+                    except Exception as exc:
+                        failed_queries.append({
+                            "entity": ent_name,
+                            "cypher": cypher if 'cypher' in dir() else "N/A",
+                            "error": str(exc),
+                        })
+
+            raw_node_list = list(all_nodes.values())
+            raw_edge_list = list(all_edges.values())
+            node_list = [_normalize_subgraph_node(n) for n in raw_node_list]
+            node_list = _hydrate_subgraph_node_properties(node_list)
+            edge_list = [_normalize_subgraph_edge(e) for e in raw_edge_list]
+
+            # 防御性 fallback：如果 all_nodes 为空但有过成功的 db_res，
+            # 说明 _collect_subgraph 可能未正确提取，用 db_res.subgraph 兜底
+            if not node_list and not edge_list:
+                result["insufficient_entities"] = True
+                logger.warning(
+                    "[retrieve_evidence_subgraph] nodes=%d edges=%d — insufficient evidence",
+                    len(node_list), len(edge_list),
+                )
+                return result
+
+            # Compute Aggregator overall confidence
+            confidence = (
+                sum(c.get("confidence", 0.0) for c in verified_claims) / max(len(verified_claims), 1)
+                if verified_claims else 0.5
+            )
+
+            # Build subgraph summary
+            type_counts: dict[str, int] = {}
+            for n in node_list:
+                et = n.get("entity_type", "")
+                if et and et != "Resource" and et != "Unknown":
+                    type_counts[et] = type_counts.get(et, 0) + 1
+
+            graph_summary = {
+                "node_count": len(node_list),
+                "edge_count": len(edge_list),
+                "entity_count": len(focus_entities),
+                "evidence_path_count": len(evidence_paths),
+                "verified_claim_count": len(verified_claims),
+                "failed_query_count": len(failed_queries),
+                "node_types": type_counts,
+            }
+
+            result.update({
+                "nodes": node_list,
+                "edges": edge_list,
+                "evidence_paths": evidence_paths,
+                "cypher_records": cypher_records,
+                "verified_claims": verified_claims,
+                "failed_queries": failed_queries,
+                "graph_summary": graph_summary,
+                "confidence": round(confidence, 3),
+            })
+
+            logger.info(
+                "[retrieve_evidence_subgraph] Complete: %d nodes, %d edges, "
+                "confidence=%.3f, verified=%d, failed=%d",
+                len(node_list), len(edge_list), confidence,
+                len(verified_claims), len(failed_queries),
+            )
+
+        except Exception as exc:
+            logger.exception("[retrieve_evidence_subgraph] Failed: %s", exc)
+            result["insufficient_entities"] = not bool(all_nodes)
+            if not all_nodes:
+                result["graph_summary"] = {"error": str(exc)}
+
+        return result
+
+    @staticmethod
+    def _build_subgraph_cypher(entity_name: str, relation: str, max_hops: int) -> str:
+        """Build a Cypher query to retrieve the subgraph around an entity."""
+        from kg_construction.ontology.ontology_registry import OntologyRegistry
+        escaped = entity_name.replace("'", "\\'")
+        node_label = OntologyRegistry.get_node_label()
+        label_str = f":{node_label}" if node_label else ""
+        prop_key = OntologyRegistry.get_entity_matching_strategy().get("property_key", "name")
+
+        return (
+            f"MATCH (n{label_str} {{{prop_key}: '{escaped}'}})"
+            f"-[r*1..{max_hops}]-(m)"
+            f"RETURN n, r, m LIMIT 200"
+        )
+
+    async def _community_sidecar(
+        self, entity_names: list[str],
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Run community discovery as a side-channel on the retrieved entities.
+
+        Queries Neo4j for the full subgraph between the entity names,
+        then runs entity stats, community detection, and entity-community mapping.
+        Results are yielded as SSE-compatible events.
+        """
+        if len(entity_names) < 1:
+            return
+
+        try:
+            # Use coalesce to match across multiple name properties:
+            # name, PERSON_NM, COMPANY_NM, title — covering all entity types
+            if len(entity_names) >= 2:
+                cypher = """
+                MATCH (n) WHERE coalesce(n.name, n.PERSON_NM, n.COMPANY_NM, n.title) IN $names
+                OPTIONAL MATCH (n)-[r]-(m) WHERE coalesce(m.name, m.PERSON_NM, m.COMPANY_NM, m.title) IN $names
+                RETURN n, r, m LIMIT 200
+                """
+            else:
+                # Single entity: expand to find its neighbors
+                cypher = """
+                MATCH (n) WHERE coalesce(n.name, n.PERSON_NM, n.COMPANY_NM, n.title) IN $names
+                OPTIONAL MATCH (n)-[r]-(m)
+                RETURN n, r, m LIMIT 200
+                """
+            records, _ = await asyncio.to_thread(
+                db_client.execute_read_with_summary, cypher, {"names": entity_names}, 10.0,
+            )
+
+            nodes, edges = RiskAnalysisEngine._collect_subgraph(records)
+            node_list = list(nodes.values())
+            edge_list = list(edges.values())
+
+            if len(node_list) < 2:
+                return
+
+            entity_stats = RiskAnalysisEngine._compute_entity_stats(node_list)
+            community_info = RiskAnalysisEngine._compute_community_discovery(node_list, edge_list)
+            entity_comm_map = RiskAnalysisEngine._compute_entity_community_map(
+                entity_stats, community_info, node_list, edge_list,
+            )
+
+            yield {"entity_stats": entity_stats}
+            yield {"community": community_info}
+            yield {"entity_community_map": entity_comm_map}
+
+            logger.info(
+                "[community-sidecar] Done: %d nodes, %d edges, %d communities, %d entities mapped",
+                len(node_list), len(edge_list),
+                len(community_info.get("communities", [])),
+                len(entity_comm_map.get("entities", [])),
+            )
+        except Exception as exc:
+            logger.exception("[community-sidecar] Failed: %s", exc)
+
     async def handle_request(
         self, query: str, history: List[str] = None, trace: TraceContext = None,
         hop: int = None, skip_nlg: bool = False
@@ -130,7 +781,10 @@ class DRAEngine:
         ctx = SkillContext(query=query, history=history or [])
         ctx = await self.skills.execute_hook(SkillHook.PRE_INTENT, ctx)
 
-        yield {"stage": "1. [意图解析] 提取起点实体与探索限制..."}
+        yield self._make_stage(
+            "intent_parsing", "意图解析", 0, agent="IntentAgent",
+            agent_action="提取起点实体与探索限制...", progress=0.0,
+        )
 
         bracket_match = re.search(r"\[(.*?)\]", query)
         bracket_entity = bracket_match.group(1) if bracket_match else ""
@@ -187,14 +841,20 @@ class DRAEngine:
         gated_mode = ctx.gated_mode  # ComplexityClassifier may override
 
         if gated_mode == "simple" and entity:
-            yield {"stage": "1-hop 快速通道: 自适应门控判定为简单查询，跳过完整多智能体管道..."}
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="GatingRouter",
+                agent_action="自适应门控判定为简单查询，跳过完整多智能体管道...", progress=0.0,
+            )
 
             # Probe real KG schema
             chosen_rel = ""
             cypher = ""
             final_results = []
+            probe_detail = ""
+            planner_decisions_detail = ""
 
             adj = await asyncio.to_thread(get_adjacent_relations, [entity])
+            probe_detail = f"探针发现 {len(adj)} 个相邻关系:\n" + "\n".join(f"  - {r}" for r in adj[:30]) if adj else "探针未发现任何相邻关系"
             if adj:
                 # Single PlannerAgent with low temperature for deterministic classification
                 decisions = await IntentPlannerAgent.dynamic_step_plan(
@@ -204,6 +864,17 @@ class DRAEngine:
                 chosen_rel = top.get("relation", "")
                 score = top.get("score", 0.0)
                 logger.info(f"[GatingRouter:1Hop] Top relation: '{chosen_rel}' (score={score:.3f})")
+
+                # Capture all planner decisions with reasons for debugging
+                planner_decisions_detail = "规划器评分结果:\n"
+                for i, d in enumerate(decisions[:10]):
+                    rel = d.get("relation", "?")
+                    s = d.get("score", 0.0)
+                    reason = d.get("reason", "")
+                    marker = " ← 选中" if i == 0 else ""
+                    planner_decisions_detail += f"  [{i+1}] {rel} (score={s:.3f}){marker}\n"
+                    if reason:
+                        planner_decisions_detail += f"      理由: {reason}\n"
 
                 if chosen_rel and chosen_rel != "<END_OF_SEARCH>":
                     cypher = ExecutorAgent.translate_to_cypher(
@@ -264,9 +935,11 @@ class DRAEngine:
                         cypher = healed_cypher
                         smash_fixed = True
 
-            yield {
-                "stage": f"1-hop 快速通道完成: 关系='{chosen_rel}', 结果数={len(final_results)}",
-                "trace": {
+            yield self._make_stage(
+                "graph_retrieval", "图谱检索", 2, agent="ExecutorAgent",
+                agent_action=f"1-hop 快速通道完成: 关系='{chosen_rel}', 结果数={len(final_results)}",
+                progress=1.0,
+                trace={
                     "gated_mode": "1hop_fast",
                     "planner_count": 1,
                     "ensemble_temps": [0.1],
@@ -274,30 +947,148 @@ class DRAEngine:
                     "semantic_anchor": intent.Expected_Answer_Type,
                     "ablation": {k: v for k, v in self.ablation.__dict__.items() if v},
                 }
-            }
+            )
 
             best_cypher = cypher
             paths = [f"{entity} - {chosen_rel} - Target"] if chosen_rel else []
 
+            # ── Stage 3: Fact Verification ──
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="EntityCleaner",
+                agent_action="多层清洗链: 规则过滤 → 类型一致性检查...", progress=0.0,
+            )
+
+            # ── Skill: POST_AGGREGATE (EntityCleaner) ──
+            ctx.results = final_results
+            ctx = await self.skills.execute_hook(SkillHook.POST_AGGREGATE, ctx)
+            final_results = ctx.results
+
+            ec_meta = ctx.metadata.get("entity_cleaner", {})
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="EntityCleaner",
+                agent_action=f"清洗完成: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体",
+                progress=1.0,
+            )
+
+            # ── Stage 4: Answer Generation ──
+            yield self._make_stage(
+                "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+                agent_action="生成自然语言回答...", progress=0.0,
+            )
+
+            # ── Skill: PRE_NLG (PersonaSelector for NLG persona) ──
+            ctx = await self.skills.execute_hook(SkillHook.PRE_NLG, ctx)
+            nlg_persona = ctx.metadata.get("persona", {}).get("aggregator_persona", "")
+
+            if skip_nlg:
+                final_reasoning = f"最佳路径: {paths[0] if paths else 'N/A'}"
+            else:
+                final_reasoning = await AggregatorAgent.generate_response(
+                    query, final_results, [p for p in paths],
+                    system_prompt=nlg_persona
+                )
+
+            yield self._make_stage(
+                "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+                agent_action="回答生成完成", progress=1.0,
+            )
+
+            reasoning_log = f"## 多智能体对齐推理日志\n\n"
+            reasoning_log += f"### 1. 意图解析 (IntentAgent)\n"
+            reasoning_log += f"- **起点实体**: {entity}\n"
+            reasoning_log += f"- **预期跳数**: {intent.Expected_Hop}\n"
+            reasoning_log += f"- **预期答案类型**: {intent.Expected_Answer_Type or '(未指定)'}\n"
+            reasoning_log += f"- **语义约束**: {intent.Constraint_Filters if intent.Constraint_Filters else '(无)'}\n"
+            if intent.reasoning:
+                reasoning_log += f"- **LLM 思维链**:\n```\n{intent.reasoning}\n```\n"
+            reasoning_log += f"\n### 2. 实体规范化 (EntityResolver)\n"
+            reasoning_log += f"- 最终使用实体: '{entity}'\n"
+            reasoning_log += f"\n### 3. 图谱探测 (Probe)\n"
+            reasoning_log += f"{probe_detail}\n"
+            reasoning_log += f"\n### 4. 关系规划 (IntentPlannerAgent)\n"
+            reasoning_log += f"{planner_decisions_detail}\n"
+            reasoning_log += f"\n### 5. 门控路由: 1-hop 快速通道\n"
+            reasoning_log += f"- **选择关系**: {chosen_rel}\n"
+            reasoning_log += f"- **结果数量**: {len(final_results)} 个实体\n"
+            if best_cypher:
+                reasoning_log += f"- **执行 Cypher**:\n```cypher\n{best_cypher}\n```\n"
+            if smash_fixed:
+                reasoning_log += f"- **SMASH 自愈**: 已触发并修复\n"
+            reasoning_log += f"\n### 6. 实体清洗 (EntityCleaner)\n"
+            reasoning_log += f"- 清洗结果: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体\n"
+            reasoning_log += f"\n### 7. 最终回答 (AggregatorAgent)\n"
+            reasoning_log += f"{final_reasoning[:500]}{'...' if len(final_reasoning) > 500 else ''}"
+
+            recommendations = [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results]
+
+            # ── Build subgraph visualization ──
+            nodes_viz = []
+            edges_viz = []
+            if entity:
+                from kg_construction.ontology.ontology_registry import OntologyRegistry
+                default_type = OntologyRegistry.get_node_label()
+                prop_key = OntologyRegistry.get_entity_matching_strategy().get("property_key", "name")
+
+                # Batch-query Neo4j for actual node labels (so PERSON vs COMPANY is distinguished)
+                all_names = [entity] + [r for r in final_results[:20] if r != entity]
+                name_to_type: dict[str, str] = {}
+                try:
+                    label_query = f"MATCH (n) WHERE n.{prop_key} IN $names RETURN n.{prop_key} as name, labels(n) as labels"
+                    label_res = db_client.execute_read(label_query, {"names": all_names})
+                    for row in (label_res or []):
+                        n = row.get("name", "")
+                        lbls = row.get("labels", [])
+                        for lbl in lbls:
+                            upper = lbl.upper() if isinstance(lbl, str) else ""
+                            if upper in ("COMPANY", "PERSON", "EVENT", "TIME"):
+                                name_to_type[n] = upper; break
+                            if lbl in ("RiskFeature", "RiskFactor", "Action", "Regulation", "Law"):
+                                name_to_type[n] = lbl; break
+                except Exception:
+                    pass
+
+                entity_type = name_to_type.get(entity, default_type)
+                nodes_viz.append({"id": entity, "label": entity, "type": entity_type})
+                added_nodes = {entity}
+                for res_item in final_results[:20]:
+                    if res_item not in added_nodes:
+                        item_type = name_to_type.get(res_item, default_type)
+                        nodes_viz.append({"id": res_item, "label": res_item, "type": item_type})
+                        added_nodes.add(res_item)
+                    edges_viz.append({"source": entity, "target": res_item, "type": chosen_rel})
+
+            # ── Community discovery side-channel ──
+            entity_names = [entity] + final_results[:20] if entity else final_results[:20]
+            async for event in self._community_sidecar(entity_names):
+                yield event
+
             final_output = {
                 "data": {
                     "output": {
-                        "recommendations": [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results],
-                        "overallReasoning": f"[1-Hop Fast Path] 关系: {chosen_rel}, 结果: {len(final_results)} 个实体"
+                        "recommendations": recommendations,
+                        "overallReasoning": final_reasoning
                     },
-                    "subgraph": {"nodes": [], "edges": []}
+                    "subgraph": {
+                        "nodes": nodes_viz,
+                        "edges": edges_viz
+                    }
                 },
                 "metadata": {
                     "llm_cypher": best_cypher,
                     "smash_fixed": smash_fixed,
-                    "paths": paths
+                    "paths": paths,
+                    "reasoning_log": reasoning_log
                 }
             }
             yield {"output": final_output}
             return
 
         # ── Multi-hop: Full DRA-MA Pipeline ──
-        yield {"stage": f"2. [并发束搜索] 启动动态拓扑探索，最大跳数={hop}，束宽=3 (门控模式: {gated_mode})..."}
+        yield self._make_stage(
+            "path_planning", "路径规划", 1, agent="Planner",
+            agent_action=f"启动动态拓扑探索，最大跳数={hop}，束宽=3 (门控模式: {gated_mode})...",
+            progress=0.0,
+        )
 
         BEAM_SIZE = 3
         beams = [{"path": entity, "current_nodes": [entity], "score": 1.0, "is_frozen": False,
@@ -309,7 +1100,11 @@ class DRAEngine:
             if not active_beams:
                 break
 
-            yield {"stage": f"   🔍 [Step {step+1}/{hop}] 并发探针扫描当前 {len(active_beams)} 个活跃分支的底层 Schema..."}
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="Probe",
+                agent_action=f"[Step {step+1}/{hop}] 并发探针扫描 {len(active_beams)} 个活跃分支的底层 Schema...",
+                progress=min(0.3 + step * 0.15, 0.8),
+            )
 
             async def get_cands(b):
                 return get_adjacent_relations(b["current_nodes"])
@@ -370,16 +1165,18 @@ class DRAEngine:
                         f"[DynamicEnsemble] Beam {beam_idx} used full ensemble (3 planners)"
                     )
 
-            yield {
-                "stage": f"   🧠 [Step {step+1}/{hop}] 并发调用 LLM 进行意图剪枝与全局打分 (Dynamic Ensemble, {len(need_ensemble)}/{len(active_beams)} beams escalated)...",
-                "trace": {
+            yield self._make_stage(
+                "path_planning", "路径规划", 1, agent="Planner Ensemble",
+                agent_action=f"[Step {step+1}/{hop}] LLM 意图剪枝与全局打分 (Dynamic Ensemble, {len(need_ensemble)}/{len(active_beams)} beams escalated)...",
+                progress=min(0.5 + step * 0.15, 0.9),
+                trace={
                     "planner_count": len(self.planners),
                     "ensemble_temps": [p.temperature for p in self.planners],
                     "active_beams": len(active_beams),
                     "ensembled_beams": len(need_ensemble),
                     "step": step + 1,
                 }
-            }
+            )
 
             new_branches = [b for b in beams if b["is_frozen"]]
 
@@ -421,7 +1218,11 @@ class DRAEngine:
             new_branches.sort(key=lambda x: x["score"], reverse=True)
             beams_to_fetch = new_branches[:BEAM_SIZE]
 
-            yield {"stage": f"   🚀 [Step {step+1}/{hop}] 并发执行物理跃迁并提取下一跳中间实体..."}
+            yield self._make_stage(
+                "graph_retrieval", "图谱检索", 2, agent="ExecutorAgent",
+                agent_action=f"[Step {step+1}/{hop}] 并发执行物理跃迁并提取下一跳中间实体...",
+                progress=0.3 + step * 0.2,
+            )
 
             async def fetch_nodes(b):
                 """Execute cypher for one beam. On failure, heal once and retry.
@@ -504,7 +1305,10 @@ class DRAEngine:
                 logger.info(f"[BeamSearch] Early stop at step {step+1}: all beams frozen")
                 break
 
-        yield {"stage": "4. [分支校验] 完成束搜索，执行最终事实校验..."}
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="VerifierAgent",
+            agent_action="完成束搜索，执行最终事实校验...", progress=0.0,
+        )
 
         branch_results = []
         paths = []
@@ -562,7 +1366,10 @@ class DRAEngine:
                     "healed_flag": b["healed_flag"]
                 })
 
-        yield {"stage": "5. [答案收束] 所有分支校验已完成，选中最佳推理路径..."}
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="VerifierAgent",
+            agent_action="所有分支校验已完成，选中最佳推理路径...", progress=0.7,
+        )
 
         # ── Skill: POST_VERIFY (FeedbackLoop — trigger re-plan on low scores) ──
         ctx.beams = branch_results
@@ -570,7 +1377,10 @@ class DRAEngine:
 
         valid_branches = [b for b in branch_results if b["is_valid"] and b["results"]]
         if not valid_branches:
-            yield {"stage": "⚠️ 所有推理分支均未返回结果，启动1-Hop直接关系兜底..."}
+            yield self._make_stage(
+                "fact_verification", "事实校验", 3, agent="SmashAgent",
+                agent_action="所有推理分支均未返回结果，启动1-Hop直接关系兜底...", progress=0.85,
+            )
 
             # 1-Hop fallback: single broad query returning ALL adjacent entities
             if entity:
@@ -602,7 +1412,10 @@ class DRAEngine:
 
             valid_branches = [b for b in branch_results if b["is_valid"] and b["results"]]
             if not valid_branches:
-                yield {"stage": "⚠️ 1-Hop兜底也未返回结果，采用原始空分支..."}
+                yield self._make_stage(
+                    "fact_verification", "事实校验", 3, agent="SmashAgent",
+                    agent_action="1-Hop兜底也未返回结果，采用原始空分支...", progress=0.95,
+                )
                 valid_branches = branch_results
 
         valid_branches = sorted(valid_branches, key=lambda x: x.get("score", 0.0), reverse=True)
@@ -610,9 +1423,11 @@ class DRAEngine:
         # ── Skill: PRE_AGGREGATE ──
         ctx = await self.skills.execute_hook(SkillHook.PRE_AGGREGATE, ctx)
 
-        yield {
-            "stage": "6. [答案聚合智能体] 融合多路径证据，使用最佳路径优先+共识补充策略，并进行终极语义定锚清洗...",
-            "trace": {
+        yield self._make_stage(
+            "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+            agent_action="融合多路径证据，最佳路径优先+共识补充策略，终极语义定锚清洗...",
+            progress=0.0,
+            trace={
                 "gated_mode": gated_mode,
                 "total_branches": len(branch_results),
                 "valid_branches": len(valid_branches),
@@ -622,7 +1437,7 @@ class DRAEngine:
                 "ensemble_temps": [p.temperature for p in self.planners],
                 "ablation": {k: v for k, v in self.ablation.__dict__.items() if v},
             }
-        }
+        )
         final_results = await AggregatorAgent.aggregate_results(
             query, valid_branches,
             expected_answer_type=intent.Expected_Answer_Type
@@ -632,6 +1447,13 @@ class DRAEngine:
         ctx.results = final_results
         ctx = await self.skills.execute_hook(SkillHook.POST_AGGREGATE, ctx)
         final_results = ctx.results
+
+        ec_meta = ctx.metadata.get("entity_cleaner", {})
+        yield self._make_stage(
+            "fact_verification", "事实校验", 3, agent="EntityCleaner",
+            agent_action=f"清洗完成: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体",
+            progress=1.0,
+        )
 
         best_cyphers = [b["cypher"] for b in valid_branches if b.get("results")]
         best_cypher = best_cyphers[0] if best_cyphers else ""
@@ -649,13 +1471,32 @@ class DRAEngine:
                 system_prompt=nlg_persona
             )
 
-        explanation = f"{final_reasoning}\n\n"
-        explanation += f"**[多智能体对齐推理日志]**\n"
-        explanation += f"- **门控路由**: {gated_mode}\n"
-        explanation += f"- **探索路径数**: {len(paths)} 条\n"
-        explanation += f"- **有效分支数**: {len([b for b in branch_results if b['is_valid']])} / {len(branch_results)}\n"
+        yield self._make_stage(
+            "answer_generation", "答案生成", 4, agent="AggregatorAgent",
+            agent_action="回答生成完成", progress=1.0,
+        )
+
+        reasoning_log = f"## 多智能体对齐推理日志\n\n"
+        reasoning_log += f"### 1. 意图解析 (IntentAgent)\n"
+        reasoning_log += f"- **起点实体**: {entity}\n"
+        reasoning_log += f"- **预期跳数**: {intent.Expected_Hop}\n"
+        reasoning_log += f"- **预期答案类型**: {intent.Expected_Answer_Type or '(未指定)'}\n"
+        reasoning_log += f"- **语义约束**: {intent.Constraint_Filters if intent.Constraint_Filters else '(无)'}\n"
+        if intent.reasoning:
+            reasoning_log += f"- **LLM 思维链**:\n```\n{intent.reasoning}\n```\n"
+        reasoning_log += f"\n### 2. 实体规范化 (EntityResolver)\n"
+        reasoning_log += f"- 最终使用实体: '{entity}'\n"
+        reasoning_log += f"\n### 3. 门控路由: {gated_mode}\n"
+        reasoning_log += f"- **探索路径数**: {len(paths)} 条\n"
+        reasoning_log += f"- **有效分支数**: {len([b for b in branch_results if b['is_valid']])} / {len(branch_results)}\n"
+        for i, b in enumerate(valid_branches[:5]):
+            reasoning_log += f"- **分支{i+1}**: {b.get('path', '?')} (score={b.get('score', 0):.3f}, results={len(b.get('results', []))})\n"
+        reasoning_log += f"\n### 4. 实体清洗 (EntityCleaner)\n"
+        reasoning_log += f"- 清洗结果: {ec_meta.get('original_count', 0)} → {ec_meta.get('final_count', 0)} 个实体\n"
         if best_cypher:
-            explanation += f"- **执行 Cypher**:\n```cypher\n{best_cypher}\n```"
+            reasoning_log += f"\n### 5. 执行 Cypher:\n```cypher\n{best_cypher}\n```\n"
+        reasoning_log += f"\n### 6. 最终回答 (AggregatorAgent)\n"
+        reasoning_log += f"{final_reasoning[:500]}{'...' if len(final_reasoning) > 500 else ''}"
 
         recommendations = [{"itemId": r, "title": r, "highlight": "Exact Match Entity"} for r in final_results]
 
@@ -663,13 +1504,40 @@ class DRAEngine:
         edges_viz = []
         if entity:
             from kg_construction.ontology.ontology_registry import OntologyRegistry
-            viz_node_type = OntologyRegistry.get_node_label()
-            nodes_viz.append({"id": entity, "label": entity, "type": viz_node_type})
+            default_type = OntologyRegistry.get_node_label()
+            prop_key = OntologyRegistry.get_entity_matching_strategy().get("property_key", "name")
+
+            # Batch-query Neo4j for actual node labels
+            all_res_items: list[str] = []
+            for b in valid_branches:
+                for res_item in b.get("results", [])[:10]:
+                    if res_item not in all_res_items and res_item != entity:
+                        all_res_items.append(res_item)
+            all_names = [entity] + all_res_items
+            name_to_type: dict[str, str] = {}
+            try:
+                label_query = f"MATCH (n) WHERE n.{prop_key} IN $names RETURN n.{prop_key} as name, labels(n) as labels"
+                label_res = db_client.execute_read(label_query, {"names": all_names})
+                for row in (label_res or []):
+                    n = row.get("name", "")
+                    lbls = row.get("labels", [])
+                    for lbl in lbls:
+                        upper = lbl.upper() if isinstance(lbl, str) else ""
+                        if upper in ("COMPANY", "PERSON", "EVENT", "TIME"):
+                            name_to_type[n] = upper; break
+                        if lbl in ("RiskFeature", "RiskFactor", "Action", "Regulation", "Law"):
+                            name_to_type[n] = lbl; break
+            except Exception:
+                pass
+
+            entity_type = name_to_type.get(entity, default_type)
+            nodes_viz.append({"id": entity, "label": entity, "type": entity_type})
             added_nodes = {entity}
             for b in valid_branches:
                 for res_item in b.get("results", [])[:10]:
                     if res_item not in added_nodes:
-                        nodes_viz.append({"id": res_item, "label": res_item, "type": viz_node_type})
+                        item_type = name_to_type.get(res_item, default_type)
+                        nodes_viz.append({"id": res_item, "label": res_item, "type": item_type})
                         added_nodes.add(res_item)
                     r_type = "connected_to"
                     parts = b["path"].split(" - ")
@@ -677,11 +1545,20 @@ class DRAEngine:
                         r_type = parts[-2]
                     edges_viz.append({"source": entity, "target": res_item, "type": r_type})
 
+        # ── Community discovery side-channel ──
+        mh_entity_names: list[str] = [entity] if entity else []
+        for b in valid_branches:
+            for res_item in b.get("results", [])[:10]:
+                if res_item not in mh_entity_names:
+                    mh_entity_names.append(res_item)
+        async for event in self._community_sidecar(mh_entity_names):
+            yield event
+
         final_output = {
             "data": {
                 "output": {
                     "recommendations": recommendations,
-                    "overallReasoning": explanation
+                    "overallReasoning": final_reasoning
                 },
                 "subgraph": {
                     "nodes": nodes_viz,
@@ -691,7 +1568,8 @@ class DRAEngine:
             "metadata": {
                 "llm_cypher": best_cypher,
                 "smash_fixed": any(b.get("healed_flag", 0) > 0 for b in branch_results),
-                "paths": paths
+                "paths": paths,
+                "reasoning_log": reasoning_log
             }
         }
 

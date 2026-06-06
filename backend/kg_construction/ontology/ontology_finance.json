@@ -16,9 +16,9 @@
     "Event":     ["Event", "COMPANY", "PERSON", "TIME", "EVENT", "REGULATOR"],
     "Feature":   ["Feature", "Riskfeature", "Riskfactor"],
     "Regulation":["Regulation", "Law", "Action"],
-    "Closure":   ["RiskReport", "WorkflowTicket", "AuditLog"]
+    "Closure":   ["RiskReport"]
   },
-  "search_properties": ["name", "COMPANY_NM", "PERSON_NM", "title", "factor_nm", "feature_nm", "report_id", "ticket_id"],
+  "search_properties": ["name", "COMPANY_NM", "PERSON_NM", "title", "factor_nm", "feature_nm", "report_id"],
   "return_target_types": ["Node"],
   "_note": "valid_relations is empty intentionally — the Probe agent dynamically discovers relations from the live KG schema at query time."
 }

@@ -56,15 +56,6 @@ export interface RiskReportSummary {
   created_at: string;
 }
 
-export interface TicketSummary {
-  ticket_id: string;
-  report_id: string;
-  status: string;
-  assigned_dept: string;
-  created_at: string;
-  updated_at: string;
-}
-
 const BASE = '';
 
 export async function fetchSummaryStats(): Promise<SummaryStats> {
@@ -94,14 +85,6 @@ export async function fetchHighRiskEntities(limit = 10): Promise<{ success: bool
 export async function fetchRecentReports(page = 1, limit = 5): Promise<{ success: boolean; data: { reports: RiskReportSummary[]; total: number; page: number } }> {
   const res = await fetch(`${BASE}/api/v1/risk/reports?page=${page}&limit=${limit}`);
   if (!res.ok) throw new Error(`reports: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchTickets(status?: string, page = 1, limit = 20): Promise<{ success: boolean; data: { tickets: TicketSummary[]; total: number; page: number } }> {
-  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (status) params.set('status', status);
-  const res = await fetch(`${BASE}/api/v1/risk/tickets?${params.toString()}`);
-  if (!res.ok) throw new Error(`tickets: ${res.status}`);
   return res.json();
 }
 

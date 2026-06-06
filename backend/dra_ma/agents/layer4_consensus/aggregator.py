@@ -14,6 +14,7 @@ from typing import List, Dict, Any
 from collections import Counter
 
 from dra_ma.agents.layer3_execution.cypher_utils import call_llm
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -158,10 +159,28 @@ class AggregatorAgent:
             filtered_entities = json.loads(raw_response)
             if isinstance(filtered_entities, list):
                 logger.info(f"[AggregatorAgent] Post-Filtering: {len(retained)} -> {len(filtered_entities)} entities.")
+                agent_trace("AggregatorAgent", "MERGE",
+                    evidence_path_count=len(branches),
+                    verified_claim_count=len(filtered_entities),
+                    node_count=len(entity_occurrences),
+                    edge_count=len(retained),
+                    confidence=round(len(filtered_entities) / max(len(retained), 1), 4))
                 return sorted(filtered_entities)
+            agent_trace("AggregatorAgent", "MERGE",
+                evidence_path_count=len(branches),
+                verified_claim_count=len(retained),
+                node_count=len(entity_occurrences),
+                edge_count=len(retained),
+                confidence=1.0)
             return sorted(retained)
         except Exception as e:
             logger.error(f"[AggregatorAgent] Post-Filtering failed: {e}")
+            agent_trace("AggregatorAgent", "MERGE",
+                evidence_path_count=len(branches),
+                verified_claim_count=len(retained),
+                node_count=len(entity_occurrences),
+                edge_count=len(retained),
+                confidence=0.0)
             return sorted(retained)
 
     @staticmethod

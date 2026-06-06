@@ -7,9 +7,26 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from dra_ma.agents.layer3_execution.cypher_utils import call_llm
+from dra_ma.utils.agent_trace import agent_trace
 from kg_construction.ontology.ontology_registry import OntologyRegistry
 
 logger = logging.getLogger(__name__)
+
+# ── Rule-based fallback patterns ─────────────────────────────────────────
+# Chinese company name suffix patterns — ordered longest-first for greedy matching
+_COMPANY_SUFFIXES = (
+    "股份有限公司", "集团有限公司", "有限责任公司",
+    "股份公司", "集团公司", "有限公司", "集团", "公司",
+)
+_COMPANY_SUFFIX_RE = "|".join(_COMPANY_SUFFIXES)
+_COMPANY_PATTERN = re.compile(
+    rf"([一-鿿\w]{{2,30}}?(?:{_COMPANY_SUFFIX_RE}))"
+)
+
+# Risk-related keywords that imply intent_type=risk_analysis
+_RISK_KEYWORDS = re.compile(
+    r"风险|传导|异常|合规|治理|报告|违规|处罚|监管|担保|关联交易|资金占用|内幕|操纵|洗钱|欺诈|违约|评级|预警"
+)
 
 
 class IntentObject(BaseModel):
@@ -17,6 +34,7 @@ class IntentObject(BaseModel):
     Constraint_Filters: List[str] = Field(default_factory=list, description="List of relation type constraints")
     Expected_Hop: int = Field(default=1, description="Expected multi-hop reasoning distance (1, 2, or 3)")
     Expected_Answer_Type: str = Field(default="", description="The semantic target type expected (location.country, person, etc.)")
+    reasoning: str = Field(default="", description="LLM chain-of-thought reasoning for debugging")
 
 
 INTENT_TEMPLATE = """
@@ -121,8 +139,9 @@ class IntentAgent:
     """Agent responsible for parsing natural language queries into logical IntentObjects."""
 
     @staticmethod
-    async def parse(query: str) -> IntentObject:
+    async def parse(query: str, intent_hint: str | None = None) -> IntentObject:
         logger.info(f"[IntentAgent] Parsing query: '{query}'")
+        agent_trace("IntentAgent", "START", query=query[:200])
 
         try:
             system_prompt = generate_prompt(INTENT_TEMPLATE)
@@ -169,13 +188,62 @@ class IntentAgent:
                 Start_Entities=entities,
                 Constraint_Filters=cleaned_filters,
                 Expected_Hop=int(data.get("Expected_Hop", 1)),
-                Expected_Answer_Type=raw_type
+                Expected_Answer_Type=raw_type,
+                reasoning=reasoning
             )
             logger.info(f"[IntentAgent] Parsed: Entities={intent.Start_Entities}, Filters={intent.Constraint_Filters}, Hop={intent.Expected_Hop}, Type={intent.Expected_Answer_Type}")
+            agent_trace("IntentAgent", "DECISION",
+                        entities=intent.Start_Entities,
+                        filters=intent.Constraint_Filters,
+                        hop=intent.Expected_Hop,
+                        answer_type=intent.Expected_Answer_Type,
+                        reasoning=intent.reasoning[:300] if intent.reasoning else "")
             return intent
 
         except Exception as e:
-            logger.error(f"[IntentAgent] Extraction failed: {e}. Returning fallback IntentObject.")
+            logger.warning(f"[IntentAgent] LLM extraction failed: {e}. Falling back to rule-based extraction.")
+
+            # ── Rule-based fallback entity extraction ────────────────
+            entities: list[str] = []
+
+            # Step 1: Bracket notation [EntityName]
             bracket_match = re.search(r"\[(.*?)\]", query)
-            entities = [bracket_match.group(1)] if bracket_match else []
-            return IntentObject(Start_Entities=entities, Constraint_Filters=[], Expected_Hop=1, Expected_Answer_Type="")
+            if bracket_match:
+                entities = [bracket_match.group(1)]
+                logger.info(f"[IntentAgent][FALLBACK] Extracted entity from brackets: {entities}")
+
+            # Step 2: Chinese company name patterns
+            if not entities:
+                company_matches = _COMPANY_PATTERN.findall(query)
+                if company_matches:
+                    # Deduplicate while preserving order
+                    seen: set[str] = set()
+                    for m in company_matches:
+                        if m not in seen:
+                            seen.add(m)
+                            entities.append(m)
+                    logger.info(f"[IntentAgent][FALLBACK] Extracted company entities by pattern: {entities}")
+
+            # ── Determine answer type ───────────────────────────────
+            if intent_hint == "risk_analysis":
+                answer_type = "risk_evidence"
+            elif _RISK_KEYWORDS.search(query):
+                answer_type = "risk_evidence"
+            else:
+                answer_type = ""
+
+            logger.warning(
+                "[IntentAgent][FALLBACK] entities=%s intent_type=%s answer_type=%s query=%.100s",
+                entities,
+                intent_hint or ("risk_analysis" if answer_type == "risk_evidence" else "graph_qa"),
+                answer_type,
+                query,
+            )
+
+            return IntentObject(
+                Start_Entities=entities,
+                Constraint_Filters=[],
+                Expected_Hop=1,
+                Expected_Answer_Type=answer_type,
+                reasoning=f"[RULE-BASED FALLBACK] LLM failed: {str(e)[:200]}",
+            )

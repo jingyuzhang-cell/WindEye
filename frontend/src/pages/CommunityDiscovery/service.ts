@@ -13,6 +13,7 @@ export interface DiscoveryResult {
   modularity?: number;
   communities_count: number;
   communities: Community[];
+  runtime_ms?: number;
 }
 
 export interface GraphNode {
@@ -39,6 +40,46 @@ export interface DiscoverParams {
   maxNodes: number;
 }
 
+export interface AlgorithmInfo {
+  name: string;
+  label: string;
+  description: string;
+  complexity: string;
+  params?: Record<string, any>;
+}
+
+export interface CompareResultItem {
+  method: string;
+  label: string;
+  communities_count: number;
+  modularity: number;
+  runtime_ms: number;
+  coverage: number;
+  size_distribution?: number[];
+  error?: string;
+}
+
+export interface CompareResult {
+  results: CompareResultItem[];
+}
+
+export interface QualityMetrics {
+  community_id: number;
+  nodes: number;
+  internal_edges: number;
+  modularity: number;
+  conductance: number;
+  coverage: number;
+  triangle_count: number;
+  avg_clustering: number;
+}
+
+export async function getAlgorithms(): Promise<AlgorithmInfo[]> {
+  const response = await fetch('/api/v1/graph/communities/algorithms');
+  const data = await response.json();
+  return data.algorithms || [];
+}
+
 export async function discoverCommunities(params: DiscoverParams): Promise<DiscoveryResult> {
   const searchParams = new URLSearchParams();
   if (params.layer && params.layer !== 'all') searchParams.append('layer', params.layer);
@@ -47,6 +88,16 @@ export async function discoverCommunities(params: DiscoverParams): Promise<Disco
   searchParams.append('max_nodes', String(params.maxNodes));
 
   const response = await fetch(`/api/v1/graph/communities?${searchParams.toString()}`);
+  return response.json();
+}
+
+export async function compareAlgorithms(params: Omit<DiscoverParams, 'method'>): Promise<CompareResult> {
+  const searchParams = new URLSearchParams();
+  if (params.layer && params.layer !== 'all') searchParams.append('layer', params.layer);
+  if (params.minSize) searchParams.append('min_community_size', String(params.minSize));
+  searchParams.append('max_nodes', String(params.maxNodes));
+
+  const response = await fetch(`/api/v1/graph/communities/compare?${searchParams.toString()}`);
   return response.json();
 }
 
@@ -61,6 +112,19 @@ export async function getCommunityGraph(
 
   const response = await fetch(
     `/api/v1/graph/communities/${communityId}?${searchParams.toString()}`,
+  );
+  return response.json();
+}
+
+export async function getCommunityQuality(
+  communityId: number,
+  layer: string = 'all',
+): Promise<QualityMetrics> {
+  const searchParams = new URLSearchParams();
+  if (layer && layer !== 'all') searchParams.append('layer', layer);
+
+  const response = await fetch(
+    `/api/v1/graph/communities/${communityId}/quality?${searchParams.toString()}`,
   );
   return response.json();
 }

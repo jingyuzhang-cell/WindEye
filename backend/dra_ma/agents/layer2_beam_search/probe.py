@@ -10,6 +10,7 @@ from typing import List, Union
 
 from kg_construction.ontology.ontology_registry import OntologyRegistry
 from dra_ma.agents.layer3_execution.cypher_utils import db_client
+from dra_ma.utils.agent_trace import agent_trace
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ def get_adjacent_relations(entity_names: Union[str, List[str]]) -> List[str]:
     if not entity_names:
         return []
 
+    agent_trace("Probe", "START", entity_names=entity_names)
+
     if isinstance(entity_names, str):
         entity_names = [entity_names]
 
@@ -33,6 +36,9 @@ def get_adjacent_relations(entity_names: Union[str, List[str]]) -> List[str]:
     cypher = f"""
     MATCH (n{label_str})
     WHERE n.{prop_key} IN $entity_names
+       OR n.COMPANY_NM IN $entity_names
+       OR n.PERSON_NM IN $entity_names
+       OR n.title IN $entity_names
     WITH n, rand() AS r ORDER BY r LIMIT 50
 
     MATCH (n)-[rel]-(m)
@@ -67,6 +73,7 @@ def get_adjacent_relations(entity_names: Union[str, List[str]]) -> List[str]:
                     relations.append(f"{r1} (Samples: {sample_str})")
 
         relations = list(set(relations))
+        agent_trace("Probe", "RELATIONS", relations=relations, count=len(relations))
         # Truncate log to first 3 relations + count to avoid GBK encoding crashes on Windows
         rel_preview = relations[:3]
         logger.info(f"[Probe] Entities {entity_names[:3]}... adjacent relations ({len(relations)} total): {rel_preview}")

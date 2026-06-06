@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Typography } from 'antd'
-import { UserOutlined, RobotOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { UserOutlined, RobotOutlined, InfoCircleOutlined, BugOutlined, CaretRightOutlined } from '@ant-design/icons'
 import type { ChatMessage } from '../types/api'
 import { DESIGN_TOKENS } from '../styles/constants'
 
@@ -78,6 +78,7 @@ export const EntityMessageBubble: React.FC<EntityMessageBubbleProps> = ({
 }) => {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
+  const [showReasoning, setShowReasoning] = useState(false)
 
   if (isSystem) {
     return (
@@ -235,6 +236,60 @@ export const EntityMessageBubble: React.FC<EntityMessageBubbleProps> = ({
         >
           {renderContent()}
         </div>
+
+        {/* Agent Reasoning Log — collapsible debug section */}
+        {!isUser && message.reasoningLog && (
+          <div style={{ width: '100%', marginTop: 4 }}>
+            <div
+              onClick={() => setShowReasoning(!showReasoning)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                padding: '4px 10px',
+                borderRadius: 6,
+                background: 'rgba(250, 140, 22, 0.08)',
+                border: '1px solid rgba(250, 140, 22, 0.2)',
+                fontSize: 12,
+                color: '#d46b08',
+                userSelect: 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              <CaretRightOutlined
+                style={{
+                  fontSize: 10,
+                  transition: 'transform 0.2s',
+                  transform: showReasoning ? 'rotate(90deg)' : 'rotate(0deg)',
+                }}
+              />
+              <BugOutlined style={{ fontSize: 12 }} />
+              <span>智能体推理日志</span>
+            </div>
+            {showReasoning && (
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: '12px 14px',
+                  borderRadius: 8,
+                  background: 'rgba(15, 23, 42, 0.92)',
+                  border: '1px solid rgba(250, 140, 22, 0.25)',
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                  color: '#e2e8f0',
+                  fontFamily: "'SF Mono', 'Cascadia Code', 'Consolas', monospace",
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: 500,
+                  overflowY: 'auto',
+                }}
+              >
+                {message.reasoningLog}
+              </div>
+            )}
+          </div>
+        )}
 
         <Text style={{ color: DESIGN_TOKENS.TEXT_MUTED, fontSize: 11, padding: '0 4px' }}>
           {formatTime(message.timestamp)}

@@ -10,8 +10,8 @@ import {
 } from '@ant-design/icons';
 import G6 from '@antv/g6';
 import { PageContainer } from '@ant-design/pro-components';
-import type { LayerConfig } from '../graphConfig';
-import { GENERAL_CONFIG, EDGE_STYLE_MAP } from '../graphConfig';
+import type { LayerConfig } from '../../graphConfig';
+import { GENERAL_CONFIG, EDGE_STYLE_MAP } from '../../graphConfig';
 import LayoutSwitcher from './LayoutSwitcher';
 
 const { Option } = Select;

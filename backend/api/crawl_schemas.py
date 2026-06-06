@@ -1,4 +1,4 @@
-"""Pydantic schemas for multi-agent crawl task requests and responses."""
+"""Pydantic schemas for crawl task requests and responses."""
 
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ class CrawlTaskRequest(BaseModel):
     date_end: Optional[str] = None
     keywords: list[str] = Field(default_factory=list)
     max_pages: int = Field(default=5, ge=1, le=50)
+    max_files: int = Field(default=0, ge=0, le=500, description="Max files to download per source (0 = unlimited)")
     natural_language_query: Optional[str] = None
     template_id: Optional[str] = None
 
