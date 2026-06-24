@@ -12,7 +12,6 @@ import getpass
 import re
 from datetime import datetime
 
-from passlib.hash import bcrypt
 from sqlalchemy import delete, select, text
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -27,6 +26,7 @@ from db.models import (
     SysUserRole,
 )
 from db.seed import PERMISSIONS, ROLE_PERMISSION_MAP
+from services.auth_service import hash_password
 
 DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
@@ -183,7 +183,7 @@ async def initialize_data(
             admin = await session.scalar(
                 select(SysUser).where(SysUser.username == admin_username)
             )
-            admin_password_hash = bcrypt.hash(admin_password)
+            admin_password_hash = hash_password(admin_password)
             password_updated_at = datetime.utcnow()
             if admin is None:
                 admin = SysUser(

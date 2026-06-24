@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.hash import bcrypt
+import bcrypt
 from sqlalchemy import select
 
 from config.settings import settings
@@ -20,14 +20,15 @@ logger = logging.getLogger(__name__)
 
 def hash_password(plain: str) -> str:
     """Hash a plaintext password with bcrypt (cost=12)."""
-    return bcrypt.hash(plain)
+    hashed = bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12))
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
     try:
-        return bcrypt.verify(plain, hashed)
-    except ValueError:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except (TypeError, ValueError):
         return False
 
 

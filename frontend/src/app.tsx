@@ -13,12 +13,15 @@ import {
 } from '@/components';
 import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
 import defaultSettings from '../config/defaultSettings';
+import { installAuthFetch } from './auth/installAuthFetch';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
 
 const isDev = process.env.NODE_ENV === 'development';
 const isDevOrTest = isDev || process.env.CI;
 const loginPath = '/user/login';
+
+installAuthFetch();
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate

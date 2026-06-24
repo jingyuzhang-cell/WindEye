@@ -22,20 +22,11 @@ export default [
       },
     ],
   },
-  // ═══════════════════════════════════════════════════════════════════
-  // Module C: 风险问答 (Developer C)
-  // ═══════════════════════════════════════════════════════════════════
   {
     path: '/welcome',
     name: 'welcome',
     icon: 'dashboard',
     component: './Welcome',
-  },
-  {
-    path: '/knowledge-qa',
-    name: 'knowledge-qa',
-    icon: 'message',
-    component: './KnowledgeQA',
   },
   // ═══════════════════════════════════════════════════════════════════
   // Module A: 知识图谱构建 (Developer A)
@@ -60,30 +51,44 @@ export default [
     name: 'knowledge-graph-subject',
     icon: 'team',
     component: './SubjectPage',
+    hideInMenu: true,
   },
   {
     path: '/knowledge-graph/event',
     name: 'knowledge-graph-event',
     icon: 'thunderbolt',
     component: './EventPage',
+    hideInMenu: true,
   },
   {
     path: '/knowledge-graph/feature',
     name: 'knowledge-graph-feature',
     icon: 'dotChart',
     component: './FeaturePage',
+    hideInMenu: true,
   },
   {
     path: '/knowledge-graph/regulation',
     name: 'knowledge-graph-regulation',
     icon: 'safetyCertificate',
     component: './RegulationPage',
+    hideInMenu: true,
   },
   {
     path: '/community-discovery',
     name: 'community-discovery',
     icon: 'radarChart',
     component: './CommunityDiscovery',
+    hideInMenu: true,
+  },
+  // ═══════════════════════════════════════════════════════════════════
+  // Module C: 风险问答 (Developer C)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    path: '/knowledge-qa',
+    name: 'knowledge-qa',
+    icon: 'message',
+    component: './KnowledgeQA',
   },
   {
     path: '/system',

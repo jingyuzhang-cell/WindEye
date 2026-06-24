@@ -6,11 +6,11 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from passlib.hash import bcrypt
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import SysRole, SysUser, SysUserRole
+from services.auth_service import hash_password
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ async def create_user(
 
     user = SysUser(
         username=username,
-        password_hash=bcrypt.hash(password),
+        password_hash=hash_password(password),
         real_name=real_name,
         email=email,
         phone=phone,
@@ -250,7 +250,7 @@ async def reset_password(
     if user is None:
         return None
 
-    user.password_hash = bcrypt.hash(new_password)
+    user.password_hash = hash_password(new_password)
     user.password_updated_at = datetime.utcnow()
     # Force password change on next login by setting to null
     # user.password_updated_at = None  # uncomment to enforce

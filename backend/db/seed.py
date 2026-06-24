@@ -17,13 +17,13 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from passlib.hash import bcrypt
 from sqlalchemy import select, text
 
 from db import MySQLClient
 from db.models import (
     Base, SysPermission, SysRole, SysRolePermission, SysUser, SysUserRole,
 )
+from services.auth_service import hash_password
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ async def seed():
         if admin is None:
             admin = SysUser(
                 username="admin",
-                password_hash=bcrypt.hash("admin"),
+                password_hash=hash_password("admin"),
                 real_name="系统管理员",
                 email="admin@windeye.local",
                 department="技术部",
