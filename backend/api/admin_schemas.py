@@ -47,6 +47,39 @@ class RoleInfo(BaseModel):
     roleName: str
 
 
+class RoleCreate(BaseModel):
+    roleCode: str = Field(..., min_length=2, max_length=64, alias="roleCode", description="角色编码")
+    roleName: str = Field(..., min_length=2, max_length=128, alias="roleName", description="角色名称")
+    description: str | None = None
+    status: int = Field(default=1, ge=0, le=1)
+    sortOrder: int = Field(default=0, ge=0, le=9999, alias="sortOrder")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class RoleUpdate(BaseModel):
+    roleName: str | None = Field(default=None, min_length=2, max_length=128, alias="roleName")
+    description: str | None = None
+    status: int | None = Field(default=None, ge=0, le=1)
+    sortOrder: int | None = Field(default=None, ge=0, le=9999, alias="sortOrder")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ConfigItemUpdate(BaseModel):
+    configKey: str = Field(..., min_length=2, max_length=128, alias="configKey")
+    configValue: str = Field(default="", max_length=2048, alias="configValue")
+    description: str | None = Field(default=None, max_length=512)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ConfigUpdate(BaseModel):
+    items: list[ConfigItemUpdate] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class UserResponse(BaseModel):
     id: int
     username: str

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { expandGraphNode, searchAllGraph } from '@/api/knowledgeGraph';
+import { expandGraphNode, searchAllGraph, subjectTraverseGraph } from '@/api/knowledgeGraph';
 import type {
   ExpandNodePayload,
   KGEdge,
@@ -7,6 +7,7 @@ import type {
   KGSummary,
   KGTriple,
   SearchAllPayload,
+  SubjectTraversePayload,
 } from '@/types/knowledgeGraph';
 import {
   computeCurrentSubgraphStats,
@@ -42,7 +43,7 @@ export function useKnowledgeGraph() {
     setLoading(true);
     setGraphError(null);
     try {
-      const response = await fetch('/api/v1/graph/data?limit=100');
+      const response = await fetch('/api/v1/graph/data');
       const data = await response.json();
       if (!response.ok || data?.error) {
         throw new Error(
@@ -130,6 +131,47 @@ export function useKnowledgeGraph() {
     }
   }, []);
 
+  const subjectTraverse = useCallback(async (payload: SubjectTraversePayload) => {
+    setLoading(true);
+    setGraphError(null);
+    try {
+      const response = await subjectTraverseGraph(payload);
+      const matchedIds = new Set(
+        (response.matchedNodes || []).map(node => String(node.id ?? node.element_id)),
+      );
+      const normalizedNodes = (response.nodes || []).map((raw) => ({
+        ...normalizeNode(raw),
+        isMatched: matchedIds.has(String(raw.id ?? raw.element_id)),
+        isCenter: matchedIds.has(String(raw.id ?? raw.element_id)),
+      }));
+      const normalizedEdges = (response.edges || []).map(normalizeEdge);
+      const merged = mergeGraph([], [], normalizedNodes, normalizedEdges);
+      const normalizedMatched = (response.matchedNodes || []).map((raw) => ({
+        ...normalizeNode(raw),
+        isMatched: true,
+        isCenter: true,
+      }));
+
+      setNodes(merged.nodes);
+      setEdges(merged.edges);
+      setMatchedNodes(normalizedMatched);
+      setTriples(response.triples || []);
+      setSummary({
+        ...response.summary,
+        nodeCount: merged.nodes.length,
+        edgeCount: merged.edges.length,
+      });
+      setWarnings([...(response.warnings || [])]);
+      setTraceId(response.traceId || null);
+      return response;
+    } catch (error) {
+      setGraphError(errorMessage(error));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const expand = useCallback(async (
     nodeId: string,
     payload: ExpandNodePayload = {},
@@ -200,6 +242,7 @@ export function useKnowledgeGraph() {
     setGraphError,
     loadInitialGraph,
     search,
+    subjectTraverse,
     expand,
     clear,
   };

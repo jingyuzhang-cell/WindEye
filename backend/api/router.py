@@ -228,6 +228,9 @@ def create_routes(app, kg_system, risk_engine=None):
     from api.admin_routes import router as admin_router
     app.include_router(admin_router)
 
+    from api.chat_session_routes import router as chat_session_router
+    app.include_router(chat_session_router)
+
     @app.get("/health")
     def health(request: Request) -> dict[str, str]:
         return {"status": "ok", "traceId": getattr(request.state, "trace_id", get_trace_id())}

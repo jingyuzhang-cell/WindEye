@@ -1,4 +1,4 @@
-import { getAccessToken } from './tokenStore';
+import { clearTokens, getAccessToken } from './tokenStore';
 
 let installed = false;
 
@@ -29,11 +29,21 @@ export function installAuthFetch(): void {
 
   const nativeFetch = window.fetch.bind(window);
 
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  function handleUnauthorized(input: RequestInfo | URL, response: Response): void {
+    if (response.status !== 401 || !shouldAttachAuth(input)) return;
+    clearTokens();
+    if (window.location.pathname === '/user/login') return;
+    const redirect = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+    window.location.href = `/user/login?redirect=${redirect}`;
+  }
+
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const token = getAccessToken();
 
     if (!token || !shouldAttachAuth(input)) {
-      return nativeFetch(input, init);
+      const response = await nativeFetch(input, init);
+      handleUnauthorized(input, response);
+      return response;
     }
 
     const headers = mergeHeaders(input, init);
@@ -42,10 +52,15 @@ export function installAuthFetch(): void {
     }
 
     if (input instanceof Request) {
-      return nativeFetch(new Request(input, { ...init, headers }));
+      const request = new Request(input, { ...init, headers });
+      const response = await nativeFetch(request);
+      handleUnauthorized(input, response);
+      return response;
     }
 
-    return nativeFetch(input, { ...init, headers });
+    const response = await nativeFetch(input, { ...init, headers });
+    handleUnauthorized(input, response);
+    return response;
   };
 
   installed = true;

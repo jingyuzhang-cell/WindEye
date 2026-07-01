@@ -21,6 +21,24 @@ interface ResponseStructure {
   showType?: ErrorShowType;
 }
 
+const formatResponseError = (error: any) => {
+  const detail = error?.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    const first = detail[0];
+    if (first?.msg) {
+      const field = Array.isArray(first.loc) ? first.loc.slice(1).join('.') : '';
+      return field ? `${field}: ${first.msg}` : first.msg;
+    }
+  }
+  if (typeof detail === 'string') {
+    return detail;
+  }
+  if (detail?.message) {
+    return detail.message;
+  }
+  return error?.response?.data?.errorMessage || `Response status:${error.response.status}`;
+};
+
 /**
  * @name 错误处理
  * pro 自带的错误处理， 可以在这里做自己的改动
@@ -86,7 +104,7 @@ export const errorConfig: RequestConfig = {
         } else if (error.response.status === 403) {
           message.error('无权限执行此操作');
         } else {
-          message.error(`Response status:${error.response.status}`);
+          message.error(formatResponseError(error));
         }
       } else if (error.request) {
         // 请求已经成功发起，但没有收到响应

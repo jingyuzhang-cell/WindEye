@@ -15,11 +15,10 @@ import {
   Card,
   Checkbox,
   Col,
-  Descriptions,
-  Drawer,
   Empty,
   Form,
   Input,
+  Modal,
   Popover,
   Row,
   Select,
@@ -42,20 +41,28 @@ import { LAYER_ORDER } from '@/utils/knowledgeGraph';
 import FourLayerGraph, {
   type FourLayerGraphHandle,
 } from './KnowledgeGraph/components/FourLayerGraph';
+import GraphSkeleton from './KnowledgeGraph/components/GraphSkeleton';
+import GraphDetailDrawer from './KnowledgeGraph/components/GraphDetailDrawer';
+import ResultStatsBar from './KnowledgeGraph/components/ResultStatsBar';
 import { useKnowledgeGraph } from './KnowledgeGraph/hooks/useKnowledgeGraph';
 import { filterGraphByMultiLayerTypes } from './KnowledgeGraph/utils/graphFilter';
 import {
   filterToCenterNeighbors,
   hideLowDegreeNodes,
 } from './KnowledgeGraph/utils/graphTransform';
-import { computeTypeCountsByLayer } from './KnowledgeGraph/utils/graphStats';
-import { chooseGraphLayoutMode } from './KnowledgeGraph/utils/layouts';
+import {
+  LAYER_COLORS,
+  resolveLayoutForViewMode,
+  PERF_THRESHOLDS,
+} from './KnowledgeGraph/config/visualTheme';
+import {
+  computeCurrentResultStats,
+  computeTypeCountsByLayer,
+} from './KnowledgeGraph/utils/graphStats';
 import {
   buildAggregateGraph,
   buildCoreGraph,
 } from './KnowledgeGraph/utils/aggregateGraph';
-import { GENERAL_CONFIG } from './graphConfig';
-
 type LayerCode = 'Subject' | 'Event' | 'Feature' | 'Regulation';
 
 interface LayerStatistics {
@@ -80,39 +87,30 @@ interface GlobalStatistics {
   layers: LayerStatistics[];
 }
 
+/**
+ * 四层元数据（颜色来自 visualTheme，背景色为页面卡片使用的高亮色）
+ */
 const LAYER_META: Record<LayerCode, { label: string; color: string; background: string }> = {
-  Subject: { label: '主体层', color: '#1677ff', background: '#e6f4ff' },
-  Event: { label: '事件层', color: '#fa8c16', background: '#fff7e6' },
-  Feature: { label: '特征层', color: '#52c41a', background: '#f6ffed' },
-  Regulation: { label: '法规层', color: '#722ed1', background: '#f9f0ff' },
+  Subject: { label: LAYER_COLORS.Subject.label, color: LAYER_COLORS.Subject.color, background: '#e6f4ff' },
+  Event: { label: LAYER_COLORS.Event.label, color: LAYER_COLORS.Event.color, background: '#fff7e6' },
+  Feature: { label: LAYER_COLORS.Feature.label, color: LAYER_COLORS.Feature.color, background: '#fff1f0' },
+  Regulation: { label: LAYER_COLORS.Regulation.label, color: LAYER_COLORS.Regulation.color, background: '#f6ffed' },
 };
-
-const RELATION_OPTIONS = [
-  'INVEST', 'WORK', 'GUARANTEE', 'CONTROLLER', 'CONTROL', 'MANAGER',
-  'TRUSTEE', 'ISSUE', 'BRANCH', 'CUSTOMER', 'SUE', 'JOINDER',
-  'PARTICIPATE_IN', 'MENTION', 'TRIGGERS', 'REFLECTS', 'CAUSE',
-  'COMPLIES_WITH', 'BELONG',
-].map(value => ({ value, label: value }));
-
-const NODE_TYPE_OPTIONS = Object.entries(GENERAL_CONFIG.nodeStyles)
-  .filter(([value]) => value !== 'Unknown')
-  .map(([value, config]) => ({ value, label: `${config.label} (${value})` }));
 
 const LAYOUT_OPTIONS: Array<{ value: GraphLayoutSelection; label: string }> = [
   { value: 'auto', label: '自动布局' },
-  { value: 'aggregate', label: '类型聚合' },
-  { value: 'cascade', label: '逐层定向级联' },
+  { value: 'neo4j-force', label: '弹性布局' },
+  { value: 'free-force', label: '自由力导向' },
+  { value: 'semantic-force', label: '语义分布' },
   { value: 'radial', label: '中心放射' },
-  { value: 'semantic-force', label: '四层语义分布' },
+  { value: 'cascade', label: '层级级联' },
+  { value: 'aggregate', label: '类型聚合' },
   { value: 'community', label: '社区聚类' },
-  { value: 'path-focus', label: '路径优先' },
 ];
 
 const VIEW_OPTIONS: Array<{ value: GraphViewMode; label: string }> = [
-  { value: 'aggregate', label: '聚合视图' },
   { value: 'core', label: '核心视图' },
-  { value: 'full', label: '完整视图' },
-  { value: 'path', label: '路径视图' },
+  { value: 'semantic', label: '全体视图' },
 ];
 
 const EMPTY_TYPES_BY_LAYER: Record<LayerCode, string[]> = {
@@ -300,6 +298,7 @@ const GeneralPage: React.FC = () => {
     setGraphError,
     loadInitialGraph,
     search,
+    subjectTraverse,
     expand,
     clear,
   } = useKnowledgeGraph();
@@ -353,17 +352,16 @@ const GeneralPage: React.FC = () => {
 
   const displayGraph = useMemo(() => {
     let result = visibleGraph;
-    if (onlyCenterNeighbors) {
-      result = filterToCenterNeighbors(result.nodes, result.edges, centerNodeId);
+    // 核心视图：使用 buildCoreGraph 提取关键子图
+    if (viewMode === 'core') {
+      const coreGraph = buildCoreGraph(result.nodes, result.edges, centerNodeId, 150);
+      return { nodes: coreGraph.nodes, edges: coreGraph.edges, limited: false, foldedNodeCount: 0 };
     }
-    if (hideIsolated) {
-      if (viewMode === 'aggregate') {
-        // 聚合节点代表一个类型分组，不因单个成员孤立而隐藏。
-      } else {
-      result = hideLowDegreeNodes(result.nodes, result.edges, 1);
-      }
-    }
+    // 聚合视图：类型分组聚合（高级模式）
     if (viewMode === 'aggregate') {
+      if (onlyCenterNeighbors) {
+        result = filterToCenterNeighbors(result.nodes, result.edges, centerNodeId);
+      }
       const aggregate = buildAggregateGraph(
         result.nodes,
         result.edges,
@@ -372,13 +370,11 @@ const GeneralPage: React.FC = () => {
       );
       return { ...aggregate, limited: aggregate.foldedNodeCount > 0 };
     }
-    if (viewMode === 'core') {
-      const core = buildCoreGraph(result.nodes, result.edges, centerNodeId, 150);
-      return {
-        ...core,
-        limited: core.nodes.length < result.nodes.length,
-        foldedNodeCount: Math.max(0, result.nodes.length - core.nodes.length),
-      };
+    if (onlyCenterNeighbors) {
+      result = filterToCenterNeighbors(result.nodes, result.edges, centerNodeId);
+    }
+    if (hideIsolated) {
+      result = hideLowDegreeNodes(result.nodes, result.edges, 1);
     }
     return { ...result, limited: false, foldedNodeCount: 0 };
   }, [
@@ -390,75 +386,143 @@ const GeneralPage: React.FC = () => {
     expandedAggregateGroups,
   ]);
 
-  const hasCommunities = useMemo(
-    () => displayGraph.nodes.some(node =>
-      node.communityId !== undefined
-      || node.properties?.communityId !== undefined
-      || node.properties?.community_id !== undefined
-      || node.properties?._communityId !== undefined),
-    [displayGraph.nodes],
+  const currentResultStats = useMemo(
+    () => computeCurrentResultStats(displayGraph.nodes, displayGraph.edges),
+    [displayGraph.nodes, displayGraph.edges],
   );
+
+  /** 性能保护：全体视图保留完整节点/关系，仅提示用户注意规模。 */
+  useEffect(() => {
+    if (viewMode === 'semantic' && visibleGraph.nodes.length > PERF_THRESHOLDS.WARN_LARGE_GRAPH) {
+      message.warning(
+        `当前全体视图展示 ${visibleGraph.nodes.length.toLocaleString()} 个节点，已采用紧凑布局；必要时可切换核心视图查看主干`,
+      );
+    }
+  }, [visibleGraph.nodes.length, viewMode, message]);
+
+  /** 节点数超过阈值时隐藏普通节点标签 */
+  const autoHideLabels = displayGraph.nodes.length > PERF_THRESHOLDS.HIDE_LABELS;
 
   const resolvedLayoutMode: GraphLayoutMode = useMemo(
     () => {
       if (layoutSelection !== 'auto') return layoutSelection;
-      if (viewMode === 'aggregate') return 'aggregate';
-      if (viewMode === 'path') return 'path-focus';
-      if (viewMode === 'core' && displayGraph.nodes.length <= 50 && centerNodeId) return 'radial';
-      if (viewMode === 'core' || viewMode === 'full') return 'semantic-force';
-      return chooseGraphLayoutMode({
-        nodes: displayGraph.nodes,
-        edges: displayGraph.edges,
-        centerNodeId,
-        hasCommunities,
-      });
+      return resolveLayoutForViewMode(viewMode);
     },
-    [layoutSelection, viewMode, displayGraph.nodes, displayGraph.edges, centerNodeId, hasCommunities],
+    [layoutSelection, viewMode],
   );
+
+  /** 高亮节点到中心节点的关联路径 */
+  const [, setPathHighlightNodeId] = useState<string | null>(null);
+
+  const handleHighlightPath = useCallback((node: KGNode) => {
+    if (!centerNodeId || node.id === centerNodeId) {
+      message.warning('需要先有中心节点，且目标节点不能是中心节点');
+      return;
+    }
+    // BFS 找最短路径
+    const adj = new Map<string, string[]>();
+    displayGraph.nodes.forEach((n) => {
+      adj.set(n.id, []);
+    });
+    displayGraph.edges.forEach(e => {
+      adj.get(e.source)?.push(e.target);
+      adj.get(e.target)?.push(e.source);
+    });
+    const visited = new Set<string>([centerNodeId]);
+    const parent = new Map<string, string>();
+    const queue = [centerNodeId];
+    while (queue.length) {
+      const cur = queue.shift();
+      if (!cur) break;
+      if (cur === node.id) break;
+      (adj.get(cur) || []).forEach(nb => {
+        if (!visited.has(nb)) { visited.add(nb); parent.set(nb, cur); queue.push(nb); }
+      });
+    }
+    if (!visited.has(node.id)) {
+      message.info('当前子图中未找到从中心节点到该节点的路径');
+      return;
+    }
+    setPathHighlightNodeId(node.id);
+    message.success('路径已高亮');
+  }, [centerNodeId, displayGraph.nodes, displayGraph.edges, message]);
 
   const handleSearch = useCallback(async (values: any) => {
     const keyword = String(values.keyword || '').trim();
     if (!keyword) {
-      message.info('请输入节点名称后搜索；刷新按钮可恢复默认子图');
+      message.info('请输入关键词后搜索；刷新按钮可恢复默认子图');
       return;
     }
+    const depth = values.depth || 2;
+    const limit = values.limit || 5000;
+    const layerWhitelist = values.layerWhitelist || [...LAYER_ORDER];
     try {
-      const response = await search({
-        query: keyword,
-        layer: values.searchLayer || 'all',
-        depth: values.depth || 2,
-        type: values.nodeType || 'all',
-        relationWhitelist: values.relationWhitelist || [],
-        includeProperties: true,
-        includeCrossLayer: true,
-        outputFormat: 'both',
-        deduplicate: true,
-        traversalMode: 'cascade',
-      });
+      // 统一搜索：优先主体穿透，无结果时 fallback 到全文检索
+      let response: { nodes?: any[] };
+      try {
+        response = await subjectTraverse({
+          subject: keyword,
+          depth,
+          nodeLimit: limit,
+          edgeLimit: Math.min(limit * 4, 20000),
+          layerWhitelist,
+          relationWhitelist: [],
+          includeProperties: true,
+        });
+        message.success(`搜索完成：${response.nodes?.length || 0} 个节点`);
+      } catch {
+        // subjectTraverse 失败或返回 NO_MATCHED_SUBJECT，fallback 到 searchAll
+        response = await search({
+          query: keyword,
+          layer: 'all',
+          depth,
+          limit,
+          layerWhitelist,
+          relationWhitelist: [],
+          includeProperties: true,
+          outputFormat: 'subgraph',
+          deduplicate: true,
+          responseMode: 'full',
+          traversalMode: 'cascade',
+        });
+        message.success(`全文检索完成：${response.nodes?.length || 0} 个节点`);
+      }
       setFilterState(DEFAULT_FILTER_STATE);
-      setViewMode((response.nodes || []).length > 100 ? 'aggregate' : 'core');
+      setViewMode('semantic');
       setExpandedAggregateGroups(new Set());
       setCenterOverrideId(undefined);
       setSelectedEdge(null);
       setOpenTypePopover(null);
-      message.success('跨层图谱搜索完成');
     } catch {
       // Hook 已写入 graphError。
     }
-  }, [message, search]);
+  }, [message, subjectTraverse, search]);
 
-  const handleExpand = useCallback(async (node: KGNode) => {
+  // Hub expand confirmation state
+  const [pendingHubNode, setPendingHubNode] = useState<KGNode | null>(null);
+
+  const handleExpand = useCallback(async (node: KGNode, forceExpandHub = false, maxFanout = 100) => {
+    // Hub node: show confirmation first unless forceExpandHub
+    if (node.isHub && !forceExpandHub) {
+      setPendingHubNode(node);
+      return;
+    }
     const values = form.getFieldsValue();
     try {
       await expand(node.id, {
         depth: values.depth || 1,
-        limit: values.limit || 500,
-        relationWhitelist: values.relationWhitelist || [],
-        layerWhitelist: [...LAYER_ORDER],
+        limit: 300,
+        relationWhitelist: [],
+        layerWhitelist: values.layerWhitelist || [...LAYER_ORDER],
         includeCrossLayer: true,
         includeProperties: true,
+        forceExpandHub,
+        maxFanout,
       });
-      message.success(`已展开“${node.name}”的关联子图`);
+      const msg = forceExpandHub
+        ? `已强制展开”${node.name}”的前 ${maxFanout} 个邻居`
+        : `已展开”${node.name}”的关联子图`;
+      message.success(msg);
     } catch {
       // Hook 已写入 graphError。
     }
@@ -471,7 +535,7 @@ const GeneralPage: React.FC = () => {
     setSelectedEdge(null);
     setCenterOverrideId(undefined);
     setExpandedAggregateGroups(new Set());
-    setViewMode('core');
+    setViewMode('semantic');
     await Promise.all([loadInitialGraph(), loadGlobalStatistics()]);
   }, [loadInitialGraph, loadGlobalStatistics]);
 
@@ -484,15 +548,16 @@ const GeneralPage: React.FC = () => {
     setSelectedEdge(null);
     setCenterOverrideId(undefined);
     setExpandedAggregateGroups(new Set());
-    setViewMode('core');
+    setViewMode('semantic');
   }, [clear, form]);
 
   const toggleAggregateGroup = useCallback((node: KGNode) => {
     if (!node.isAggregate || !node.aggregateKey) return false;
+    const aggregateKey = node.aggregateKey;
     setExpandedAggregateGroups((current) => {
       const next = new Set(current);
-      if (next.has(node.aggregateKey!)) next.delete(node.aggregateKey!);
-      else next.add(node.aggregateKey!);
+      if (next.has(aggregateKey)) next.delete(aggregateKey);
+      else next.add(aggregateKey);
       return next;
     });
     return true;
@@ -577,6 +642,44 @@ const GeneralPage: React.FC = () => {
     });
   };
 
+  const toggleGlobalEdgeType = (type: string) => {
+    setFilterState(current => {
+      const selected = current.selectedEdgeTypes.includes(type);
+      const touchedLayers = (Object.keys(currentResultStats.edgeTypeCountsByLayer) as LayerCode[])
+        .filter(layer => currentResultStats.edgeTypeCountsByLayer[layer]?.[type] > 0);
+      const targetLayers = touchedLayers.length > 0 ? touchedLayers : [...LAYER_ORDER];
+      const nextByLayer = { ...current.selectedEdgeTypesByLayer };
+
+      targetLayers.forEach((layer) => {
+        const layerTypes = nextByLayer[layer] || [];
+        nextByLayer[layer] = selected
+          ? layerTypes.filter(item => item !== type)
+          : [...new Set([...layerTypes, type])];
+      });
+
+      return {
+        ...current,
+        selectedEdgeTypesByLayer: nextByLayer,
+        selectedEdgeTypes: [...new Set(Object.values(nextByLayer).flat())],
+      };
+    });
+  };
+
+  const clearNodeTypeFilters = () => {
+    setFilterState(current => ({
+      ...current,
+      selectedNodeTypesByLayer: { ...EMPTY_TYPES_BY_LAYER },
+    }));
+  };
+
+  const clearEdgeTypeFilters = () => {
+    setFilterState(current => ({
+      ...current,
+      selectedEdgeTypesByLayer: { ...EMPTY_TYPES_BY_LAYER },
+      selectedEdgeTypes: [],
+    }));
+  };
+
   const clearTypeFilters = () => {
     setOpenTypePopover(null);
     setFilterState(DEFAULT_FILTER_STATE);
@@ -619,9 +722,7 @@ const GeneralPage: React.FC = () => {
                 accent="#1677ff"
                 tag={<Tag color="blue">搜索 / 展开结果</Tag>}
                 description={displayGraph.limited
-                  ? viewMode === 'aggregate'
-                    ? `聚合展示 ${displayGraph.nodes.length} 个类型组/展开节点`
-                    : `核心展示 ${displayGraph.nodes.length} 个重要节点`
+                  ? `聚合展示 ${displayGraph.nodes.length} 个类型组/展开节点`
                   : '与当前图谱展示数据保持一致'}
               />
             </Col>
@@ -801,7 +902,7 @@ const GeneralPage: React.FC = () => {
         >
           {!hasTypeFilters ? (
             <span style={{ color: '#8c8c8c' }}>
-              暂未限制类型。默认高亮模式会保留完整四层结构。
+              暂未限制类型，默认保留完整四层结构。可通过层级卡片或图层按钮筛选节点类型。
             </span>
           ) : (
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
@@ -856,51 +957,50 @@ const GeneralPage: React.FC = () => {
             layout="vertical"
             onFinish={handleSearch}
             initialValues={{
-              searchLayer: 'all',
-              nodeType: 'all',
               depth: 2,
-              relationWhitelist: [],
+              limit: 5000,
+              layerWhitelist: [...LAYER_ORDER],
             }}
           >
             <Row gutter={12} align="bottom">
-              <Col xs={24} lg={7}>
-                <Form.Item name="keyword" label="节点名称" style={{ marginBottom: 0 }}>
-                  <Input placeholder="输入企业、事件、风险特征或法规名称" allowClear />
+              <Col xs={24} md={8} lg={6}>
+                <Form.Item name="keyword" label="检索关键词" style={{ marginBottom: 0 }}>
+                  <Input placeholder="输入企业、个人、基金等名称" allowClear />
                 </Form.Item>
               </Col>
-              <Col xs={12} lg={3}>
-                <Form.Item name="searchLayer" label="检索层级" style={{ marginBottom: 0 }}>
-                  <Select options={[
-                    { value: 'all', label: '全部层级' },
-                    ...LAYER_ORDER.map(value => ({ value, label: LAYER_META[value].label })),
-                  ]} />
-                </Form.Item>
-              </Col>
-              <Col xs={12} lg={3}>
-                <Form.Item name="nodeType" label="节点类型" style={{ marginBottom: 0 }}>
-                  <Select showSearch options={[{ value: 'all', label: '全部类型' }, ...NODE_TYPE_OPTIONS]} />
-                </Form.Item>
-              </Col>
-              <Col xs={12} lg={2}>
+              <Col xs={12} md={4} lg={2}>
                 <Form.Item name="depth" label="穿透深度" style={{ marginBottom: 0 }}>
                   <Select options={[1, 2, 3, 4, 5].map(value => ({ value, label: `${value}跳` }))} />
                 </Form.Item>
               </Col>
-              <Col xs={24} lg={6}>
-                <Form.Item name="relationWhitelist" label="关系白名单" style={{ marginBottom: 0 }}>
-                  <Select mode="multiple" maxTagCount="responsive" allowClear options={RELATION_OPTIONS} />
+              <Col xs={12} md={4} lg={2}>
+                <Form.Item name="limit" label="返回上限" style={{ marginBottom: 0 }}>
+                  <Select
+                    options={[500, 1000, 2000, 5000].map(value => ({ value, label: value.toLocaleString() }))}
+                  />
                 </Form.Item>
               </Col>
-              <Col xs={24} lg={3}>
-                <Space wrap>
-                  <Tooltip title="搜索">
+              <Col xs={24} md={8} lg={6}>
+                <Form.Item name="layerWhitelist" label="检索层级" style={{ marginBottom: 0 }}>
+                  <Checkbox.Group
+                    options={LAYER_ORDER.map(value => ({
+                      value,
+                      label: LAYER_META[value].label,
+                    }))}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12} lg={8}>
+                <Space wrap style={{ marginTop: 2 }}>
+                  <Tooltip title="搜索（统一使用增强版 POST 接口）">
                     <Button
                       data-testid="kg-search-button"
                       type="primary"
                       htmlType="submit"
                       icon={<SearchOutlined />}
-                      onClick={() => form.submit()}
-                    />
+                    >
+                      搜索
+                    </Button>
                   </Tooltip>
                   <Tooltip title="刷新默认子图"><Button icon={<ReloadOutlined />} onClick={() => void handleRefresh()} /></Tooltip>
                   <Tooltip title="清空"><Button icon={<ClearOutlined />} onClick={handleClear} /></Tooltip>
@@ -917,7 +1017,15 @@ const GeneralPage: React.FC = () => {
           <Alert
             type={summary.truncated ? 'warning' : 'info'}
             showIcon
-            message={summary.truncated ? '当前结果已达到返回上限，图谱可能不是完整子图' : '查询提示'}
+            message={
+              summary.evidenceDiagnosis && !summary.evidenceDiagnosis.evidenceNodeFound
+                ? '当前主体查询未命中事件层、特征层和法规层证据。系统已限制主体层扩散，但图谱数据中可能缺少主体到证据层的连接，请检查数据建模或标签映射。'
+                : summary.subjectExpansionBlocked
+                  ? '系统已阻止超级节点继续扩散到大量无关主体节点，并优先保留事件层、特征层和法规层证据。'
+                  : summary.truncated
+                    ? '当前结果达到返回上限，图谱可能不是完整子图。系统已优先保留中心主体和关键关联节点。'
+                    : '查询提示'
+            }
             description={warnings.join('；')}
           />
         )}
@@ -925,10 +1033,8 @@ const GeneralPage: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message={viewMode === 'aggregate' ? '当前使用聚合视图' : '当前使用核心视图'}
-            description={viewMode === 'aggregate'
-              ? `接口返回 ${visibleGraph.nodes.length.toLocaleString()} 个节点，当前折叠 ${displayGraph.foldedNodeCount.toLocaleString()} 个节点；点击聚合节点可展开 Top 20。`
-              : `当前优先展示中心、一跳邻居、高度数和跨层桥接节点，已隐藏 ${displayGraph.foldedNodeCount.toLocaleString()} 个低优先级节点。`}
+            message="当前使用聚合视图"
+            description={`接口返回 ${visibleGraph.nodes.length.toLocaleString()} 个节点，当前折叠 ${displayGraph.foldedNodeCount.toLocaleString()} 个节点；点击聚合节点可展开 Top 20。`}
           />
         )}
         {graphError && (
@@ -947,11 +1053,20 @@ const GeneralPage: React.FC = () => {
 
         <Card
           title={(
-            <Space>
+            <Space direction="vertical" size={6}>
+              <Space>
               <NodeIndexOutlined />
               <span>主体驱动交互图谱</span>
-              <Tag>{displayGraph.nodes.length} 节点</Tag>
-              <Tag>{displayGraph.edges.length} 关系</Tag>
+              </Space>
+              <ResultStatsBar
+                stats={currentResultStats}
+                selectedNodeTypesByLayer={filterState.selectedNodeTypesByLayer}
+                selectedEdgeTypes={filterState.selectedEdgeTypes}
+                onSelectNodeType={toggleNodeType}
+                onSelectEdgeType={toggleGlobalEdgeType}
+                onClearNodeTypes={clearNodeTypeFilters}
+                onClearEdgeTypes={clearEdgeTypeFilters}
+              />
             </Space>
           )}
           extra={(
@@ -995,7 +1110,8 @@ const GeneralPage: React.FC = () => {
           )}
           styles={{ body: { padding: 0, minHeight: 620, position: 'relative' } }}
         >
-          {loading && (
+          <GraphSkeleton visible={loading && !initialized} />
+          {loading && initialized && (
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -1034,6 +1150,7 @@ const GeneralPage: React.FC = () => {
               filterMode={filterState.filterMode}
               loading={loading}
               onNodeClick={handleGraphNodeClick}
+              hideLabels={autoHideLabels}
               onNodeDoubleClick={handleGraphNodeDoubleClick}
               onEdgeClick={handleGraphEdgeClick}
               onRenderError={setGraphError}
@@ -1042,110 +1159,78 @@ const GeneralPage: React.FC = () => {
         </Card>
 
         <div style={{ color: '#8c8c8c', fontSize: 12 }}>
-          当前子图统计与图谱展示一致：nodes.length={displayGraph.nodes.length}、
-          edges.length={displayGraph.edges.length}；当前视图为
-          {VIEW_OPTIONS.find(option => option.value === viewMode)?.label}，布局为
-          {LAYOUT_OPTIONS.find(option => option.value === resolvedLayoutMode)?.label}。
+          当前使用{LAYOUT_OPTIONS.find(option => option.value === resolvedLayoutMode)?.label || '自动'}图谱视图：节点根据真实关系在画布中自然分布，颜色表示四层语义，跨层连接节点优先使用圆形。
+          {displayGraph.nodes.length} 节点 · {displayGraph.edges.length} 关系 · 视图
+          {VIEW_OPTIONS.find(option => option.value === viewMode)?.label}
         </div>
       </Space>
 
-      <Drawer
-        title={selectedNode
-          ? `节点详情 - ${selectedNode.name}`
-          : selectedEdge
-            ? `关系详情 - ${selectedEdge.type}`
-            : '图谱详情'}
-        width={460}
-        open={Boolean(selectedNode || selectedEdge)}
+      <GraphDetailDrawer
+        selectedNode={selectedNode}
+        selectedEdge={selectedEdge}
+        displayNodeCount={displayGraph.nodes.length}
+        displayEdgeCount={displayGraph.edges.length}
+        viewMode={viewMode}
+        layoutMode={resolvedLayoutMode}
+        traceId={traceId}
+        summary={summary}
+        warnings={warnings}
+        loading={loading}
         onClose={() => {
           setSelectedNode(null);
           setSelectedEdge(null);
         }}
+        onExpand={handleExpand}
+        onSetCenter={(node) => {
+          setCenterOverrideId(node.id);
+          setOnlyCenterNeighbors(false);
+          setViewMode('semantic');
+          setSelectedNode(null);
+          message.success(`已将”${node.name}”设为当前中心`);
+        }}
+        onHighlightPath={handleHighlightPath}
+      />
+
+      <Modal
+        title="超级节点展开确认"
+        open={Boolean(pendingHubNode)}
+        onCancel={() => setPendingHubNode(null)}
+        footer={null}
+        width={420}
       >
-        {selectedNode && (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="节点名称">{selectedNode.name}</Descriptions.Item>
-              <Descriptions.Item label="节点 ID">{selectedNode.id}</Descriptions.Item>
-              <Descriptions.Item label="层级">
-                <Tag color={selectedNode.layer === 'Unknown' ? 'default' : LAYER_META[selectedNode.layer].color}>
-                  {selectedNode.layer}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="类型">{selectedNode.type}</Descriptions.Item>
-              <Descriptions.Item label="度数">{selectedNode.degree || 0}</Descriptions.Item>
-              <Descriptions.Item label="标签">
-                {selectedNode.labels.map(label => <Tag key={label}>{label}</Tag>)}
-              </Descriptions.Item>
-              {Object.entries(selectedNode.properties).map(([key, value]) => (
-                <Descriptions.Item key={key} label={GENERAL_CONFIG.propertyMap[key]?.label || key}>
-                  <span style={{ wordBreak: 'break-all' }}>
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                  </span>
-                </Descriptions.Item>
-              ))}
-            </Descriptions>
-            <Button
-              block
-              type="primary"
-              icon={<NodeIndexOutlined />}
-              loading={loading}
-              onClick={() => void handleExpand(selectedNode)}
-            >
-              按当前深度展开关联子图
-            </Button>
-            <Button
-              block
-              onClick={() => {
-                setCenterOverrideId(selectedNode.id);
-                setOnlyCenterNeighbors(false);
-                setViewMode('core');
-                setSelectedNode(null);
-                message.success(`已将“${selectedNode.name}”设为当前中心`);
-              }}
-            >
-              设为中心节点
-            </Button>
-          </Space>
+        {pendingHubNode && (
+          <div>
+            <p>
+              节点 <strong>{pendingHubNode.name}</strong> 已连接
+              <strong>{(pendingHubNode.hubDegree || 0).toLocaleString()}</strong> 个主体节点，
+              系统已默认折叠其同层主体扩散，但保留事件、特征、法规证据。
+            </p>
+            <p style={{ color: '#8c8c8c', fontSize: 13 }}>
+              是否强制加载部分主体邻居？
+            </p>
+            <Space style={{ marginTop: 12 }}>
+              <Button
+                type="primary"
+                onClick={() => {
+                  setPendingHubNode(null);
+                  handleExpand(pendingHubNode, true, 100);
+                }}
+              >
+                加载前 100 个
+              </Button>
+              <Button
+                onClick={() => {
+                  setPendingHubNode(null);
+                  handleExpand(pendingHubNode, true, 300);
+                }}
+              >
+                加载前 300 个
+              </Button>
+              <Button onClick={() => setPendingHubNode(null)}>取消</Button>
+            </Space>
+          </div>
         )}
-        {selectedEdge && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="关系类型">{selectedEdge.type}</Descriptions.Item>
-            <Descriptions.Item label="Source">{selectedEdge.source}</Descriptions.Item>
-            <Descriptions.Item label="Target">{selectedEdge.target}</Descriptions.Item>
-            {selectedEdge.count && (
-              <Descriptions.Item label="聚合数量">{selectedEdge.count}</Descriptions.Item>
-            )}
-            {Object.entries(selectedEdge.properties || {}).map(([key, value]) => (
-              <Descriptions.Item key={key} label={key}>
-                <span style={{ wordBreak: 'break-all' }}>
-                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                </span>
-              </Descriptions.Item>
-            ))}
-          </Descriptions>
-        )}
-        {(selectedNode || selectedEdge) && (
-          <>
-            <div style={{ fontWeight: 600, margin: '20px 0 10px' }}>图谱摘要</div>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="当前节点数">{displayGraph.nodes.length}</Descriptions.Item>
-              <Descriptions.Item label="当前关系数">{displayGraph.edges.length}</Descriptions.Item>
-              <Descriptions.Item label="视图模式">
-                {VIEW_OPTIONS.find(option => option.value === viewMode)?.label}
-              </Descriptions.Item>
-              <Descriptions.Item label="布局模式">
-                {LAYOUT_OPTIONS.find(option => option.value === resolvedLayoutMode)?.label}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trace ID">{traceId || '-'}</Descriptions.Item>
-              <Descriptions.Item label="是否截断">{summary.truncated ? '是' : '否'}</Descriptions.Item>
-              <Descriptions.Item label="Warnings">
-                {warnings.length ? warnings.join('；') : '无'}
-              </Descriptions.Item>
-            </Descriptions>
-          </>
-        )}
-      </Drawer>
+      </Modal>
     </PageContainer>
   );
 };

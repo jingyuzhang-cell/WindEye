@@ -231,6 +231,50 @@ class ExpandRequest(BaseModel):
     includeCrossLayer: bool = Field(default=True, description="是否包含跨层关系")
     includeProperties: bool = Field(default=True, description="是否返回节点和关系属性")
     responseMode: str = Field(default="full", description="返回模式：full / summary")
+    forceExpandHub: bool = Field(default=False, description="强制展开 hub 节点（配合 maxFanout）")
+    maxFanout: int = Field(default=100, ge=1, le=500, description="强制展开 hub 时的最大邻居数")
+
+    @field_validator("layerWhitelist")
+    @classmethod
+    def _validate_layer_whitelist(cls, v: list[str]) -> list[str]:
+        allowed = {"Subject", "Event", "Feature", "Regulation"}
+        invalid = [x for x in v if x not in allowed]
+        if invalid:
+            raise ValueError(f"Invalid layer whitelist entries: {invalid}. Allowed: {sorted(allowed)}")
+        return v
+
+    @field_validator("relationWhitelist")
+    @classmethod
+    def _validate_relations(cls, v: list[str]) -> list[str]:
+        if "*" in v:
+            return v
+        invalid = [r for r in v if r not in ALLOWED_REL_TYPES]
+        if invalid:
+            raise ValueError(
+                f"Invalid relation types: {invalid}. Allowed: {sorted(ALLOWED_REL_TYPES)}"
+            )
+        return v
+
+
+class SubjectTraverseRequest(BaseModel):
+    """Subject-centered traversal request for large four-layer graphs."""
+
+    subject: str | None = Field(default=None, description="主体名称，支持企业/个人/基金等名称")
+    query: str | None = Field(default=None, description="主体名称兼容字段")
+    startNodeId: str | None = Field(default=None, description="Neo4j elementId 精确入口")
+    depth: int = Field(default=3, ge=1, le=5, description="主体穿透跳数")
+    centerLimit: int = Field(default=5, ge=1, le=20, description="主体名称命中多个中心时的最大中心数")
+    nodeLimit: int = Field(default=500, ge=50, le=5000, description="前端单次渲染节点上限")
+    edgeLimit: int = Field(default=2000, ge=100, le=20000, description="前端单次渲染关系上限")
+    relationWhitelist: list[str] = Field(
+        default_factory=list,
+        description="允许的关系类型，空=默认白名单，[\"*\"]=不限制",
+    )
+    layerWhitelist: list[str] = Field(
+        default_factory=lambda: ["Subject", "Event", "Feature", "Regulation"],
+        description="返回层级开关，如 Subject/Event/Feature/Regulation",
+    )
+    includeProperties: bool = Field(default=True, description="是否返回节点和关系属性")
 
     @field_validator("layerWhitelist")
     @classmethod
@@ -331,6 +375,188 @@ LAYER_BUSINESS_LABELS = sorted(
     }
 )
 
+# ── evidence_first expansion policy ────────────────────────────────────
+
+EVIDENCE_LABELS = (
+    LAYER_LABEL_MAP["Event"]
+    + LAYER_LABEL_MAP["Feature"]
+    + LAYER_LABEL_MAP["Regulation"]
+)
+SUBJECT_LABELS = LAYER_LABEL_MAP["Subject"]
+
+ALLOWED_LAYER_TRANSITIONS: dict[str, set[str]] = {
+    "Subject":    {"Subject", "Event", "Feature", "Regulation"},
+    "Event":      {"Feature", "Regulation"},
+    "Feature":    {"Regulation"},
+    "Regulation": set(),
+}
+
+HUB_NODE_DEGREE_THRESHOLD = 500
+HUB_NODE_TYPE_THRESHOLD: dict[str, int] = {
+    "SECURITY": 300, "PFUND": 500, "PFCOMPANY": 500,
+    "COMPANY": 1000, "PERSON": 800, "TIME": 300,
+    "REGULATOR": 300, "Law": 1000, "Regulation": 1000,
+}
+
+STRONG_SUBJECT_RELATIONS = {
+    "GUARANTEE", "CONTROLLER", "CONTROL", "INVEST", "CAUSE", "TRIGGERS",
+}
+
+# Per-node limits (tightened for evidence_first)
+EVIDENCE_LIMIT_PER_NODE = 500
+SUBJECT_LIMIT_PER_NODE = 20
+HUB_STRONG_SUBJECT_LIMIT_PER_NODE = 10
+
+# Global limits (Subject strictly capped)
+MAX_EVIDENCE_NODES_TOTAL = 800
+MAX_SUBJECT_NODES_TOTAL = 200
+EVIDENCE_COMPLETION_LIMIT = 5000
+
+LAYER_QUOTA: dict[str, int] = {"Subject": 200, "Event": 300, "Feature": 250, "Regulation": 250}
+
+
+def resolve_layer(labels: list[str]) -> str:
+    """Map a node's business labels to its four-layer category."""
+    for layer, layer_labels in LAYER_LABEL_MAP.items():
+        if any(label in layer_labels for label in labels):
+            return layer
+    return "Unknown"
+
+
+def get_node_degrees(tx, node_ids: list[str]) -> dict[str, int]:
+    """Batch-fetch degrees for multiple nodes (avoids per-node single queries).
+
+    Uses Redis cache when available to skip repeated Neo4j degree queries.
+    """
+    if not node_ids:
+        return {}
+    result: dict[str, int] = {}
+
+    # 1) Try Redis cache first
+    try:
+        from services.graph_cache_service import (
+            get_node_degrees_cached,
+            set_node_degrees_batch,
+        )
+        result.update(get_node_degrees_cached(node_ids))
+    except Exception:
+        pass
+
+    # 2) Query Neo4j for the rest (uncached)
+    uncached = [nid for nid in node_ids if nid not in result]
+    if uncached:
+        fresh: dict[str, int] = {}
+        for i in range(0, len(uncached), 500):
+            batch = uncached[i:i + 500]
+            records = tx.run(
+                "MATCH (n)-[r]-() WHERE elementId(n) IN $ids "
+                "RETURN elementId(n) AS id, count(r) AS degree",
+                ids=batch,
+            )
+            for rec in records:
+                nid = str(rec["id"])
+                deg = int(rec["degree"] or 0)
+                fresh[nid] = deg
+                result[nid] = deg
+        # 3) Write back to Redis
+        if fresh:
+            try:
+                set_node_degrees_batch(fresh)
+            except Exception:
+                pass
+    return result
+
+
+def is_hub_node(labels: list[str], degree: int) -> bool:
+    """Check whether a node qualifies as a super-node (hub)."""
+    for label in labels:
+        if label in HUB_NODE_TYPE_THRESHOLD:
+            return degree >= HUB_NODE_TYPE_THRESHOLD[label]
+    return degree >= HUB_NODE_DEGREE_THRESHOLD
+
+
+def should_include_neighbor(
+    current_layer: str,
+    target_layer: str,
+    rel_type: str,
+    current_is_hub: bool,
+    policy: str,
+) -> str:
+    """Decide how to handle a neighbor during evidence_first BFS.
+
+    Returns one of:
+      - "include_and_expand": add node + edge, continue expanding from it
+      - "include_terminal":   add node + edge, do NOT expand further
+      - "block_subject_expansion": do not add; record as blocked
+    """
+    if policy != "evidence_first":
+        return "include_and_expand"
+
+    # Evidence layers are ALWAYS retained and expanded
+    if target_layer in {"Event", "Feature", "Regulation"}:
+        return "include_and_expand"
+
+    # Regulation is the endpoint — do not backflow
+    if current_layer == "Regulation":
+        return "skip"
+
+    # Feature only continues into Regulation
+    if current_layer == "Feature" and target_layer != "Regulation":
+        return "skip"
+
+    # Event only continues into Feature / Regulation
+    if current_layer == "Event" and target_layer not in {"Feature", "Regulation"}:
+        return "include_terminal" if target_layer == "Subject" else "skip"
+
+    # Evidence→Subject backflow: retain as terminal
+    if current_layer in {"Event", "Feature", "Regulation"} and target_layer == "Subject":
+        return "include_terminal"
+
+    # Hub→Subject: the dangerous fan-out
+    if current_is_hub and target_layer == "Subject":
+        if rel_type in STRONG_SUBJECT_RELATIONS:
+            return "include_terminal"
+        return "block_subject_expansion"
+
+    # Ordinary Subject→Subject: ALWAYS TERMINAL (prevent cascading explosion)
+    if target_layer == "Subject":
+        return "include_terminal"
+
+    return "include_terminal"
+
+
+def build_layer_budget(node_limit: int) -> dict[str, int]:
+    """evidence_first 分层预算：Subject 不能占满全部 nodeLimit。
+
+    Event / Feature / Regulation 必须预留独立空间。
+    """
+    if node_limit <= 0:
+        node_limit = 1000
+    return {
+        "Subject":    min(200, int(node_limit * 0.25)),
+        "Event":      min(300, int(node_limit * 0.30)),
+        "Feature":    min(250, int(node_limit * 0.25)),
+        "Regulation": min(250, int(node_limit * 0.25)),
+        "Unknown":    min(50,  int(node_limit * 0.05)),
+    }
+
+
+def can_add_node_by_layer(
+    node_id: str,
+    labels: list[str],
+    layer_counts: dict[str, int],
+    layer_budget: dict[str, int],
+    must_keep: bool = False,
+) -> bool:
+    """Check whether a node can be added without exceeding its layer budget."""
+    if must_keep:
+        return True
+    layer = resolve_layer(labels)
+    current = layer_counts.get(layer, 0)
+    budget = layer_budget.get(layer, layer_budget.get("Unknown", 50))
+    return current < budget
+
+
 NODE_TYPE_DISPLAY_NAMES = {
     "COMPANY": "企业",
     "PERSON": "自然人",
@@ -414,6 +640,7 @@ def _collect_graph_statistics(force: bool = False) -> dict:
     the dashboard and graph page request the same statistics concurrently.
     """
     now = time.monotonic()
+    # 1) In-memory cache
     cached = _statistics_cache.get("data")
     if (
         not force
@@ -421,6 +648,16 @@ def _collect_graph_statistics(force: bool = False) -> dict:
         and now < float(_statistics_cache.get("expires_at", 0.0))
     ):
         return cached
+    # 2) Redis cache (longer TTL, shared across workers)
+    try:
+        from services.graph_cache_service import get_global_stats as _redis_stats
+        redis_cached = _redis_stats()
+        if isinstance(redis_cached, dict) and not force:
+            _statistics_cache["data"] = redis_cached
+            _statistics_cache["expires_at"] = now + 60  # short in-memory hold
+            return redis_cached
+    except Exception:
+        pass
 
     client = _client()
     params = _statistics_params()
@@ -565,6 +802,12 @@ def _collect_graph_statistics(force: bool = False) -> dict:
     }
     _statistics_cache["data"] = result
     _statistics_cache["expires_at"] = now + _STATISTICS_CACHE_TTL_SECONDS
+    # 3) Write to Redis for cross-worker sharing
+    try:
+        from services.graph_cache_service import set_global_stats as _redis_write
+        _redis_write(result)
+    except Exception:
+        pass
     return result
 
 
@@ -730,6 +973,10 @@ SEARCH_NAME_PROPERTIES = [
     "event_name", "regulation_name", "law_name", "factor_nm", "feature_nm",
 ]
 
+SUBJECT_SEARCH_NAME_PROPERTIES = [
+    "name", "title", "COMPANY_NM", "PERSON_NM", "id",
+]
+
 SEARCH_CONTENT_PROPERTIES = [
     "e_text", "definition", "description", "content", "text", "summary",
 ]
@@ -846,10 +1093,15 @@ def _search_subject_cascade(
     subject_depth: int,
     relation_whitelist: list[str] | None,
     include_properties: bool,
+    node_limit: int = 500,
+    edge_limit: int = 2000,
+    include_semantic_search: bool = True,
+    semantic_terms: list[str] | None = None,
 ) -> dict:
-    """Build an unbounded, stage-oriented Subject → Event → Feature → Regulation graph."""
+    """Build a bounded, stage-oriented Subject → Event → Feature → Regulation graph."""
     node_map = {node["id"]: node for node in center_nodes}
     edge_map: dict[str, dict] = {}
+    warnings: list[str] = []
     subject_ids = set(node_map)
     frontier_ids = set(subject_ids)
     effective_rel = relation_whitelist
@@ -861,6 +1113,7 @@ def _search_subject_cascade(
         params: dict = {
             "frontier": list(frontier_ids),
             "subjectLabels": subject_labels,
+            "edgeLimit": edge_limit,
         }
         rel_filter = ""
         if effective_rel is not None:
@@ -873,6 +1126,7 @@ def _search_subject_cascade(
               AND any(label IN labels(target) WHERE label IN $subjectLabels)
               {rel_filter}
             RETURN DISTINCT source, r, target
+            LIMIT $edgeLimit
             """,
             params,
             timeout_seconds=120.0,
@@ -896,16 +1150,16 @@ def _search_subject_cascade(
         frontier_ids = next_frontier
 
     primary_id = center_nodes[0]["id"]
-    term_owner: dict[str, str] = {
-        term: primary_id for term in _keyword_variants(keyword)
-    }
-    for subject_id in subject_ids:
-        node = node_map.get(subject_id)
-        if not node:
-            continue
-        name = _serialized_node_name(node).strip()
-        if len(name) >= 3:
-            term_owner.setdefault(name, subject_id)
+    base_terms = semantic_terms or _keyword_variants(keyword)
+    term_owner: dict[str, str] = {term: primary_id for term in base_terms}
+    if include_semantic_search and semantic_terms is None:
+        for subject_id in subject_ids:
+            node = node_map.get(subject_id)
+            if not node:
+                continue
+            name = _serialized_node_name(node).strip()
+            if len(name) >= 3:
+                term_owner.setdefault(name, subject_id)
     terms = sorted(term_owner, key=lambda value: (-len(value), value))
 
     event_labels = LAYER_LABEL_MAP["Event"]
@@ -917,8 +1171,9 @@ def _search_subject_cascade(
         WHERE elementId(subject) IN $subjectIds
           AND any(label IN labels(event) WHERE label IN $eventLabels)
         RETURN DISTINCT subject, r, event
+        LIMIT $edgeLimit
         """,
-        {"subjectIds": list(subject_ids), "eventLabels": event_labels},
+        {"subjectIds": list(subject_ids), "eventLabels": event_labels, "edgeLimit": edge_limit},
         timeout_seconds=120.0,
     )
     for row in direct_event_rows:
@@ -936,35 +1191,40 @@ def _search_subject_cascade(
         direct_event_pairs.add((subject_data["id"], event_data["id"]))
         edge_map[edge_data["id"]] = edge_data
 
-    event_conditions = " OR ".join(
-        f"any(term IN $terms WHERE coalesce(event.{prop}, '') CONTAINS term)"
-        for prop in (*SEARCH_NAME_PROPERTIES, *SEARCH_CONTENT_PROPERTIES)
-    )
-    event_rows, _ = db.execute_read_with_summary(
-        f"""
-        MATCH (event)
-        WHERE any(label IN labels(event) WHERE label IN $eventLabels)
-          AND ({event_conditions})
-        RETURN DISTINCT event
-        """,
-        {"terms": terms, "eventLabels": event_labels},
-        timeout_seconds=120.0,
-    )
     event_term: dict[str, str] = {}
-    for row in event_rows:
-        event = row.get("event")
-        if event is None:
-            continue
-        data = Neo4jClient.serialize_node(event)
-        node_map[data["id"]] = data
-        event_ids.add(data["id"])
-        text = _serialized_node_text(data)
-        matched_term = next((term for term in terms if term in text), keyword)
-        event_term[data["id"]] = matched_term
-        owner_id = term_owner.get(matched_term, primary_id)
-        if (owner_id, data["id"]) not in direct_event_pairs:
-            edge = _cascade_virtual_edge(owner_id, data["id"], "语义关联事件", matched_term)
-            edge_map[edge["id"]] = edge
+    if include_semantic_search:
+        event_rows, _ = db.execute_read_with_summary(
+            """
+            MATCH (event)
+            WHERE any(label IN labels(event) WHERE label IN $eventLabels)
+              AND any(prop IN $semanticProps WHERE
+                any(term IN $terms WHERE coalesce(event[prop], '') CONTAINS term)
+              )
+            RETURN DISTINCT event
+            LIMIT $nodeLimit
+            """,
+            {
+                "terms": terms,
+                "eventLabels": event_labels,
+                "semanticProps": [*SEARCH_NAME_PROPERTIES, *SEARCH_CONTENT_PROPERTIES],
+                "nodeLimit": node_limit,
+            },
+            timeout_seconds=120.0,
+        )
+        for row in event_rows:
+            event = row.get("event")
+            if event is None:
+                continue
+            data = Neo4jClient.serialize_node(event)
+            node_map[data["id"]] = data
+            event_ids.add(data["id"])
+            text = _serialized_node_text(data)
+            matched_term = next((term for term in terms if term in text), keyword)
+            event_term[data["id"]] = matched_term
+            owner_id = term_owner.get(matched_term, primary_id)
+            if (owner_id, data["id"]) not in direct_event_pairs:
+                edge = _cascade_virtual_edge(owner_id, data["id"], "语义关联事件", matched_term)
+                edge_map[edge["id"]] = edge
 
     feature_labels = LAYER_LABEL_MAP["Feature"]
     feature_ids: set[str] = set()
@@ -980,10 +1240,12 @@ def _search_subject_cascade(
             WHERE elementId(event) IN $eventIds
               AND any(label IN labels(neighbor) WHERE label IN $classifiedLabels)
             RETURN DISTINCT event, r, neighbor
+            LIMIT $edgeLimit
             """,
             {
                 "eventIds": list(event_ids),
                 "classifiedLabels": LAYER_BUSINESS_LABELS,
+                "edgeLimit": edge_limit,
             },
             timeout_seconds=120.0,
         )
@@ -1021,8 +1283,9 @@ def _search_subject_cascade(
             WHERE elementId(event) IN $eventIds
               AND any(label IN labels(feature) WHERE label IN $featureLabels)
             RETURN DISTINCT event, r, feature
+            LIMIT $edgeLimit
             """,
-            {"eventIds": list(event_ids), "featureLabels": feature_labels},
+            {"eventIds": list(event_ids), "featureLabels": feature_labels, "edgeLimit": edge_limit},
             timeout_seconds=120.0,
         )
         for row in direct_feature_rows:
@@ -1044,27 +1307,32 @@ def _search_subject_cascade(
             direct_feature_pairs.add((event_data["id"], feature_data["id"]))
             edge_map[edge_data["id"]] = edge_data
 
-    feature_conditions = " OR ".join(
-        f"any(term IN $terms WHERE coalesce(feature.{prop}, '') CONTAINS term)"
-        for prop in (*SEARCH_NAME_PROPERTIES, *SEARCH_CONTENT_PROPERTIES)
-    )
-    feature_rows, _ = db.execute_read_with_summary(
-        f"""
-        MATCH (feature)
-        WHERE any(label IN labels(feature) WHERE label IN $featureLabels)
-          AND ({feature_conditions})
-        RETURN DISTINCT feature
-        """,
-        {"terms": terms, "featureLabels": feature_labels},
-        timeout_seconds=120.0,
-    )
-    for row in feature_rows:
-        feature = row.get("feature")
-        if feature is None:
-            continue
-        data = Neo4jClient.serialize_node(feature)
-        node_map[data["id"]] = data
-        feature_ids.add(data["id"])
+    if include_semantic_search:
+        feature_rows, _ = db.execute_read_with_summary(
+            """
+            MATCH (feature)
+            WHERE any(label IN labels(feature) WHERE label IN $featureLabels)
+              AND any(prop IN $semanticProps WHERE
+                any(term IN $terms WHERE coalesce(feature[prop], '') CONTAINS term)
+              )
+            RETURN DISTINCT feature
+            LIMIT $nodeLimit
+            """,
+            {
+                "terms": terms,
+                "featureLabels": feature_labels,
+                "semanticProps": [*SEARCH_NAME_PROPERTIES, *SEARCH_CONTENT_PROPERTIES],
+                "nodeLimit": node_limit,
+            },
+            timeout_seconds=120.0,
+        )
+        for row in feature_rows:
+            feature = row.get("feature")
+            if feature is None:
+                continue
+            data = Neo4jClient.serialize_node(feature)
+            node_map[data["id"]] = data
+            feature_ids.add(data["id"])
 
     # Include every classified feature neighbor: RiskFactor/RiskFeature stay in
     # the feature pipe, while mapped Action/Law nodes enter regulation.
@@ -1075,10 +1343,12 @@ def _search_subject_cascade(
             WHERE elementId(source) IN $featureIds
               AND any(label IN labels(target) WHERE label IN $classifiedLabels)
             RETURN DISTINCT source, r, target
+            LIMIT $edgeLimit
             """,
             {
                 "featureIds": list(feature_ids),
                 "classifiedLabels": LAYER_BUSINESS_LABELS,
+                "edgeLimit": edge_limit,
             },
             timeout_seconds=120.0,
         )
@@ -1110,7 +1380,7 @@ def _search_subject_cascade(
 
     # Make semantic Event → Feature links explicit when the source database
     # stores both records but omits a direct relationship.
-    if event_ids:
+    if include_semantic_search and event_ids:
         event_by_term: dict[str, str] = {}
         for event_id, matched_term in event_term.items():
             event_by_term.setdefault(matched_term, event_id)
@@ -1131,10 +1401,12 @@ def _search_subject_cascade(
             WHERE elementId(feature) IN $featureIds
               AND any(label IN labels(regulation) WHERE label IN $regulationLabels)
             RETURN DISTINCT feature, r, regulation
+            LIMIT $edgeLimit
             """,
             {
                 "featureIds": list(feature_ids),
                 "regulationLabels": regulation_labels,
+                "edgeLimit": edge_limit,
             },
             timeout_seconds=120.0,
         )
@@ -1165,10 +1437,12 @@ def _search_subject_cascade(
             WHERE elementId(source) IN $regulationIds
               AND any(label IN labels(target) WHERE label IN $regulationLabels)
             RETURN DISTINCT source, r, target
+            LIMIT $edgeLimit
             """,
             {
                 "regulationIds": list(regulation_ids),
                 "regulationLabels": regulation_labels,
+                "edgeLimit": edge_limit,
             },
             timeout_seconds=120.0,
         )
@@ -1188,6 +1462,60 @@ def _search_subject_cascade(
 
     nodes = list(node_map.values())
     edges = list(edge_map.values())
+    truncated = False
+    truncated_by: str | None = None
+
+    if len(nodes) > node_limit:
+        truncated = True
+        truncated_by = "nodeLimit"
+        center_id_set = {node["id"] for node in center_nodes}
+        layer_budget = build_layer_budget(node_limit)
+        kept_nodes = [node for node in nodes if node.get("id") in center_id_set]
+        layer_counts = {
+            layer: sum(_serialized_node_layer(node) == layer for node in kept_nodes)
+            for layer in layer_budget
+        }
+        layered_nodes = sorted(
+            [node for node in nodes if node.get("id") not in center_id_set],
+            key=lambda node: (
+                {"Event": 0, "Feature": 1, "Regulation": 2, "Subject": 3}.get(
+                    _serialized_node_layer(node) or "Unknown",
+                    4,
+                ),
+                _serialized_node_name(node),
+            ),
+        )
+        for node in layered_nodes:
+            if len(kept_nodes) >= node_limit:
+                break
+            layer = _serialized_node_layer(node) or "Unknown"
+            budget = layer_budget.get(layer, layer_budget.get("Unknown", 50))
+            if layer_counts.get(layer, 0) >= budget:
+                continue
+            kept_nodes.append(node)
+            layer_counts[layer] = layer_counts.get(layer, 0) + 1
+        if len(kept_nodes) < node_limit:
+            kept_id_set = {node["id"] for node in kept_nodes}
+            for node in layered_nodes:
+                if len(kept_nodes) >= node_limit:
+                    break
+                if node.get("id") not in kept_id_set:
+                    kept_nodes.append(node)
+                    kept_id_set.add(node.get("id"))
+        kept_ids = {node["id"] for node in kept_nodes}
+        nodes = kept_nodes
+        edges = [
+            edge for edge in edges
+            if edge.get("source") in kept_ids and edge.get("target") in kept_ids
+        ]
+        warnings.append(f"NODE_LIMIT_REACHED: nodeLimit={node_limit}，已按四层证据优先裁剪")
+
+    if len(edges) > edge_limit:
+        truncated = True
+        truncated_by = truncated_by or "edgeLimit"
+        edges = edges[:edge_limit]
+        warnings.append(f"EDGE_LIMIT_REACHED: edgeLimit={edge_limit}，已裁剪关系数量")
+
     stage_counts = {
         "Subject": sum(_serialized_node_layer(node) == "Subject" for node in nodes),
         "Event": sum(_serialized_node_layer(node) == "Event" for node in nodes),
@@ -1197,7 +1525,7 @@ def _search_subject_cascade(
     return {
         "nodes": nodes,
         "edges": edges,
-        "warnings": [],
+        "warnings": warnings,
         "summary": {
             "requestedDepth": subject_depth,
             "actualDepth": subject_depth,
@@ -1210,8 +1538,8 @@ def _search_subject_cascade(
             "nodeTypeCounts": _count_node_types(nodes),
             "edgeTypeCounts": _count_edge_types(edges),
             "frontierCountsByHop": {},
-            "truncated": False,
-            "truncatedBy": None,
+            "truncated": truncated,
+            "truncatedBy": truncated_by,
             "traversalMode": "cascade",
             "cascadeStageCounts": stage_counts,
         },
@@ -1261,6 +1589,35 @@ def _node_matches_layer(node: dict, layer_whitelist: list[str]) -> bool:
     return False
 
 
+def _filter_subgraph_by_layers(
+    nodes: list[dict],
+    edges: list[dict],
+    layer_whitelist: list[str],
+    center_ids: set[str] | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """Filter serialized graph data by four-layer whitelist."""
+    if not layer_whitelist:
+        return nodes, edges
+
+    allowed = set(layer_whitelist)
+    center_ids = center_ids or set()
+    kept_nodes: list[dict] = []
+    kept_ids: set[str] = set()
+    for node in nodes:
+        node_id = node.get("id")
+        layer = _serialized_node_layer(node)
+        if node_id in center_ids or layer in allowed:
+            kept_nodes.append(node)
+            if node_id:
+                kept_ids.add(node_id)
+
+    kept_edges = [
+        edge for edge in edges
+        if edge.get("source") in kept_ids and edge.get("target") in kept_ids
+    ]
+    return kept_nodes, kept_edges
+
+
 def _count_node_types(nodes: list[dict]) -> dict[str, int]:
     """Count nodes by their primary type label (first non-layer label)."""
     layer_codes = {"Subject", "Event", "Feature", "Regulation"}
@@ -1285,6 +1642,96 @@ def _count_edge_types(edges: list[dict]) -> dict[str, int]:
     return counts
 
 
+# ── evidence_first helper queries ──────────────────────────────────────
+
+def _fetch_node_slim(db: "Neo4jClient", node_id: str) -> dict | None:
+    """Fetch a single node's labels and name property (lightweight)."""
+    try:
+        rows, _ = db.execute_read_with_summary(
+            "MATCH (n) WHERE elementId(n) = $nid RETURN labels(n) AS labels, properties(n) AS props",
+            {"nid": node_id}, timeout_seconds=5.0,
+        )
+        if rows:
+            r = rows[0]
+            return {"labels": list(r.get("labels", [])), "properties": dict(r.get("props", {}))}
+    except Exception:
+        pass
+    return None
+
+
+def _query_neighbors_by_labels(
+    db: "Neo4jClient", node_id: str, target_labels: list[str],
+    limit: int, rel_whitelist: list[str] | None,
+) -> list[dict]:
+    """Fetch neighbors matching given target labels, optionally filtered by relation types."""
+    params: dict = {"nid": node_id, "targetLabels": target_labels, "lim": limit}
+    rel_clause = ""
+    if rel_whitelist:
+        params["relWhitelist"] = rel_whitelist
+        rel_clause = "AND type(r) IN $relWhitelist"
+    query = f"""
+    MATCH (n)-[r]-(m)
+    WHERE elementId(n) = $nid
+      AND any(label IN labels(m) WHERE label IN $targetLabels)
+      {rel_clause}
+    RETURN DISTINCT m, r
+    LIMIT $lim
+    """
+    rows, _ = db.execute_read_with_summary(query, params, timeout_seconds=30.0)
+    return [dict(row) for row in rows]
+
+
+def _query_hub_subject_stats(
+    db: "Neo4jClient", node_id: str, subject_labels: list[str],
+    rel_whitelist: list[str] | None,
+) -> list[dict]:
+    """Count Subject neighbors grouped by relation type (no node data fetched)."""
+    params: dict = {"nid": node_id, "subjectLabels": subject_labels}
+    rel_clause = ""
+    if rel_whitelist:
+        params["relWhitelist"] = rel_whitelist
+        rel_clause = "AND type(r) IN $relWhitelist"
+    query = f"""
+    MATCH (n)-[r]-(m)
+    WHERE elementId(n) = $nid
+      AND any(label IN labels(m) WHERE label IN $subjectLabels)
+      {rel_clause}
+    RETURN type(r) AS relType, count(DISTINCT m) AS cnt
+    ORDER BY cnt DESC
+    """
+    rows, _ = db.execute_read_with_summary(query, params, timeout_seconds=15.0)
+    return [{"relType": str(r["relType"]), "cnt": int(r["cnt"])} for r in rows]
+
+
+def _complete_evidence_for_subjects(
+    db: "Neo4jClient", subject_ids: list[str], evidence_labels: list[str],
+    limit: int, rel_whitelist: list[str] | None,
+) -> set[str]:
+    """For retained Subject nodes, fill in direct Event/Feature/Regulation neighbors."""
+    discovered: set[str] = set()
+    if not subject_ids:
+        return discovered
+    for i in range(0, len(subject_ids), 200):
+        batch = subject_ids[i:i + 200]
+        params: dict = {"sids": batch, "evidenceLabels": evidence_labels, "lim": limit}
+        rel_clause = ""
+        if rel_whitelist:
+            params["relWhitelist"] = rel_whitelist
+            rel_clause = "AND type(r) IN $relWhitelist"
+        query = f"""
+        MATCH (s)-[r]-(m)
+        WHERE elementId(s) IN $sids
+          AND any(label IN labels(m) WHERE label IN $evidenceLabels)
+          {rel_clause}
+        RETURN DISTINCT elementId(m) AS mid
+        LIMIT $lim
+        """
+        rows, _ = db.execute_read_with_summary(query, params, timeout_seconds=60.0)
+        for row in rows:
+            discovered.add(str(row["mid"]))
+    return discovered
+
+
 # ── expand_subgraph: unified N-hop subgraph expander ────────────────────
 
 def expand_subgraph(
@@ -1298,6 +1745,9 @@ def expand_subgraph(
     include_cross_layer: bool = True,
     include_properties: bool = True,
     batch_size: int = 300,
+    expansion_policy: str = "safe_default",
+    force_expand_hub: bool = False,
+    max_fanout: int = 100,
 ) -> dict:
     """Unified N-hop subgraph expansion.
 
@@ -1323,9 +1773,37 @@ def expand_subgraph(
     truncated = False
     truncated_by: str | None = None
     actual_depth = 0
-    _ = include_cross_layer  # reserved for future layer-aware traversal
+    _ = include_cross_layer
+
+    # Hub / evidence / layer-budget tracking
+    hub_nodes: list[dict] = []
+    blocked_expansions: list[dict] = []
+    key_subject_ids: set[str] = set(center_ids)
+    layer_budget = build_layer_budget(node_limit)
+    layer_counts: dict[str, int] = {"Subject": 0, "Event": 0, "Feature": 0, "Regulation": 0, "Unknown": 0}
 
     effective_rel = _resolve_relation_whitelist(relation_whitelist or [])
+    use_evidence_first = (expansion_policy == "evidence_first" and not force_expand_hub)
+
+    # ── Phase 0: Evidence completion for center subjects (BEFORE BFS) ─
+    evidence_completion_applied = False
+    if use_evidence_first:
+        try:
+            completed = _complete_evidence_for_subjects(
+                db, list(center_ids), EVIDENCE_LABELS,
+                EVIDENCE_COMPLETION_LIMIT, effective_rel,
+            )
+            for mid in completed:
+                if mid not in visited_ids:
+                    m_labels_s = _fetch_node_slim(db, mid)
+                    m_labels = m_labels_s.get("labels", []) if m_labels_s else []
+                    if can_add_node_by_layer(mid, m_labels, layer_counts, layer_budget):
+                        visited_ids.add(mid)
+                        layer_counts[resolve_layer(m_labels)] += 1
+            if completed:
+                evidence_completion_applied = True
+        except Exception as exc:
+            logger.warning("[expand_subgraph] Evidence completion phase-0 failed: %s", exc)
 
     # ── Phase 1: BFS node discovery ──────────────────────────────────
     try:
@@ -1334,48 +1812,128 @@ def expand_subgraph(
                 frontier_counts_by_hop[str(hop)] = 0
                 continue
 
-            next_frontier: set[str] = set()
             current_frontier = list(frontier_ids)
+            degree_map = get_node_degrees(db.driver.session(), current_frontier)
+            next_frontier: set[str] = set()
 
-            for i in range(0, len(current_frontier), batch_size):
-                batch = current_frontier[i:i + batch_size]
-                params: dict = {"frontier": batch}
-                rel_filter = ""
-                if effective_rel is not None:
-                    params["relWhitelist"] = effective_rel
-                    rel_filter = "\n              AND type(r) IN $relWhitelist"
+            for current_id in current_frontier:
+                current_degree = degree_map.get(current_id, 0)
+                current_node_s = _fetch_node_slim(db, current_id)
+                current_labels = current_node_s.get("labels", []) if current_node_s else []
+                current_layer = resolve_layer(current_labels)
+                current_is_hub = use_evidence_first and is_hub_node(current_labels, current_degree)
 
-                bfs_query = f"""
-                MATCH (n)-[r]-(m)
-                WHERE elementId(n) IN $frontier{rel_filter}
-                RETURN DISTINCT m
-                """
+                if current_is_hub:
+                    hub_nodes.append({
+                        "id": current_id,
+                        "name": current_node_s.get("properties", {}).get("name", current_id),
+                        "degree": current_degree, "layer": current_layer,
+                    })
 
-                rows, _ = db.execute_read_with_summary(bfs_query, params, timeout_seconds=30.0)
-
-                for row in rows:
+                # --- 1a) Evidence neighbors (always fetched, budget-checked) ---
+                evidence_rows = _query_neighbors_by_labels(
+                    db, current_id, EVIDENCE_LABELS, EVIDENCE_LIMIT_PER_NODE, effective_rel,
+                )
+                for row in evidence_rows:
                     m = row.get("m")
                     if m is None:
                         continue
                     mid = m.element_id
                     if mid in visited_ids:
                         continue
+                    m_labels = list(m.labels)
+                    target_layer = resolve_layer(m_labels)
 
-                    # serialize to check layer whitelist
-                    m_serialized = Neo4jClient.serialize_node(m) if include_properties else {"id": mid, "labels": list(m.labels), "properties": {}}
-                    if layer_whitelist and not _node_matches_layer(m_serialized, layer_whitelist):
+                    # Must respect layer budget
+                    if not can_add_node_by_layer(mid, m_labels, layer_counts, layer_budget):
                         continue
 
                     visited_ids.add(mid)
-                    next_frontier.add(mid)
+                    layer_counts[target_layer] = layer_counts.get(target_layer, 0) + 1
+
+                    allowed_targets = ALLOWED_LAYER_TRANSITIONS.get(current_layer, set())
+                    if target_layer in allowed_targets:
+                        next_frontier.add(mid)
 
                     if len(visited_ids) >= node_limit:
-                        truncated = True
-                        truncated_by = "nodeLimit"
-                        warnings.append(
-                            f"NODE_LIMIT_REACHED: nodeLimit={node_limit}，返回结果可能不是完整子图"
-                        )
+                        truncated = True; truncated_by = "nodeLimit"
+                        warnings.append(f"NODE_LIMIT_REACHED: nodeLimit={node_limit}，已按中心主体优先裁剪")
                         break
+
+                if truncated:
+                    break
+
+                # --- 1b) Subject neighbors (strictly budget-gated) ---
+                if current_is_hub:
+                    # Stats-only for weak-relation subjects
+                    hub_stats = _query_hub_subject_stats(
+                        db, current_id, SUBJECT_LABELS, effective_rel,
+                    )
+                    total_blocked = sum(s["cnt"] for s in hub_stats)
+                    if total_blocked > 0:
+                        blocked_expansions.append({
+                            "hubId": current_id,
+                            "hubName": current_node_s.get("properties", {}).get("name", current_id),
+                            "degree": current_degree,
+                            "blockedCount": total_blocked,
+                            "blockedRelationTypes": [s["relType"] for s in hub_stats[:5]],
+                        })
+                    # Strong-relation subjects: terminal only, subject to budget
+                    strong_rel = list(STRONG_SUBJECT_RELATIONS & set(effective_rel or [])) or (
+                        list(STRONG_SUBJECT_RELATIONS) if effective_rel is None else []
+                    )
+                    if strong_rel and layer_counts.get("Subject", 0) < MAX_SUBJECT_NODES_TOTAL:
+                        strong_rows = _query_neighbors_by_labels(
+                            db, current_id, SUBJECT_LABELS,
+                            HUB_STRONG_SUBJECT_LIMIT_PER_NODE,
+                            strong_rel if effective_rel is not None else None,
+                        )
+                        for row in strong_rows:
+                            m = row.get("m")
+                            if m is None:
+                                continue
+                            mid = m.element_id
+                            if mid in visited_ids:
+                                continue
+                            m_labels = list(m.labels)
+                            if not can_add_node_by_layer(mid, m_labels, layer_counts, layer_budget):
+                                break
+                            visited_ids.add(mid)
+                            layer_counts["Subject"] = layer_counts.get("Subject", 0) + 1
+                            key_subject_ids.add(mid)
+                            # terminal: do not add to next_frontier
+                else:
+                    # Non-hub → Subject: budget-gated
+                    if layer_counts.get("Subject", 0) < MAX_SUBJECT_NODES_TOTAL:
+                        subject_rows = _query_neighbors_by_labels(
+                            db, current_id, SUBJECT_LABELS, SUBJECT_LIMIT_PER_NODE, effective_rel,
+                        )
+                        for row in subject_rows:
+                            m, r = row.get("m"), row.get("r")
+                            if m is None:
+                                continue
+                            mid = m.element_id
+                            if mid in visited_ids:
+                                continue
+                            m_labels = list(m.labels)
+                            target_layer = resolve_layer(m_labels)
+                            rel_type = r.type if r else "UNKNOWN"
+
+                            decision = should_include_neighbor(
+                                current_layer, target_layer, rel_type, False, expansion_policy,
+                            )
+                            if decision in ("block_subject_expansion", "skip"):
+                                continue
+
+                            if not can_add_node_by_layer(mid, m_labels, layer_counts, layer_budget):
+                                break
+
+                            visited_ids.add(mid)
+                            layer_counts[target_layer] = layer_counts.get(target_layer, 0) + 1
+                            if decision == "include_and_expand":
+                                next_frontier.add(mid)
+                                if rel_type in STRONG_SUBJECT_RELATIONS:
+                                    key_subject_ids.add(mid)
 
                 if truncated:
                     break
@@ -1457,7 +2015,7 @@ def expand_subgraph(
         logger.warning("[expand_subgraph] Closure phase failed: %s", exc)
         warnings.append(f"CLOSURE_PHASE_ERROR: edge query failed: {exc}")
 
-    # Ensure center nodes are always in node_map (even if no edges)
+    # Ensure center nodes are always in node_map
     if include_properties:
         try:
             for cid in center_ids:
@@ -1465,8 +2023,7 @@ def expand_subgraph(
                     params_center = {"nodeId": cid}
                     center_rows, _ = db.execute_read_with_summary(
                         "MATCH (n) WHERE elementId(n) = $nodeId RETURN n",
-                        params_center,
-                        timeout_seconds=10.0,
+                        params_center, timeout_seconds=10.0,
                     )
                     for cr in center_rows:
                         cn = cr.get("n")
@@ -1475,8 +2032,35 @@ def expand_subgraph(
         except Exception as exc:
             logger.warning("[expand_subgraph] Center-node lookup failed: %s", exc)
 
+    # Tag hub nodes with meta
+    hub_id_set = {h["id"] for h in hub_nodes}
+    for nid, node in node_map.items():
+        if nid in hub_id_set:
+            hub_info = next(h for h in hub_nodes if h["id"] == nid)
+            node.setdefault("meta", {})
+            node["meta"]["isHub"] = True
+            node["meta"]["degree"] = hub_info["degree"]
+            node["meta"]["collapsed"] = True
+
     nodes = list(node_map.values())
     edges = list(edge_map.values())
+
+    # Evidence layer counts
+    evidence_counts: dict[str, int] = {"Event": 0, "Feature": 0, "Regulation": 0}
+    for node in nodes:
+        layer = resolve_layer(node.get("labels", []))
+        if layer in evidence_counts:
+            evidence_counts[layer] += 1
+
+    total_blocked = sum(b["blockedCount"] for b in blocked_expansions)
+
+    if blocked_expansions:
+        for be in blocked_expansions[:3]:
+            warnings.append(
+                f"HUB_SUBJECT_EXPANSION_BLOCKED: 节点 {be['hubName']} "
+                f"连接大量主体节点({be['blockedCount']}个)，已阻止其继续扩散到 Subject 层，"
+                f"但保留其关联事件、特征和法规证据。"
+            )
 
     summary = {
         "requestedDepth": depth,
@@ -1492,7 +2076,39 @@ def expand_subgraph(
         "frontierCountsByHop": frontier_counts_by_hop,
         "truncated": truncated,
         "truncatedBy": truncated_by,
+        "policy": expansion_policy,
+        "hubNodeCount": len(hub_nodes),
+        "blockedSubjectExpansionCount": total_blocked,
+        "blockedSubjectExpansionByHub": blocked_expansions[:10],
+        "evidenceCompletionApplied": evidence_completion_applied,
+        "evidenceNodeCounts": evidence_counts,
+        "subjectExpansionBlocked": total_blocked > 0,
+        "forceExpandHub": force_expand_hub,
     }
+
+    # Evidence diagnosis when evidence layers are empty
+    if use_evidence_first and all(evidence_counts.get(l, 0) == 0 for l in ("Event", "Feature", "Regulation")):
+        summary["evidenceDiagnosis"] = {
+            "evidenceNodeFound": False,
+            "possibleReasons": [
+                "中心主体未直接连接 Event/Feature/Regulation",
+                "当前图谱中证据层标签与 LAYER_LABEL_MAP 不匹配",
+                "主体与证据层之间缺少关系边",
+                "证据层节点存在但未被当前关系方向或关系类型命中",
+            ],
+        }
+        if not any(
+            w.startswith("NO_EVIDENCE_LAYER_FOUND") for w in warnings
+        ):
+            warnings.append(
+                "NO_EVIDENCE_LAYER_FOUND: 当前主体查询结果未命中 Event/Feature/Regulation "
+                "证据层，请检查图谱数据建模或标签映射。"
+            )
+    elif use_evidence_first and evidence_completion_applied:
+        summary["evidenceDiagnosis"] = {
+            "evidenceNodeFound": True,
+            "message": "证据层已补全，查看 evidenceNodeCounts 了解各层分布",
+        }
 
     return {
         "nodes": nodes,
@@ -2008,6 +2624,7 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
                 layer_whitelist=layer_whitelist if not req.layerWhitelist and req.layer == "all" else req.layerWhitelist or None,
                 include_cross_layer=req.includeCrossLayer,
                 include_properties=req.includeProperties,
+                expansion_policy="evidence_first",
             )
 
         # Merge center nodes that may not appear in subgraph (no edges)
@@ -2069,6 +2686,21 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
 
         combined_warnings = warnings + subgraph_warnings
 
+        # Cache subgraph snapshot to Redis (best-effort)
+        try:
+            from services.graph_cache_service import set_subgraph_summary
+            set_subgraph_summary(trace_id, {
+                "query": keyword,
+                "centerNodeId": subgraph_summary.get("centerNodeId"),
+                "nodeCount": len(returned_nodes),
+                "edgeCount": len(returned_edges),
+                "policy": subgraph_summary.get("policy"),
+                "evidenceNodeCounts": subgraph_summary.get("evidenceNodeCounts"),
+                "layers": sorted(all_layers_set),
+            })
+        except Exception:
+            pass
+
         return SearchAllResponse(
             success=True,
             traceId=trace_id,
@@ -2101,6 +2733,186 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
 
     except Exception as e:
         logger.error(f"POST /search-all error: {traceback.format_exc()}")
+        return SearchAllResponse(
+            success=False,
+            traceId=trace_id,
+            warnings=warnings + [str(e)],
+        )
+
+
+@router.post("/subject-traverse", response_model=SearchAllResponse)
+def subject_traverse(req: SubjectTraverseRequest) -> SearchAllResponse:
+    """Subject-centered traversal for embedded large-scale graph exploration."""
+    import time
+    from uuid import uuid4
+
+    trace_id = f"trc-{uuid4().hex[:16]}-subject-traverse"
+    warnings: list[str] = []
+    started = time.monotonic()
+    keyword = (req.subject or req.query or "").strip()
+    effective_rel = _resolve_relation_whitelist(req.relationWhitelist)
+
+    if not req.startNodeId and not keyword:
+        warnings.append("EMPTY_SUBJECT: 请输入主体名称或 startNodeId")
+        return SearchAllResponse(
+            success=False,
+            traceId=trace_id,
+            summary=SearchAllSummary(matchedCount=0),
+            warnings=warnings,
+        )
+
+    try:
+        subject_labels = LAYER_LABEL_MAP["Subject"]
+        center_records: list[dict] = []
+
+        if req.startNodeId:
+            center_records, _ = _client().execute_read_with_summary(
+                """
+                MATCH (center)
+                WHERE elementId(center) = $nodeId
+                  AND any(label IN labels(center) WHERE label IN $subjectLabels)
+                RETURN center, 0 AS match_rank
+                """,
+                {"nodeId": req.startNodeId, "subjectLabels": subject_labels},
+                timeout_seconds=10.0,
+            )
+        else:
+            exact_conditions = " OR ".join(
+                f"coalesce(center.{prop}, '') = $keyword" for prop in SUBJECT_SEARCH_NAME_PROPERTIES
+            )
+            fuzzy_conditions = " OR ".join(
+                f"any(term IN $keywords WHERE coalesce(center.{prop}, '') CONTAINS term)"
+                for prop in SUBJECT_SEARCH_NAME_PROPERTIES
+            )
+            params = {
+                "keyword": keyword,
+                "keywords": _keyword_variants(keyword),
+                "subjectLabels": subject_labels,
+                "centerLimit": req.centerLimit,
+            }
+            exact_records, _ = _client().execute_read_with_summary(
+                f"""
+                MATCH (center)
+                WHERE any(label IN labels(center) WHERE label IN $subjectLabels)
+                  AND ({exact_conditions})
+                WITH DISTINCT center LIMIT $centerLimit
+                RETURN center, 0 AS match_rank
+                """,
+                params,
+                timeout_seconds=30.0,
+            )
+            center_records = list(exact_records)
+            if len(center_records) < req.centerLimit:
+                fuzzy_records, _ = _client().execute_read_with_summary(
+                    f"""
+                    MATCH (center)
+                    WHERE any(label IN labels(center) WHERE label IN $subjectLabels)
+                      AND ({fuzzy_conditions})
+                    WITH DISTINCT center LIMIT $centerLimit
+                    RETURN center, 1 AS match_rank
+                    """,
+                    params,
+                    timeout_seconds=30.0,
+                )
+                seen_ids = {
+                    record["center"].element_id
+                    for record in center_records
+                    if record.get("center") is not None
+                }
+                for record in fuzzy_records:
+                    center = record.get("center")
+                    if center is None or center.element_id in seen_ids:
+                        continue
+                    center_records.append(record)
+                    seen_ids.add(center.element_id)
+                    if len(center_records) >= req.centerLimit:
+                        break
+
+        matched_nodes: dict[str, dict] = {}
+        for record in center_records:
+            center = record.get("center")
+            if center is None:
+                continue
+            serialized = Neo4jClient.serialize_node(center)
+            matched_nodes[serialized["id"]] = serialized
+
+        if not matched_nodes:
+            warnings.append(f"NO_SUBJECT_MATCH: 未找到主体“{keyword or req.startNodeId}”")
+            return SearchAllResponse(
+                success=True,
+                traceId=trace_id,
+                matchedNodes=[],
+                nodes=[],
+                edges=[],
+                summary=SearchAllSummary(matchedCount=0),
+                warnings=warnings,
+            )
+
+        subgraph = _search_subject_cascade(
+            db=_client(),
+            center_nodes=list(matched_nodes.values()),
+            keyword=keyword or _serialized_node_name(next(iter(matched_nodes.values()))),
+            subject_depth=req.depth,
+            relation_whitelist=effective_rel,
+            include_properties=req.includeProperties,
+            node_limit=req.nodeLimit,
+            edge_limit=req.edgeLimit,
+            include_semantic_search=True,
+            semantic_terms=_keyword_variants(keyword),
+        )
+        nodes, edges = _filter_subgraph_by_layers(
+            subgraph.get("nodes", []),
+            subgraph.get("edges", []),
+            req.layerWhitelist,
+            set(matched_nodes.keys()),
+        )
+
+        layers = sorted({
+            layer for layer in (_serialized_node_layer(node) for node in nodes)
+            if layer
+        })
+        summary_data = subgraph.get("summary", {})
+        elapsed = time.monotonic() - started
+        if elapsed > 5.0:
+            warnings.append(
+                f"SUBJECT_TRAVERSE_SLOW: 主体穿透耗时 {elapsed:.1f}s，可降低跳数或关闭部分层级"
+            )
+
+        return SearchAllResponse(
+            success=True,
+            traceId=trace_id,
+            matchedNodes=list(matched_nodes.values()),
+            nodes=nodes,
+            edges=edges,
+            triples=[],
+            summary=SearchAllSummary(
+                matchedCount=len(matched_nodes),
+                nodeCount=len(nodes),
+                edgeCount=len(edges),
+                tripleCount=0,
+                layers=layers,
+                relationTypes=sorted(set(
+                    edge.get("type", edge.get("label", "")) for edge in edges
+                )),
+                requestedDepth=req.depth,
+                actualDepth=summary_data.get("actualDepth", req.depth),
+                centerCount=len(matched_nodes),
+                nodeTypeCounts=_count_node_types(nodes),
+                edgeTypeCounts=_count_edge_types(edges),
+                frontierCountsByHop=summary_data.get("frontierCountsByHop", {}),
+                truncated=summary_data.get("truncated", False),
+                truncatedBy=summary_data.get("truncatedBy"),
+                traversalMode="subject-traverse",
+                cascadeStageCounts={
+                    layer: sum(_serialized_node_layer(node) == layer for node in nodes)
+                    for layer in LAYER_LABEL_MAP
+                },
+            ),
+            warnings=warnings + subgraph.get("warnings", []),
+        )
+
+    except Exception as e:
+        logger.error("POST /subject-traverse error: %s", traceback.format_exc())
         return SearchAllResponse(
             success=False,
             traceId=trace_id,
@@ -2199,6 +3011,9 @@ def expand_node_post(node_id: str, req: ExpandRequest):
             layer_whitelist=layer_whitelist,
             include_cross_layer=req.includeCrossLayer,
             include_properties=req.includeProperties,
+            expansion_policy="evidence_first",
+            force_expand_hub=req.forceExpandHub,
+            max_fanout=req.maxFanout,
         )
 
         # Ensure center node is in the result
@@ -2252,6 +3067,19 @@ def expand_node_post(node_id: str, req: ExpandRequest):
             "message": str(e),
             "warnings": warnings + [str(e)],
         }
+
+
+@router.get("/subgraphs/{subgraph_id}")
+def get_cached_subgraph(subgraph_id: str):
+    """Retrieve a previously cached subgraph summary by trace/subgraph ID."""
+    try:
+        from services.graph_cache_service import get_subgraph_summary
+        data = get_subgraph_summary(subgraph_id)
+        if data:
+            return {"success": True, "data": data}
+        return {"success": False, "message": "Subgraph not found or expired"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
 @router.get("/expand/{node_id}")

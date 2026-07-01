@@ -1,9 +1,13 @@
-import { PageContainer, ProColumns, ProTable } from '@ant-design/pro-components';
+import { PageContainer, type ProColumns, ProTable } from '@ant-design/pro-components';
 import { Tag } from 'antd';
 import React from 'react';
 import { systemApi } from '@/services/system';
 
-export default function AuditLogs() {
+type AuditLogsProps = {
+  embedded?: boolean;
+};
+
+export default function AuditLogs({ embedded = false }: AuditLogsProps) {
   const columns: ProColumns<any>[] = [
     { title: '时间', dataIndex: 'createdAt', valueType: 'dateTime', search: false },
     { title: '用户', dataIndex: 'username', search: false },
@@ -19,8 +23,7 @@ export default function AuditLogs() {
     },
     { title: 'Trace ID', dataIndex: 'traceId', copyable: true },
   ];
-  return (
-    <PageContainer title="操作日志">
+  const content = (
       <ProTable
         rowKey="id"
         columns={columns}
@@ -35,6 +38,11 @@ export default function AuditLogs() {
           return { data: res.data, total: res.total, success: res.success };
         }}
       />
-    </PageContainer>
   );
+
+  if (embedded) {
+    return content;
+  }
+
+  return <PageContainer title="操作日志">{content}</PageContainer>;
 }

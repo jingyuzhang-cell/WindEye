@@ -3,6 +3,7 @@ import type {
   ExpandNodeResponse,
   SearchAllPayload,
   SearchAllResponse,
+  SubjectTraversePayload,
 } from '@/types/knowledgeGraph';
 
 export class KnowledgeGraphApiError extends Error {
@@ -15,6 +16,15 @@ export class KnowledgeGraphApiError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+function extractApiErrorMessage(data: any, status: number): string {
+  const detail = data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (detail && typeof detail === 'object') {
+    return detail.message || detail.msg || detail.error || detail.code || `知识图谱请求失败（HTTP ${status}）`;
+  }
+  return data?.message || data?.msg || data?.error || `知识图谱请求失败（HTTP ${status}）`;
 }
 
 async function postJson<T>(url: string, payload: Record<string, any>): Promise<T> {
@@ -46,7 +56,7 @@ async function postJson<T>(url: string, payload: Record<string, any>): Promise<T
 
   if (!response.ok || data?.success === false) {
     throw new KnowledgeGraphApiError(
-      data?.message || data?.error || `知识图谱请求失败（HTTP ${response.status}）`,
+      extractApiErrorMessage(data, response.status),
       response.status,
       data,
     );
@@ -60,7 +70,6 @@ export async function searchAllGraph(
   return postJson<SearchAllResponse>('/api/v1/graph/search-all', {
     layer: 'all',
     depth: 2,
-    limit: 500,
     type: 'all',
     relationWhitelist: [],
     layerWhitelist: [],
@@ -74,6 +83,19 @@ export async function searchAllGraph(
   });
 }
 
+export async function subjectTraverseGraph(
+  payload: SubjectTraversePayload,
+): Promise<SearchAllResponse> {
+  return postJson<SearchAllResponse>('/api/v1/graph/subject-traverse', {
+    depth: 3,
+    centerLimit: 5,
+    relationWhitelist: [],
+    layerWhitelist: ['Subject', 'Event', 'Feature', 'Regulation'],
+    includeProperties: true,
+    ...payload,
+  });
+}
+
 export async function expandGraphNode(
   nodeId: string,
   payload: ExpandNodePayload = {},
@@ -82,12 +104,14 @@ export async function expandGraphNode(
     `/api/v1/graph/expand/${encodeURIComponent(nodeId)}`,
     {
       depth: 2,
-      limit: 500,
+      limit: 300,
       relationWhitelist: [],
       layerWhitelist: [],
       includeCrossLayer: true,
       includeProperties: true,
       responseMode: 'full',
+      forceExpandHub: false,
+      maxFanout: 100,
       ...payload,
     },
   );

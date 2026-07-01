@@ -1,6 +1,7 @@
 import G6 from '@antv/g6';
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -16,27 +17,16 @@ import type {
 } from '@/types/knowledgeGraph';
 import { truncateLabel } from '@/utils/knowledgeGraph';
 import { computeAdaptiveLayout } from '../utils/layouts';
-
-const LAYER_THEME: Record<GraphLayer, {
-  label: string;
-  color: string;
-  background: string;
-}> = {
-  Subject: { label: '主体层', color: '#1677ff', background: 'rgba(22,119,255,0.055)' },
-  Event: { label: '事件层', color: '#faad14', background: 'rgba(250,173,20,0.065)' },
-  Feature: { label: '特征层', color: '#52c41a', background: 'rgba(82,196,26,0.055)' },
-  Regulation: { label: '法规层', color: '#722ed1', background: 'rgba(114,46,209,0.055)' },
-  Unknown: { label: '未归类', color: '#8c8c8c', background: 'rgba(140,140,140,0.05)' },
-};
-
-const LAYOUT_LABELS: Record<GraphLayoutMode, string> = {
-  aggregate: '类型聚合',
-  cascade: '逐层定向级联',
-  radial: '中心放射',
-  'semantic-force': '四层语义分布',
-  community: '社区聚类',
-  'path-focus': '路径优先',
-};
+import {
+  LAYER_COLORS_WITH_UNKNOWN,
+  NODE_SIZE_BY_LAYER,
+  getEdgeVisualSpec,
+  EDGE_STATE_COLORS,
+  PERF_THRESHOLDS,
+  HUB_NODE_STYLE,
+  FREE_FORCE_CONFIG,
+  NEO4J_FORCE_CONFIG,
+} from '../config/visualTheme';
 
 export interface FourLayerGraphHandle {
   exportPNG: () => void;
@@ -57,6 +47,7 @@ interface FourLayerGraphProps {
   hasActiveFilter?: boolean;
   filterMode?: GraphFilterMode;
   loading?: boolean;
+  hideLabels?: boolean;
   onNodeClick?: (node: KGNode) => void;
   onNodeDoubleClick?: (node: KGNode) => void;
   onEdgeClick?: (edge: KGEdge) => void;
@@ -77,6 +68,66 @@ function isHighRiskNode(node: KGNode): boolean {
   return ['high', 'critical', '-3', '-2', 3, 4, 5].includes(value);
 }
 
+function getLayerSize(node: KGNode, baseSize: number): number {
+  const spec = NODE_SIZE_BY_LAYER[node.layer];
+  return Math.max(spec?.floor ?? 24, baseSize);
+}
+
+function getLayerEdgeDash(sourceLayer: GraphLayer, targetLayer: GraphLayer): number[] | undefined {
+  return getEdgeVisualSpec(sourceLayer, targetLayer).dashPattern;
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildPropertyPreview(properties?: Record<string, any>): string {
+  const entries = Object.entries(properties || {})
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+    .slice(0, 3);
+  if (entries.length === 0) return '';
+  return entries
+    .map(([key, value]) => `<div><span style="color:#8c8c8c">${escapeHtml(key)}：</span>${escapeHtml(
+      typeof value === 'object' ? JSON.stringify(value) : String(value),
+    )}</div>`)
+    .join('');
+}
+
+// ── 邻居索引（hover 高亮时使用，避免每次 hover 都遍历全图） ──
+interface NeighborIndex {
+  neighborMap: Map<string, Set<string>>;
+  edgeMap: Map<string, Set<string>>;
+}
+
+function buildNeighborIndex(nodes: KGNode[], edges: KGEdge[]): NeighborIndex {
+  const neighborMap = new Map<string, Set<string>>();
+  const edgeMap = new Map<string, Set<string>>();
+
+  for (const node of nodes) {
+    neighborMap.set(node.id, new Set());
+    edgeMap.set(node.id, new Set());
+  }
+
+  for (const edge of edges) {
+    if (!neighborMap.has(edge.source)) neighborMap.set(edge.source, new Set());
+    if (!neighborMap.has(edge.target)) neighborMap.set(edge.target, new Set());
+    if (!edgeMap.has(edge.source)) edgeMap.set(edge.source, new Set());
+    if (!edgeMap.has(edge.target)) edgeMap.set(edge.target, new Set());
+
+    neighborMap.get(edge.source)?.add(edge.target);
+    neighborMap.get(edge.target)?.add(edge.source);
+    edgeMap.get(edge.source)?.add(edge.id);
+    edgeMap.get(edge.target)?.add(edge.id);
+  }
+
+  return { neighborMap, edgeMap };
+}
+
 const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
   function FourLayerGraph(
     {
@@ -92,6 +143,7 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
       selectedEdgeId,
       hasActiveFilter = false,
       filterMode = 'highlight',
+      hideLabels = false,
       onNodeClick,
       onNodeDoubleClick,
       onEdgeClick,
@@ -102,12 +154,17 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
     const viewportRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<any>(null);
-    const graphDataRef = useRef<any>({ nodes: [], edges: [] });
+    const [containerWidth, setContainerWidth] = useState(960);
+
+    // ── hover 状态全部使用 ref，避免触发 React 重渲染 ──
+    const hoveredNodeIdRef = useRef<string | null>(null);
+    const lastDataViewportKeyRef = useRef<string>('');
+    const lastHoverNodeIdsRef = useRef<Set<string>>(new Set());
+    const lastHoverEdgeIdsRef = useRef<Set<string>>(new Set());
+    const neighborIndexRef = useRef<NeighborIndex>({ neighborMap: new Map(), edgeMap: new Map() });
     const clickRef = useRef(onNodeClick);
     const doubleClickRef = useRef(onNodeDoubleClick);
     const edgeClickRef = useRef(onEdgeClick);
-    const [containerWidth, setContainerWidth] = useState(960);
-    const [highlightedLayer, setHighlightedLayer] = useState<GraphLayer | null>(null);
 
     clickRef.current = onNodeClick;
     doubleClickRef.current = onNodeDoubleClick;
@@ -123,7 +180,11 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
       return () => observer.disconnect();
     }, []);
 
-    const canvasHeight = layoutMode === 'community' ? 820 : 720;
+    const canvasHeight = layoutMode === 'community'
+      ? 820
+      : layoutMode === 'semantic-force'
+        ? Math.max(720, Math.min(1180, 520 + Math.ceil(nodes.length / 45) * 22))
+        : 720;
     const layout = useMemo(() => computeAdaptiveLayout({
       mode: layoutMode,
       nodes,
@@ -134,6 +195,7 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
       pathNodeIds,
     }), [layoutMode, nodes, edges, containerWidth, canvasHeight, centerNodeId, pathNodeIds]);
 
+    // ── 计算 G6 渲染数据（不依赖 highlightedLayer，hover 通过 stateStyles 实现） ──
     const graphData = useMemo(() => {
       const nodeMap = new Map(layout.nodes.map(node => [node.id, node]));
       const pathPairs = new Set<string>();
@@ -144,60 +206,67 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
         pathPairs.add(`${right}|${left}`);
       }
       const g6Nodes = layout.nodes.map((node) => {
-        const theme = LAYER_THEME[node.layer];
+        const theme = LAYER_COLORS_WITH_UNKNOWN[node.layer];
         const isCenter = node.isCenter || node.id === centerNodeId;
         const highRisk = isHighRiskNode(node);
-        const size = isCenter
-          ? 46
+        const baseSize = isCenter
+          ? 36
           : node.isMatched
-            ? 42
+            ? 32
             : node.isAggregate
-              ? Math.min(70, 36 + Math.sqrt(Math.max(1, node.count || 1)) * 2)
-              : Math.min(42, 24 + Math.sqrt(Math.max(1, node.degree)) * 3);
-        const layerDimmed = highlightedLayer !== null && highlightedLayer !== node.layer;
-        const pathDimmed = layoutMode === 'path-focus' && !node.isPathNode;
+              ? Math.min(56, 28 + Math.sqrt(Math.max(1, node.count || 1)) * 2)
+              : Math.min(32, 18 + Math.sqrt(Math.max(1, node.degree || 0)) * 2.5);
+        const size = getLayerSize(node, baseSize);
+        const nodeShape = 'circle';
         const filterHighlighted = highlightedNodeIds.has(node.id);
         const selected = selectedNodeId === node.id;
-        const filterDimmed = hasActiveFilter
-          && filterMode === 'highlight'
-          && !filterHighlighted;
-        const showLabel = node.isAggregate
-          || layout.nodes.length <= 30
-          || node.isCenter
+        const totalNodes = layout.nodes.length;
+        const showLabel = !hideLabels && (
+          node.isCenter
           || node.isMatched
-          || filterHighlighted
-          || node.degree >= 4;
+          || node.isAggregate
+          || (totalNodes <= PERF_THRESHOLDS.SHOW_MORE_LABELS && (filterHighlighted || (node.degree || 0) >= 3))
+          || (totalNodes <= PERF_THRESHOLDS.MINIMAL_LABELS && (filterHighlighted || (node.degree || 0) >= 5))
+        );
+        const alwaysShowLabel = node.isCenter || node.isMatched || node.isAggregate;
         return {
           id: node.id,
           x: node.x,
           y: node.y,
-          label: showLabel
+          type: nodeShape,
+          label: (showLabel || alwaysShowLabel)
             ? node.isAggregate
               ? `${node.type}\n${(node.count || 0).toLocaleString()} 个 · ${(node.relationCount || 0).toLocaleString()} 关系`
-              : truncateLabel(node.name, node.isCenter ? 18 : 10)
+              : truncateLabel(node.name, node.isCenter ? 14 : 8)
             : '',
           fullName: node.name,
           layer: node.layer,
+          nodeType: node.type,
+          degree: node.degree || 0,
+          isCenter,
+          isHub: node.isHub,
           kgNode: node,
           size,
           style: {
             fill: theme.color,
-            stroke: isCenter
-              ? '#f5222d'
-              : node.isMatched
-                ? '#1677ff'
-                : highRisk
-                  ? '#f5222d'
-                : selected
-                  ? '#eb2f96'
-                : filterHighlighted
-                  ? '#fa8c16'
-                  : '#ffffff',
-            lineWidth: isCenter ? 5 : node.isMatched ? 4 : highRisk ? 4 : selected ? 4 : filterHighlighted ? 4 : 2,
+            stroke: node.isHub
+              ? HUB_NODE_STYLE.stroke
+              : isCenter
+                ? '#f5222d'
+                : node.isMatched
+                  ? '#1677ff'
+                  : highRisk
+                    ? '#f5222d'
+                  : selected
+                    ? '#eb2f96'
+                  : filterHighlighted
+                    ? '#fa8c16'
+                    : '#ffffff',
+            lineWidth: node.isHub
+              ? HUB_NODE_STYLE.lineWidth
+              : isCenter ? 5 : node.isMatched ? 4 : highRisk ? 4 : selected ? 4 : filterHighlighted ? 4 : 2,
             lineDash: node.isAggregate ? [6, 4] : undefined,
-            opacity: layerDimmed ? 0.16 : filterDimmed ? 0.14 : pathDimmed ? 0.32 : 1,
-            shadowColor: highRisk ? '#f5222d88' : isCenter || node.isMatched ? `${theme.color}88` : undefined,
-            shadowBlur: isCenter || node.isMatched || highRisk || filterHighlighted ? 14 : 0,
+            opacity: 1,
           },
           labelCfg: {
             position: 'bottom',
@@ -206,49 +275,41 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
               fill: '#262626',
               fontSize: 11,
               fontWeight: node.isAggregate || isCenter ? 600 : 400,
-              opacity: layerDimmed ? 0.12 : filterDimmed ? 0.1 : pathDimmed ? 0.28 : 0.9,
+              opacity: 0.9,
             },
           },
         };
       });
       const g6Edges = edges
         .filter(edge => nodeMap.has(edge.source) && nodeMap.has(edge.target))
-        .map((edge) => {
-          const sourceNode = nodeMap.get(edge.source)!;
-          const targetNode = nodeMap.get(edge.target)!;
+        .flatMap((edge) => {
+          const sourceNode = nodeMap.get(edge.source);
+          const targetNode = nodeMap.get(edge.target);
+          if (!sourceNode || !targetNode) return [];
           const crossLayer = sourceNode.layer !== targetNode.layer;
           const onPath = pathPairs.has(`${edge.source}|${edge.target}`);
-          const layerDimmed = highlightedLayer !== null
-            && sourceNode.layer !== highlightedLayer
-            && targetNode.layer !== highlightedLayer;
-          const pathDimmed = layoutMode === 'path-focus' && !onPath;
           const filterHighlighted = highlightedEdgeIds.has(edge.id);
           const selected = selectedEdgeId === edge.id;
-          const filterDimmed = hasActiveFilter
-            && filterMode === 'highlight'
-            && !filterHighlighted;
           const highRisk = isHighRiskEdge(edge);
-          const stroke = selected
-            ? '#eb2f96'
-            : filterHighlighted
-            ? '#fa8c16'
-            : onPath
-            ? '#f5222d'
-            : highRisk
-              ? '#fa541c'
-              : crossLayer
-                ? '#66788a'
-                : '#c8cdd3';
-          return {
+          const dash = getLayerEdgeDash(sourceNode.layer, targetNode.layer);
+          const spec = getEdgeVisualSpec(sourceNode.layer, targetNode.layer);
+
+          // 边颜色根据层级对使用不同色调，增强可读性
+          let strokeColor: string;
+          if (selected) strokeColor = EDGE_STATE_COLORS.selected;
+          else if (filterHighlighted) strokeColor = '#fa8c16';
+          else if (onPath) strokeColor = EDGE_STATE_COLORS.onPath;
+          else if (highRisk) strokeColor = EDGE_STATE_COLORS.risk;
+          else strokeColor = spec.stroke;
+
+          return [{
             id: edge.id,
             source: edge.source,
             target: edge.target,
-            type: layoutMode === 'cascade'
-              ? 'cubic-horizontal'
-              : layoutMode === 'radial' || crossLayer
-                ? 'quadratic'
-                : 'line',
+            type: (layoutMode === 'cascade' || crossLayer) ? 'quadratic' : 'line',
             relationType: edge.type,
+            sourceLayer: sourceNode.layer,
+            targetLayer: targetNode.layer,
             kgEdge: edge,
             properties: edge.properties,
             onPath,
@@ -270,35 +331,24 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
               },
             },
             style: {
-              stroke,
-              lineWidth: edge.count
-                ? 1 + Math.log((edge.count || 0) + 1)
-                : selected ? 3.5 : filterHighlighted ? 3.2 : onPath ? 4 : highRisk ? 2.8 : crossLayer ? 1.5 : 1,
-              opacity: layerDimmed
-                ? 0.08
-                : filterDimmed
-                  ? 0.06
-                  : pathDimmed
-                    ? 0.12
-                    : filterHighlighted
-                      ? 0.95
-                      : crossLayer
-                        ? 0.48
-                        : 0.18,
+              stroke: strokeColor,
+              lineWidth: spec.lineWidth,
+              lineDash: dash,
+              opacity: crossLayer ? 0.58 : 0.35,
               endArrow: layoutMode === 'cascade' && crossLayer
-                ? {
-                  path: G6.Arrow.triangle(4, 6, 1),
-                  fill: stroke,
-                }
+                ? { path: G6.Arrow.triangle(4, 6, 1), fill: strokeColor }
                 : false,
             },
-          };
+          }];
         });
+
+      // 构建邻居索引（用于 hover 高亮）
+      neighborIndexRef.current = buildNeighborIndex(layout.nodes, edges);
+
       return { nodes: g6Nodes, edges: g6Edges };
     }, [
       layout,
       edges,
-      highlightedLayer,
       layoutMode,
       highlightedNodeIds,
       highlightedEdgeIds,
@@ -306,46 +356,231 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
       selectedEdgeId,
       hasActiveFilter,
       filterMode,
+      hideLabels,
     ]);
-    graphDataRef.current = graphData;
 
+    // ── 清理上一次 hover 的节点/边状态（仅操作受影响项，不遍历全图） ──
+    const clearPrevHoverStates = useCallback((graph: any) => {
+      graph.setAutoPaint(false);
+      for (const nodeId of lastHoverNodeIdsRef.current) {
+        const item = graph.findById(nodeId);
+        if (item && !item.destroyed) {
+          graph.clearItemStates(item, ['hover', 'neighbor', 'inactive']);
+        }
+      }
+      for (const edgeId of lastHoverEdgeIdsRef.current) {
+        const item = graph.findById(edgeId);
+        if (item && !item.destroyed) {
+          graph.clearItemStates(item, ['hover', 'inactive']);
+        }
+      }
+      lastHoverNodeIdsRef.current.clear();
+      lastHoverEdgeIdsRef.current.clear();
+      graph.paint();
+      graph.setAutoPaint(true);
+    }, []);
+
+    // ── 高亮节点及其邻居 ──
+    const highlightNodeAndNeighbors = useCallback((graph: any, nodeId: string) => {
+      if (hoveredNodeIdRef.current === nodeId) return;
+      hoveredNodeIdRef.current = nodeId;
+
+      clearPrevHoverStates(graph);
+
+      const { neighborMap, edgeMap } = neighborIndexRef.current;
+      const neighbors = neighborMap.get(nodeId) || new Set();
+      const relatedEdges = edgeMap.get(nodeId) || new Set();
+
+      graph.setAutoPaint(false);
+
+      // 收集本节点 + 邻居节点 ID
+      const involvedNodeIds = new Set<string>([nodeId]);
+      for (const nb of neighbors) involvedNodeIds.add(nb);
+
+      lastHoverNodeIdsRef.current = involvedNodeIds;
+      lastHoverEdgeIdsRef.current = relatedEdges;
+
+      // 设置 hover 节点状态
+      const nodeItem = graph.findById(nodeId);
+      if (nodeItem && !nodeItem.destroyed) {
+        graph.setItemState(nodeItem, 'hover', true);
+      }
+
+      // 设置邻居节点状态
+      for (const neighborId of neighbors) {
+        const item = graph.findById(neighborId);
+        if (item && !item.destroyed) {
+          graph.setItemState(item, 'neighbor', true);
+        }
+      }
+
+      // 设置相关边状态
+      for (const edgeId of relatedEdges) {
+        const item = graph.findById(edgeId);
+        if (item && !item.destroyed) {
+          graph.setItemState(item, 'hover', true);
+        }
+      }
+
+      graph.paint();
+      graph.setAutoPaint(true);
+    }, [clearPrevHoverStates]);
+
+    // ── 清除所有 hover 状态 ──
+    const clearHover = useCallback((graph: any) => {
+      hoveredNodeIdRef.current = null;
+      clearPrevHoverStates(graph);
+    }, [clearPrevHoverStates]);
+
+    // ── 应用层级聚焦和选中聚焦。点击节点后保留一跳上下文，弱化无关元素。 ──
+    const effectiveGraphData = useMemo(() => {
+      const focusNodeIds = new Set<string>();
+      const focusEdgeIds = new Set<string>();
+
+      if (selectedNodeId) {
+        focusNodeIds.add(selectedNodeId);
+        graphData.edges.forEach((edge: any) => {
+          if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
+            focusEdgeIds.add(edge.id);
+            focusNodeIds.add(edge.source);
+            focusNodeIds.add(edge.target);
+          }
+        });
+      }
+
+      if (selectedEdgeId) {
+        const selectedEdge = graphData.edges.find((edge: any) => edge.id === selectedEdgeId);
+        if (selectedEdge) {
+          focusEdgeIds.add(selectedEdge.id);
+          focusNodeIds.add(selectedEdge.source);
+          focusNodeIds.add(selectedEdge.target);
+        }
+      }
+
+      const hasSelectionFocus = focusNodeIds.size > 0 || focusEdgeIds.size > 0;
+
+      return {
+        nodes: graphData.nodes.map((node: any) => {
+          const selectionDimmed = hasSelectionFocus && !focusNodeIds.has(node.id);
+          const selected = node.id === selectedNodeId;
+          if (!selectionDimmed && !selected) return node;
+          return {
+            ...node,
+            label: selected ? truncateLabel(node.fullName, 18) : node.label,
+            style: {
+              ...node.style,
+              opacity: selectionDimmed ? 0.12 : 1,
+              stroke: selected ? '#eb2f96' : node.style?.stroke,
+              lineWidth: selected ? Math.max(4, node.style?.lineWidth || 2) : node.style?.lineWidth,
+            },
+            labelCfg: {
+              ...node.labelCfg,
+              style: {
+                ...node.labelCfg?.style,
+                opacity: selectionDimmed ? 0.12 : 0.95,
+                fontWeight: selected ? 700 : node.labelCfg?.style?.fontWeight,
+              },
+            },
+          };
+        }),
+        edges: graphData.edges.map((edge: any) => {
+          const selectionRelated = !hasSelectionFocus || focusEdgeIds.has(edge.id);
+          const selected = edge.id === selectedEdgeId;
+          const dimmed = !selectionRelated;
+          return {
+            ...edge,
+            label: selected ? edge.relationType : edge.label,
+            style: {
+              ...edge.style,
+              opacity: selected ? 1 : dimmed ? 0.035 : hasSelectionFocus ? 0.82 : edge.style.opacity,
+              lineWidth: selected
+                ? Math.max(3.5, edge.style.lineWidth || 1)
+                : hasSelectionFocus && focusEdgeIds.has(edge.id)
+                  ? Math.max(2.4, edge.style.lineWidth || 1)
+                  : edge.style.lineWidth,
+              stroke: selected ? EDGE_STATE_COLORS.selected : edge.style.stroke,
+            },
+          };
+        }),
+      };
+    }, [graphData, selectedNodeId, selectedEdgeId]);
+
+    // ── G6 初始化（仅一次） ──
     useEffect(() => {
       if (!containerRef.current || graphRef.current || nodes.length === 0) return undefined;
+      const isForceLayout = layoutMode === 'free-force' || layoutMode === 'neo4j-force';
+
+      const tooltip = new G6.Tooltip({
+        itemTypes: ['node', 'edge'],
+        offsetX: 12,
+        offsetY: 12,
+        // 使用 className 以便注入 pointer-events: none
+        className: 'kg-graph-tooltip',
+        getContent: (event: any) => {
+          const model: any = event?.item?.getModel();
+          if (event?.item?.getType?.() === 'edge') {
+            const props = buildPropertyPreview(model?.properties);
+            return `<div style="padding:8px 10px;max-width:360px">
+              <b>${escapeHtml(model?.relationType || '关联')}</b>
+              <div style="color:#8c8c8c;margin-top:3px">点击查看关系详情</div>
+              ${props ? `<div style="margin-top:6px;line-height:1.65">${props}</div>` : ''}
+            </div>`;
+          }
+          const degree = Number(model?.degree || 0);
+          return `<div style="padding:9px 11px;max-width:380px;white-space:normal">
+            <b>${escapeHtml(model?.fullName || '')}</b>
+            <div style="color:#8c8c8c;margin-top:4px">
+              ${escapeHtml(model?.layer || '')} / ${escapeHtml(model?.nodeType || 'Unknown')} · ${degree.toLocaleString()} 个关联
+            </div>
+            <div style="color:#595959;margin-top:6px">单击固定一跳关系，双击展开邻居</div>
+            ${buildPropertyPreview(model?.kgNode?.properties) ? `<div style="margin-top:6px;line-height:1.65">${buildPropertyPreview(model?.kgNode?.properties)}</div>` : ''}
+          </div>`;
+        },
+      });
+
       try {
-        const graph = new G6.Graph({
+        const graphOptions: any = {
           container: containerRef.current,
           width: layout.width,
           height: layout.height,
-          layout: null as any,
           animate: layoutMode === 'cascade',
-          animateCfg: {
-            duration: 720,
-            easing: 'easeCubic',
-          },
+          animateCfg: { duration: 720, easing: 'easeCubic' },
           renderer: 'canvas',
           modes: { default: ['drag-canvas', 'zoom-canvas', 'drag-node'] },
           defaultNode: { type: 'circle' },
           defaultEdge: { type: 'line' },
-          plugins: [
-            new G6.Tooltip({
-              itemTypes: ['node', 'edge'],
-              offsetX: 12,
-              offsetY: 12,
-              getContent: (event: any) => {
-                const model: any = event?.item?.getModel();
-                if (event?.item?.getType?.() === 'edge') {
-                  const properties = model?.properties && Object.keys(model.properties).length
-                    ? `<div style="color:#8c8c8c;margin-top:4px">${JSON.stringify(model.properties)}</div>`
-                    : '';
-                  return `<div style="padding:7px 10px;max-width:360px"><b>${model?.relationType || '关联'}</b>${properties}</div>`;
-                }
-                return `<div style="padding:8px 10px;max-width:360px;white-space:normal"><b>${model?.fullName || ''}</b><div style="color:#8c8c8c;margin-top:3px">${model?.layer || ''}</div></div>`;
-              },
-            }),
-          ],
-        });
+          // ── G6 状态样式定义（hover 不再通过 updateItem 修改 inline style） ──
+          nodeStateStyles: {
+            hover: { lineWidth: 3, stroke: '#1677ff' },
+            neighbor: { lineWidth: 2.5, stroke: '#60a5fa' },
+            selected: { lineWidth: 3.5, stroke: '#722ed1' },
+            inactive: { opacity: 0.18 },
+          },
+          edgeStateStyles: {
+            hover: { stroke: '#1677ff', lineWidth: 3, opacity: 0.95 },
+            selected: { stroke: '#722ed1', lineWidth: 3.5, opacity: 1 },
+            highlight: { stroke: '#ff4d4f', lineWidth: 4, opacity: 1 },
+            inactive: { opacity: 0.08, lineWidth: 0.8 },
+          },
+          plugins: [tooltip],
+        };
+        if (isForceLayout) {
+          graphOptions.layout = layoutMode === 'neo4j-force'
+            ? NEO4J_FORCE_CONFIG
+            : FREE_FORCE_CONFIG;
+        }
+        const graph = new G6.Graph(graphOptions);
+
+        // ── 事件绑定 ──
         graph.on('node:click', (event: any) => {
           const node = event?.item?.getModel()?.kgNode as KGNode | undefined;
+          if (event?.item) {
+            try {
+              graph.focusItem(event.item, true, { duration: 360, easing: 'easeCubic' });
+            } catch {
+              // focusItem is best-effort across G6 minor versions.
+            }
+          }
           if (node) clickRef.current?.(node);
         });
         graph.on('node:dblclick', (event: any) => {
@@ -356,59 +591,68 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
           const edge = event?.item?.getModel()?.kgEdge as KGEdge | undefined;
           if (edge) edgeClickRef.current?.(edge);
         });
+
+        // ── hover：只通过 setItemState 触发状态样式，不遍历全图 ──
         graph.on('node:mouseenter', (event: any) => {
+          if (containerRef.current) containerRef.current.style.cursor = 'pointer';
           const item = event?.item;
           if (!item) return;
-          const id = String(item.getID());
-          const neighborIds = new Set<string>([id]);
-          graph.getEdges().forEach((edgeItem: any) => {
-            const model = edgeItem.getModel();
-            if (model.source === id) neighborIds.add(String(model.target));
-            if (model.target === id) neighborIds.add(String(model.source));
-          });
-          graph.getNodes().forEach((nodeItem: any) => {
-            const model = nodeItem.getModel();
-            graph.updateItem(nodeItem, {
-              style: { ...model.style, opacity: neighborIds.has(String(model.id)) ? 1 : 0.12 },
-              labelCfg: {
-                ...model.labelCfg,
-                style: { ...model.labelCfg?.style, opacity: neighborIds.has(String(model.id)) ? 1 : 0.1 },
-              },
-            });
-          });
-          graph.getEdges().forEach((edgeItem: any) => {
-            const model = edgeItem.getModel();
-            const related = model.source === id || model.target === id;
-            graph.updateItem(edgeItem, {
-              style: { ...model.style, opacity: related ? 0.95 : 0.06, lineWidth: related ? Math.max(2.5, model.style?.lineWidth || 1) : model.style?.lineWidth },
-            });
-          });
+          const nodeId = String(item.getID());
+          highlightNodeAndNeighbors(graph, nodeId);
         });
-        graph.on('node:mouseleave', () => graph.changeData(graphDataRef.current));
-        graph.data(graphData);
+        graph.on('node:mouseleave', () => {
+          if (containerRef.current) containerRef.current.style.cursor = 'grab';
+          clearHover(graph);
+        });
+        graph.on('edge:mouseenter', (event: any) => {
+          if (containerRef.current) containerRef.current.style.cursor = 'pointer';
+          const item = event?.item;
+          if (item && !item.destroyed) graph.setItemState(item, 'hover', true);
+        });
+        graph.on('edge:mouseleave', (event: any) => {
+          if (containerRef.current) containerRef.current.style.cursor = 'grab';
+          const item = event?.item;
+          if (item && !item.destroyed) graph.clearItemStates(item, ['hover']);
+        });
+        graph.on('canvas:mouseenter', () => {
+          if (containerRef.current) containerRef.current.style.cursor = 'grab';
+        });
+
+        graph.data(effectiveGraphData);
         graph.render();
         if (layoutMode !== 'cascade') graph.fitView(30);
+        lastDataViewportKeyRef.current = `${layoutMode}:${layout.width}:${layout.height}:${nodes.length}:${edges.length}`;
         graphRef.current = graph;
         onRenderError?.(null);
       } catch (error) {
         onRenderError?.(error instanceof Error ? error.message : 'G6 初始化失败');
       }
       return undefined;
-    }, [nodes.length, layout.width, layout.height, graphData, layoutMode, onRenderError]);
+      // 只在首次有节点时初始化，后续通过 changeData 更新
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodes.length]);
 
+    // ── 数据更新（不重建 graph 实例） ──
     useEffect(() => {
       const graph = graphRef.current;
       if (!graph) return;
       try {
+        // 更新前清理 hover 状态
+        clearHover(graph);
         graph.changeSize(layout.width, layout.height);
-        graph.changeData(graphData);
-        if (layoutMode !== 'cascade') graph.fitView(30);
+        graph.changeData(effectiveGraphData);
+        const nextViewportKey = `${layoutMode}:${layout.width}:${layout.height}:${nodes.length}:${edges.length}`;
+        if (layoutMode !== 'cascade' && lastDataViewportKeyRef.current !== nextViewportKey) {
+          graph.fitView(30);
+          lastDataViewportKeyRef.current = nextViewportKey;
+        }
         onRenderError?.(null);
       } catch (error) {
         onRenderError?.(error instanceof Error ? error.message : 'G6 数据更新失败');
       }
-    }, [graphData, layout.width, layout.height, layoutMode, onRenderError]);
+    }, [effectiveGraphData, layout.width, layout.height, layoutMode, nodes.length, edges.length, clearHover, onRenderError]);
 
+    // ── 清理 ──
     useEffect(() => () => {
       if (graphRef.current && !graphRef.current.get('destroyed')) graphRef.current.destroy();
       graphRef.current = null;
@@ -423,6 +667,27 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
       fitView: () => graphRef.current?.fitView(30),
     }), []);
 
+    // ── 注入 tooltip CSS（pointer-events: none 防止闪烁） ──
+    useEffect(() => {
+      const styleId = 'kg-graph-tooltip-fix';
+      if (document.getElementById(styleId)) return;
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .kg-graph-tooltip,
+        .g6-tooltip,
+        .g6-component-tooltip {
+          pointer-events: none !important;
+          user-select: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+      return () => {
+        const el = document.getElementById(styleId);
+        if (el) el.remove();
+      };
+    }, []);
+
     if (nodes.length === 0) return null;
 
     return (
@@ -430,50 +695,6 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
         ref={viewportRef}
         style={{ width: '100%', height: canvasHeight, overflow: 'auto', position: 'relative' }}
       >
-        <SemanticBackground mode={layoutMode} layout={layout} />
-        <div style={{
-          position: 'absolute',
-          top: layoutMode === 'cascade' ? 58 : 12,
-          left: 14,
-          zIndex: 5,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '7px 10px',
-          borderRadius: 8,
-          background: 'rgba(255,255,255,0.9)',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-        }}>
-          <span style={{ color: '#8c8c8c', fontSize: 12 }}>{LAYOUT_LABELS[layoutMode]}</span>
-          {(Object.keys(LAYER_THEME) as GraphLayer[]).slice(0, 4).map((layer) => (
-            <button
-              key={layer}
-              type="button"
-              onClick={() => setHighlightedLayer(current => current === layer ? null : layer)}
-              style={{
-                border: highlightedLayer === layer
-                  ? `1px solid ${LAYER_THEME[layer].color}`
-                  : '1px solid transparent',
-                background: highlightedLayer === layer ? LAYER_THEME[layer].background : 'transparent',
-                borderRadius: 5,
-                padding: '3px 6px',
-                cursor: 'pointer',
-                color: LAYER_THEME[layer].color,
-                fontSize: 12,
-              }}
-            >
-              <span style={{
-                display: 'inline-block',
-                width: 8,
-                height: 8,
-                marginRight: 4,
-                borderRadius: '50%',
-                background: LAYER_THEME[layer].color,
-              }} />
-              {LAYER_THEME[layer].label}
-            </button>
-          ))}
-        </div>
         {layoutMode === 'community' && omittedNodeCount > 0 && (
           <div style={{
             position: 'absolute',
@@ -516,7 +737,7 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
                   <div key={node.id} style={{
                     padding: '5px 0',
                     borderTop: '1px solid #f0f0f0',
-                    color: LAYER_THEME.Regulation.color,
+                    color: LAYER_COLORS_WITH_UNKNOWN.Regulation.color,
                     fontSize: 12,
                   }}>
                     {truncateLabel(node.name, 20)}
@@ -537,191 +758,12 @@ const FourLayerGraph = forwardRef<FourLayerGraphHandle, FourLayerGraphProps>(
             width: layout.width,
             height: layout.height,
             background: 'transparent',
+            cursor: 'grab',
           }}
         />
       </div>
     );
   },
 );
-
-const SemanticBackground: React.FC<{
-  mode: GraphLayoutMode;
-  layout: ReturnType<typeof computeAdaptiveLayout>;
-}> = ({ mode, layout }) => {
-  if (mode === 'aggregate') {
-    const anchors: Array<{ layer: GraphLayer; x: number; y: number }> = [
-      { layer: 'Subject', x: layout.width * 0.24, y: layout.height * 0.36 },
-      { layer: 'Event', x: layout.width * 0.56, y: layout.height * 0.28 },
-      { layer: 'Feature', x: layout.width * 0.45, y: layout.height * 0.72 },
-      { layer: 'Regulation', x: layout.width * 0.78, y: layout.height * 0.64 },
-    ];
-    return (
-      <>
-        {anchors.map(item => (
-          <div key={item.layer} style={{
-            position: 'absolute',
-            left: item.x - 125,
-            top: item.y - 90,
-            width: 250,
-            height: 180,
-            borderRadius: '50%',
-            background: LAYER_THEME[item.layer].background,
-            border: `1px dashed ${LAYER_THEME[item.layer].color}33`,
-          }}>
-            <span style={{
-              position: 'absolute',
-              top: 10,
-              left: 18,
-              color: LAYER_THEME[item.layer].color,
-              fontWeight: 600,
-              fontSize: 12,
-            }}>
-              {LAYER_THEME[item.layer].label}类型组
-            </span>
-          </div>
-        ))}
-      </>
-    );
-  }
-  if (mode === 'cascade') {
-    const stages: Array<{ layer: GraphLayer; label: string }> = [
-      { layer: 'Subject', label: '主体及关联主体' },
-      { layer: 'Event', label: '相关事件' },
-      { layer: 'Feature', label: '风险特征' },
-      { layer: 'Regulation', label: '法规依据' },
-    ];
-    return (
-      <>
-        {stages.map((stage, index) => (
-          <React.Fragment key={stage.layer}>
-            <div style={{
-              position: 'absolute',
-              left: index * layout.width / 4,
-              top: 0,
-              width: layout.width / 4,
-              height: layout.height,
-              borderRight: index < stages.length - 1 ? '1px solid rgba(0,0,0,0.055)' : undefined,
-            }}>
-              <span style={{
-                position: 'absolute',
-                top: 14,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                padding: '5px 9px',
-                borderRadius: 18,
-                color: LAYER_THEME[stage.layer].color,
-                background: '#fff',
-                border: `1px solid ${LAYER_THEME[stage.layer].color}55`,
-                boxShadow: '0 3px 12px rgba(0,0,0,0.06)',
-                fontWeight: 600,
-                fontSize: 12,
-                whiteSpace: 'nowrap',
-              }}>
-                {index + 1}. {stage.label}（
-                {layout.nodes.filter(node => node.layer === stage.layer).length.toLocaleString()}）
-              </span>
-            </div>
-            {index < stages.length - 1 && (
-              <span style={{
-                position: 'absolute',
-                left: (index + 1) * layout.width / 4,
-                top: 20,
-                transform: 'translateX(-50%)',
-                color: '#8c8c8c',
-                fontSize: 18,
-                zIndex: 2,
-              }}>
-                →
-              </span>
-            )}
-          </React.Fragment>
-        ))}
-      </>
-    );
-  }
-  if (mode === 'semantic-force') {
-    const columns: Array<{ layer: GraphLayer; left: string }> = [
-      { layer: 'Subject', left: '0%' },
-      { layer: 'Event', left: '25%' },
-      { layer: 'Feature', left: '50%' },
-      { layer: 'Regulation', left: '75%' },
-    ];
-    return (
-      <>
-        {columns.map(item => (
-          <div key={item.layer} style={{
-            position: 'absolute',
-            left: item.left,
-            top: 0,
-            width: '25%',
-            height: '100%',
-            background: LAYER_THEME[item.layer].background,
-            border: '1px dashed rgba(0,0,0,0.06)',
-          }}>
-            <span style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              color: LAYER_THEME[item.layer].color,
-              opacity: 0.48,
-              fontWeight: 600,
-            }}>
-              {LAYER_THEME[item.layer].label}
-            </span>
-          </div>
-        ))}
-      </>
-    );
-  }
-  if (mode === 'community') {
-    return (
-      <>
-        {layout.communityCenters.map(center => (
-          <div key={center.id} style={{
-            position: 'absolute',
-            left: center.x - center.radius,
-            top: center.y - center.radius,
-            width: center.radius * 2,
-            height: center.radius * 2,
-            borderRadius: '50%',
-            background: 'rgba(22,119,255,0.025)',
-            border: '1px dashed rgba(22,119,255,0.18)',
-          }}>
-            <span style={{ position: 'absolute', top: 8, left: 14, color: '#8c8c8c', fontSize: 11 }}>
-              {center.id}
-            </span>
-          </div>
-        ))}
-      </>
-    );
-  }
-  if (mode === 'radial') {
-    return (
-      <>
-        {[0.18, 0.3, 0.42].map(scale => (
-          <div key={scale} style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: Math.min(layout.width, layout.height) * scale * 2,
-            height: Math.min(layout.width, layout.height) * scale * 2,
-            transform: 'translate(-50%, -50%)',
-            borderRadius: '50%',
-            border: '1px dashed rgba(22,119,255,0.12)',
-          }} />
-        ))}
-      </>
-    );
-  }
-  return (
-    <div style={{
-      position: 'absolute',
-      left: 50,
-      right: 50,
-      top: '50%',
-      borderTop: '2px dashed rgba(245,34,45,0.12)',
-    }} />
-  );
-};
 
 export default FourLayerGraph;

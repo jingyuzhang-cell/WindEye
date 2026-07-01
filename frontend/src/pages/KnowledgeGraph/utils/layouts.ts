@@ -33,6 +33,14 @@ function hashUnit(value: string): number {
   return ((hash >>> 0) % 10000) / 10000;
 }
 
+function getVector(map: Map<string, { x: number; y: number }>, id: string): { x: number; y: number } {
+  const existing = map.get(id);
+  if (existing) return existing;
+  const fallback = { x: 0, y: 0 };
+  map.set(id, fallback);
+  return fallback;
+}
+
 export function chooseGraphLayoutMode(params: {
   nodes: KGNode[];
   edges: KGEdge[];
@@ -125,10 +133,12 @@ export function computeCascadeLayout(
           const strength = (48 - distance) * 0.07;
           dx /= distance;
           dy /= distance;
-          displacement.get(left.id)!.x += dx * strength;
-          displacement.get(left.id)!.y += dy * strength;
-          displacement.get(right.id)!.x -= dx * strength;
-          displacement.get(right.id)!.y -= dy * strength;
+          const leftDelta = getVector(displacement, left.id);
+          const rightDelta = getVector(displacement, right.id);
+          leftDelta.x += dx * strength;
+          leftDelta.y += dy * strength;
+          rightDelta.x -= dx * strength;
+          rightDelta.y -= dy * strength;
         }
       }
     });
@@ -141,14 +151,16 @@ export function computeCascadeLayout(
         const dy = target.y - source.y;
         const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
         const pull = Math.max(-3, Math.min(3, (distance - 92) * 0.012));
-        displacement.get(source.id)!.x += (dx / distance) * pull;
-        displacement.get(source.id)!.y += (dy / distance) * pull;
-        displacement.get(target.id)!.x -= (dx / distance) * pull;
-        displacement.get(target.id)!.y -= (dy / distance) * pull;
+        const sourceDelta = getVector(displacement, source.id);
+        const targetDelta = getVector(displacement, target.id);
+        sourceDelta.x += (dx / distance) * pull;
+        sourceDelta.y += (dy / distance) * pull;
+        targetDelta.x -= (dx / distance) * pull;
+        targetDelta.y -= (dy / distance) * pull;
       } else {
         const align = (target.y - source.y) * 0.006;
-        displacement.get(source.id)!.y += align;
-        displacement.get(target.id)!.y -= align;
+        getVector(displacement, source.id).y += align;
+        getVector(displacement, target.id).y -= align;
       }
     });
     positioned.forEach((node) => {
@@ -156,7 +168,7 @@ export function computeCascadeLayout(
       if (index === undefined) return;
       const laneLeft = index * bandWidth + 22;
       const laneRight = (index + 1) * bandWidth - 22;
-      const delta = displacement.get(node.id)!;
+      const delta = getVector(displacement, node.id);
       node.x = Math.max(laneLeft, Math.min(laneRight, node.x + delta.x));
       node.y = Math.max(100, Math.min(height - 36, node.y + delta.y));
     });
@@ -246,7 +258,8 @@ export function computeRadialLayout(
   const hop = new Map<string, number>([[centerId, 0]]);
   const queue = [centerId];
   while (queue.length) {
-    const current = queue.shift()!;
+    const current = queue.shift();
+    if (current === undefined) break;
     const nextHop = (hop.get(current) || 0) + 1;
     (graph.get(current) || []).forEach((neighbor) => {
       if (!hop.has(neighbor)) {
@@ -297,21 +310,27 @@ export function computeSemanticForceInitialPositions(
   height: number,
 ): AdaptiveLayoutResult {
   const degrees = getNodeDegreeMap(nodes, edges);
+  const connectedNodes = nodes.filter(node =>
+    (degrees.get(node.id) || 0) > 0 || node.isCenter || node.isMatched);
+  const isolatedNodes = nodes.filter(node =>
+    !connectedNodes.some(connected => connected.id === node.id));
+  const relationHeight = isolatedNodes.length > 0 ? Math.max(300, height * 0.48) : height;
+  const gridTop = isolatedNodes.length > 0 ? relationHeight + 34 : height + 40;
   const anchors: Record<GraphLayer, { x: number; y: number }> = {
-    Subject: { x: width * 0.25, y: height * 0.35 },
-    Event: { x: width * 0.55, y: height * 0.30 },
-    Feature: { x: width * 0.45, y: height * 0.70 },
-    Regulation: { x: width * 0.78, y: height * 0.62 },
-    Unknown: { x: width * 0.50, y: height * 0.50 },
+    Subject: { x: width * 0.36, y: relationHeight * 0.48 },
+    Event: { x: width * 0.52, y: relationHeight * 0.34 },
+    Feature: { x: width * 0.58, y: relationHeight * 0.58 },
+    Regulation: { x: width * 0.70, y: relationHeight * 0.62 },
+    Unknown: { x: width * 0.50, y: relationHeight * 0.50 },
   };
-  const positioned: PositionedKGNode[] = nodes.map(node => ({
+  const positioned: PositionedKGNode[] = connectedNodes.map(node => ({
     ...node,
-    x: anchors[node.layer].x + (hashUnit(`${node.id}:semantic-x`) - 0.5) * 240,
-    y: anchors[node.layer].y + (hashUnit(`${node.id}:semantic-y`) - 0.5) * 160,
+    x: anchors[node.layer].x + (hashUnit(`${node.id}:semantic-x`) - 0.5) * 180,
+    y: anchors[node.layer].y + (hashUnit(`${node.id}:semantic-y`) - 0.5) * 120,
     degree: degrees.get(node.id) || 0,
   }));
   const nodeMap = new Map(positioned.map(node => [node.id, node]));
-  for (let iteration = 0; iteration < 42; iteration += 1) {
+  for (let iteration = 0; iteration < 48; iteration += 1) {
     const delta = new Map(positioned.map(node => [node.id, { x: 0, y: 0 }]));
     for (let leftIndex = 0; leftIndex < positioned.length; leftIndex += 1) {
       for (let rightIndex = leftIndex + 1; rightIndex < positioned.length; rightIndex += 1) {
@@ -320,14 +339,16 @@ export function computeSemanticForceInitialPositions(
         let dx = left.x - right.x;
         let dy = left.y - right.y;
         const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-        if (distance > 82) continue;
-        const repel = (82 - distance) * 0.025;
+        if (distance > 58) continue;
+        const repel = (58 - distance) * 0.035;
         dx /= distance;
         dy /= distance;
-        delta.get(left.id)!.x += dx * repel;
-        delta.get(left.id)!.y += dy * repel;
-        delta.get(right.id)!.x -= dx * repel;
-        delta.get(right.id)!.y -= dy * repel;
+        const leftDelta = getVector(delta, left.id);
+        const rightDelta = getVector(delta, right.id);
+        leftDelta.x += dx * repel;
+        leftDelta.y += dy * repel;
+        rightDelta.x -= dx * repel;
+        rightDelta.y -= dy * repel;
       }
     }
     edges.forEach((edge) => {
@@ -337,20 +358,54 @@ export function computeSemanticForceInitialPositions(
       const dx = target.x - source.x;
       const dy = target.y - source.y;
       const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      const desired = source.layer === target.layer ? 92 : 150;
-      const pull = Math.max(-2.5, Math.min(2.5, (distance - desired) * 0.008));
-      delta.get(source.id)!.x += (dx / distance) * pull;
-      delta.get(source.id)!.y += (dy / distance) * pull;
-      delta.get(target.id)!.x -= (dx / distance) * pull;
-      delta.get(target.id)!.y -= (dy / distance) * pull;
+      const desired = source.layer === target.layer ? 76 : 116;
+      const pull = Math.max(-2.2, Math.min(2.2, (distance - desired) * 0.012));
+      const sourceDelta = getVector(delta, source.id);
+      const targetDelta = getVector(delta, target.id);
+      sourceDelta.x += (dx / distance) * pull;
+      sourceDelta.y += (dy / distance) * pull;
+      targetDelta.x -= (dx / distance) * pull;
+      targetDelta.y -= (dy / distance) * pull;
     });
     positioned.forEach((node) => {
       const anchor = anchors[node.layer];
-      const movement = delta.get(node.id)!;
-      node.x = Math.max(34, Math.min(width - 34, node.x + movement.x + (anchor.x - node.x) * 0.015));
-      node.y = Math.max(60, Math.min(height - 34, node.y + movement.y + (anchor.y - node.y) * 0.015));
+      const movement = getVector(delta, node.id);
+      node.x = Math.max(34, Math.min(width - 34, node.x + movement.x + (anchor.x - node.x) * 0.018));
+      node.y = Math.max(58, Math.min(relationHeight - 28, node.y + movement.y + (anchor.y - node.y) * 0.018));
     });
   }
+
+  const isolatedGroups = new Map<GraphLayer, KGNode[]>();
+  LAYERS.forEach((layer) => {
+    isolatedGroups.set(layer, []);
+  });
+  isolatedNodes.forEach((node) => {
+    isolatedGroups.get(node.layer)?.push(node);
+  });
+  const gridGapX = nodes.length > 800 ? 23 : 28;
+  const gridGapY = nodes.length > 800 ? 22 : 26;
+  const gridColumns = Math.max(12, Math.floor((width - 56) / gridGapX));
+  let rowOffset = 0;
+  LAYERS.forEach((layer) => {
+    const members = (isolatedGroups.get(layer) || [])
+      .sort((left, right) =>
+        Number(Boolean(right.isCenter)) - Number(Boolean(left.isCenter))
+        || Number(Boolean(right.isMatched)) - Number(Boolean(left.isMatched))
+        || left.name.localeCompare(right.name, 'zh-CN'));
+    if (members.length === 0) return;
+    members.forEach((node, index) => {
+      const column = index % gridColumns;
+      const row = Math.floor(index / gridColumns) + rowOffset;
+      positioned.push({
+        ...node,
+        x: 28 + column * gridGapX + (hashUnit(`${node.id}:iso-x`) - 0.5) * 3,
+        y: gridTop + row * gridGapY + (hashUnit(`${node.id}:iso-y`) - 0.5) * 3,
+        degree: 0,
+      });
+    });
+    rowOffset += Math.ceil(members.length / gridColumns) + 1;
+  });
+
   return {
     mode: 'semantic-force',
     nodes: positioned,
@@ -387,7 +442,8 @@ function connectedCommunities(nodes: KGNode[], edges: KGEdge[]): Map<string, KGN
     const members: KGNode[] = [];
     visited.add(start.id);
     while (queue.length) {
-      const id = queue.shift()!;
+      const id = queue.shift();
+      if (id === undefined) break;
       const node = nodes.find(candidate => candidate.id === id);
       if (node) members.push(node);
       (graph.get(id) || []).forEach((neighbor) => {
@@ -459,7 +515,8 @@ function derivePath(nodes: KGNode[], edges: KGEdge[], centerNodeId?: string): st
   const queue = [center];
   let farthest = center;
   while (queue.length) {
-    const current = queue.shift()!;
+    const current = queue.shift();
+    if (current === undefined) break;
     farthest = current;
     (graph.get(current) || []).forEach((neighbor) => {
       if (!parent.has(neighbor)) {
@@ -527,6 +584,103 @@ export function computePathFocusLayout(
   };
 }
 
+/**
+ * 自由力导向布局初始位置。
+ * 仅使用微弱的层种偏移作为初始 seed，不约束节点到固定泳道。
+ * 实际物理仿真由 G6 force layout 完成。
+ */
+export function computeFreeForceInitialPositions(
+  nodes: KGNode[],
+  edges: KGEdge[],
+  width: number,
+  height: number,
+): AdaptiveLayoutResult {
+  const degrees = getNodeDegreeMap(nodes, edges);
+  const cx = width / 2;
+  const cy = height / 2;
+  const layerSeeds: Record<string, { dx: number; dy: number }> = {
+    Subject: { dx: -120, dy: 0 },
+    Event: { dx: 0, dy: -80 },
+    Feature: { dx: 0, dy: 80 },
+    Regulation: { dx: 120, dy: 0 },
+  };
+  const positioned: PositionedKGNode[] = nodes.map(node => {
+    const seed = layerSeeds[node.layer] || { dx: 0, dy: 0 };
+    const jitterX = (hashUnit(`${node.id}:fx`) - 0.5) * 160;
+    const jitterY = (hashUnit(`${node.id}:fy`) - 0.5) * 160;
+    return {
+      ...node,
+      x: cx + seed.dx + jitterX,
+      y: cy + seed.dy + jitterY,
+      degree: degrees.get(node.id) || 0,
+    };
+  });
+  return {
+    mode: 'free-force',
+    nodes: positioned,
+    width,
+    height,
+    pathNodeIds: [],
+    communityCenters: [],
+  };
+}
+
+/**
+ * Neo4j Browser 风格弹性力导向初始位置。
+ * 这里只提供稳定 seed，不固定节点，让 G6 force 自己产生弹簧拉开效果。
+ */
+export function computeNeo4jForceLayout(
+  nodes: KGNode[],
+  edges: KGEdge[],
+  options: {
+    width: number;
+    height: number;
+    centerNodeId?: string;
+  },
+): AdaptiveLayoutResult {
+  const { width, height, centerNodeId } = options;
+  const degrees = getNodeDegreeMap(nodes, edges);
+  const centerId = resolveCenter(nodes, edges, centerNodeId);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const layerSeed: Record<GraphLayer, { x: number; y: number; jitterX: number; jitterY: number }> = {
+    Subject: { x: centerX - 240, y: centerY, jitterX: 320, jitterY: 260 },
+    Event: { x: centerX, y: centerY - 180, jitterX: 260, jitterY: 220 },
+    Feature: { x: centerX + 140, y: centerY + 130, jitterX: 260, jitterY: 220 },
+    Regulation: { x: centerX + 330, y: centerY, jitterX: 300, jitterY: 240 },
+    Unknown: { x: centerX, y: centerY, jitterX: 260, jitterY: 220 },
+  };
+  const positioned: PositionedKGNode[] = nodes.map((node) => {
+    if (node.id === centerId || node.isCenter) {
+      return {
+        ...node,
+        x: centerX,
+        y: centerY,
+        degree: degrees.get(node.id) || 0,
+      };
+    }
+    const seed = layerSeed[node.layer] || layerSeed.Unknown;
+    const degreeBoost = Math.min(90, Math.sqrt(Math.max(0, degrees.get(node.id) || 0)) * 10);
+    const jitterX = (hashUnit(`${node.id}:neo4j-x`) - 0.5) * (seed.jitterX + degreeBoost);
+    const jitterY = (hashUnit(`${node.id}:neo4j-y`) - 0.5) * (seed.jitterY + degreeBoost);
+    return {
+      ...node,
+      x: seed.x + jitterX,
+      y: seed.y + jitterY,
+      degree: degrees.get(node.id) || 0,
+    };
+  });
+
+  return {
+    mode: 'neo4j-force',
+    nodes: positioned,
+    width,
+    height,
+    pathNodeIds: [],
+    communityCenters: [],
+  };
+}
+
 export function computeAdaptiveLayout(params: {
   mode: GraphLayoutMode;
   nodes: KGNode[];
@@ -537,6 +691,10 @@ export function computeAdaptiveLayout(params: {
   pathNodeIds?: string[];
 }): AdaptiveLayoutResult {
   const { mode, nodes, edges, width, height, centerNodeId, pathNodeIds } = params;
+  if (mode === 'neo4j-force') {
+    return computeNeo4jForceLayout(nodes, edges, { width, height, centerNodeId });
+  }
+  if (mode === 'free-force') return computeFreeForceInitialPositions(nodes, edges, width, height);
   if (mode === 'aggregate') return computeAggregateLayout(nodes, edges, width, height);
   if (mode === 'cascade') return computeCascadeLayout(nodes, edges, width, height);
   if (mode === 'radial') return computeRadialLayout(nodes, edges, width, height, centerNodeId);

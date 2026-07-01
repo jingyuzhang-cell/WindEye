@@ -87,32 +87,7 @@ def get_token_expiry(token: str) -> int | None:
 
 # ── Token blacklist (Redis-backed, optional) ──────────────────────────
 
-_redis = None
-
-
-def _get_redis():
-    """Lazy-init Redis connection for token blacklist."""
-    global _redis
-    if not settings.REDIS_ENABLED:
-        return False
-    if _redis is not None:
-        return _redis
-    try:
-        import redis
-        _redis_client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            password=settings.REDIS_PASSWORD or None,
-            decode_responses=True,
-            socket_connect_timeout=0.5,
-            socket_timeout=0.5,
-        )
-        _redis_client.ping()
-        _redis = _redis_client
-    except Exception:
-        _redis = False
-    return _redis
+from core.redis_client import get_redis as _get_redis  # unified client
 
 
 def _blacklist_token(token: str, ttl: int) -> None:

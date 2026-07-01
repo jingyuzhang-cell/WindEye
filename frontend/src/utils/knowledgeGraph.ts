@@ -97,6 +97,9 @@ export function normalizeNode(raw: any): KGNode {
     name: '',
     isMatched: Boolean(raw?.isMatched),
     isCenter: Boolean(raw?.isCenter),
+    isHub: Boolean(raw?.meta?.isHub),
+    hubDegree: typeof raw?.meta?.degree === 'number' ? raw.meta.degree : undefined,
+    collapsed: Boolean(raw?.meta?.collapsed),
   };
   node.name = getNodeDisplayName(node);
   return node;

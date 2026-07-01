@@ -9,15 +9,14 @@ export type {
   GraphLayer,
   GraphLayoutMode,
   GraphLayoutSelection,
+  GraphViewMode,
 } from '@/types/knowledgeGraph';
 
-export const GRAPH_LAYER_THEME = {
-  Subject: { label: '主体层', color: '#1677ff', background: 'rgba(22,119,255,0.055)' },
-  Event: { label: '事件层', color: '#faad14', background: 'rgba(250,173,20,0.065)' },
-  Feature: { label: '特征层', color: '#52c41a', background: 'rgba(82,196,26,0.055)' },
-  Regulation: { label: '法规层', color: '#722ed1', background: 'rgba(114,46,209,0.055)' },
-  Unknown: { label: '未归类', color: '#8c8c8c', background: 'rgba(140,140,140,0.05)' },
-} as const;
+/**
+ * @deprecated 请从 '@/pages/KnowledgeGraph/config/visualTheme' 导入 LAYER_COLORS_WITH_UNKNOWN。
+ * 保留此导出仅为向后兼容 SubjectPage / EventPage / FeaturePage / RegulationPage。
+ */
+export { LAYER_COLORS_WITH_UNKNOWN as GRAPH_LAYER_THEME } from '@/pages/KnowledgeGraph/config/visualTheme';
 
 export const GRAPH_LAYOUT_LIMITS = {
   radialMaxNodes: 30,

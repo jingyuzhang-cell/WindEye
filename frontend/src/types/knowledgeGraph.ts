@@ -1,8 +1,13 @@
 export type GraphLayer = 'Subject' | 'Event' | 'Feature' | 'Regulation' | 'Unknown';
 export type GraphFilterLayer = Exclude<GraphLayer, 'Unknown'>;
-export type GraphLayoutMode = 'aggregate' | 'cascade' | 'radial' | 'semantic-force' | 'community' | 'path-focus';
+export type GraphLayoutMode = 'neo4j-force' | 'free-force' | 'aggregate' | 'cascade' | 'radial' | 'semantic-force' | 'community' | 'path-focus';
 export type GraphLayoutSelection = 'auto' | GraphLayoutMode;
-export type GraphViewMode = 'aggregate' | 'core' | 'full' | 'path';
+/**
+ * 图谱视图模式。
+ * UI 默认展示 core / semantic 两种；
+ * aggregate / community / path-focus 用于高级场景（聚合、社区发现、风险路径高亮）。
+ */
+export type GraphViewMode = 'core' | 'semantic' | 'aggregate' | 'community' | 'path-focus';
 export type GraphFilterMode = 'highlight' | 'filter';
 
 export interface GraphFilterState {
@@ -24,6 +29,9 @@ export interface KGNode {
   isCenter?: boolean;
   degree?: number;
   communityId?: string | number;
+  isHub?: boolean;
+  hubDegree?: number;
+  collapsed?: boolean;
   isAggregate?: boolean;
   aggregateKey?: string;
   count?: number;
@@ -74,8 +82,21 @@ export interface KGSummary {
   frontierCountsByHop?: Record<string, number>;
   truncated?: boolean;
   truncatedBy?: string | null;
-  traversalMode?: 'bfs' | 'cascade';
+  traversalMode?: 'bfs' | 'cascade' | 'subject-traverse';
   cascadeStageCounts?: Partial<Record<Exclude<GraphLayer, 'Unknown'>, number>>;
+  policy?: string;
+  hubNodeCount?: number;
+  blockedSubjectExpansionCount?: number;
+  blockedSubjectExpansionByHub?: Array<{hubId:string;hubName:string;degree:number;blockedCount:number;blockedRelationTypes:string[]}>;
+  evidenceCompletionApplied?: boolean;
+  evidenceNodeCounts?: Record<string, number>;
+  subjectExpansionBlocked?: boolean;
+  forceExpandHub?: boolean;
+  evidenceDiagnosis?: {
+    evidenceNodeFound: boolean;
+    possibleReasons?: string[];
+    message?: string;
+  };
 }
 
 export interface SearchAllPayload {
@@ -94,6 +115,19 @@ export interface SearchAllPayload {
   deduplicate?: boolean;
   responseMode?: 'full' | 'summary';
   traversalMode?: 'bfs' | 'cascade';
+}
+
+export interface SubjectTraversePayload {
+  subject?: string;
+  query?: string;
+  startNodeId?: string;
+  depth?: number;
+  centerLimit?: number;
+  nodeLimit?: number;
+  edgeLimit?: number;
+  relationWhitelist?: string[];
+  layerWhitelist?: Exclude<GraphLayer, 'Unknown'>[];
+  includeProperties?: boolean;
 }
 
 export interface SearchAllResponse {
@@ -119,6 +153,8 @@ export interface ExpandNodePayload {
   includeCrossLayer?: boolean;
   includeProperties?: boolean;
   responseMode?: 'full' | 'summary';
+  forceExpandHub?: boolean;
+  maxFanout?: number;
 }
 
 export interface ExpandNodeResponse {

@@ -212,7 +212,11 @@ function getSubgraphNodeName(node: any): string {
   )
 }
 
-function buildGraphQaAnswer(query: string, subgraph: Subgraph | null): string {
+function buildGraphQaAnswer(
+  query: string,
+  subgraph: Subgraph | null,
+  resolvedEntities: ResolvedEntity[] = [],
+): string {
   const nodes = subgraph?.nodes || []
   const edges = subgraph?.edges || []
   if (nodes.length === 0) {
@@ -220,17 +224,64 @@ function buildGraphQaAnswer(query: string, subgraph: Subgraph | null): string {
   }
 
   const nodeById = new Map(nodes.map((node: any) => [String(node.id), node]))
-  const degree = new Map<string, number>()
-  edges.forEach((edge: any) => {
-    const source = String(edge.source)
-    const target = String(edge.target)
-    degree.set(source, (degree.get(source) || 0) + 1)
-    degree.set(target, (degree.get(target) || 0) + 1)
-  })
-  const center = [...nodes].sort((a: any, b: any) => (degree.get(String(b.id)) || 0) - (degree.get(String(a.id)) || 0))[0]
-  const centerId = center ? String((center as any).id) : ''
-  const centerName = center ? getSubgraphNodeName(center) : '查询主体'
-  const directEdges = edges.filter((edge: any) => String(edge.source) === centerId || String(edge.target) === centerId)
+
+  // 优先从 resolved entities 确定中心实体
+  let centerId = ''
+  let centerName = ''
+  let matchType = ''
+
+  if (resolvedEntities.length > 0) {
+    for (const re of resolvedEntities) {
+      const candidateId = String(re.kg_node_id || re.id || '')
+      if (nodeById.has(candidateId)) {
+        centerId = candidateId
+        centerName = re.canonical_name || re.name || getSubgraphNodeName(nodeById.get(candidateId))
+        matchType = re.match_type || ''
+        break
+      }
+      for (const [nid, node] of nodeById) {
+        const name = getSubgraphNodeName(node)
+        if (name && re.canonical_name && name.includes(re.canonical_name)) {
+          centerId = nid
+          centerName = re.canonical_name
+          matchType = re.match_type || ''
+          break
+        }
+      }
+      if (centerId) break
+    }
+  }
+
+  // Fallback: use isCenter flag
+  if (!centerId) {
+    const centerNode = nodes.find((n: any) => n.isCenter || n.isMatched)
+    if (centerNode) {
+      centerId = String((centerNode as any).id)
+      centerName = getSubgraphNodeName(centerNode)
+    }
+  }
+
+  // Last resort: degree-based center
+  if (!centerId) {
+    const degree = new Map<string, number>()
+    edges.forEach((edge: any) => {
+      degree.set(String(edge.source), (degree.get(String(edge.source)) || 0) + 1)
+      degree.set(String(edge.target), (degree.get(String(edge.target)) || 0) + 1)
+    })
+    const best = [...nodes].sort((a: any, b: any) =>
+      (degree.get(String(b.id)) || 0) - (degree.get(String(a.id)) || 0))[0]
+    centerId = best ? String((best as any).id) : ''
+    centerName = best ? getSubgraphNodeName(best) : '查询主体'
+  }
+
+  if (!centerId) {
+    return '我暂时无法确定查询的核心实体。可以补充完整名称，我再继续查询。'
+  }
+
+  // 直接关系：仅来自中心节点的一跳边
+  const directEdges = edges.filter(
+    (edge: any) => String(edge.source) === centerId || String(edge.target) === centerId,
+  )
   const related = directEdges
     .map((edge: any) => {
       const otherId = String(edge.source) === centerId ? String(edge.target) : String(edge.source)
@@ -240,12 +291,16 @@ function buildGraphQaAnswer(query: string, subgraph: Subgraph | null): string {
         relation: compactText(edge.relation || (edge as any).type || (edge as any).label, '关联'),
       }
     })
-    .filter((item) => item.name && item.name !== '未知实体')
+    .filter((item) => item.name && item.name !== '未知实体' && item.name !== centerName)
 
+  // 构建回答
   const lines: string[] = []
-  lines.push(`已根据你的问题查询到相关子图：${nodes.length} 个节点、${edges.length} 条关系。`)
+  const matchInfo = matchType ? `（${matchType}）` : ''
+  lines.push(`已匹配到实体：**${centerName}**${matchInfo}`)
+
   if (related.length > 0) {
-    lines.push(`${centerName} 的直接关联包括：`)
+    lines.push('')
+    lines.push(`**${centerName}** 的直接关联包括：`)
     related.slice(0, 8).forEach((item, index) => {
       lines.push(`${index + 1}. ${item.name}（${item.relation}）`)
     })
@@ -253,8 +308,8 @@ function buildGraphQaAnswer(query: string, subgraph: Subgraph | null): string {
       lines.push(`还有 ${related.length - 8} 个关联实体，可在右侧图谱继续查看。`)
     }
   } else {
-    const names = nodes.slice(0, 8).map(getSubgraphNodeName).join('、')
-    lines.push(`本次命中的实体包括：${names}。`)
+    lines.push('')
+    lines.push('当前图谱中暂未查询到该实体的一跳关联关系。可以提高穿透深度，或检查该实体是否存在关系入库。')
   }
   if (/简称|缩写/.test(query) || /^[\u4e00-\u9fa5]{2,4}$/.test(query.trim())) {
     lines.push('')
@@ -1035,7 +1090,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                     ...m,
                     content: m.content || (isRisk
                       ? buildPartialRiskAnswer(query, state.riskReport, state.currentSubgraph)
-                      : buildGraphQaAnswer(query, state.currentSubgraph)),
+                      : buildGraphQaAnswer(query, state.currentSubgraph, state.resolvedEntities)),
                     isLoading: false,
                     thinkingStatus: undefined,
                   }
