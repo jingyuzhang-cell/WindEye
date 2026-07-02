@@ -1,0 +1,31 @@
+{
+  "batch_id": "exec_20260624_091907",
+  "timestamp": "2026-06-24T09:19:12.529625+00:00",
+  "failed_companies": [
+    {
+      "company_name": "(待清理)中国人寿保险股份有限公司陵水县支公司新村营销服务部",
+      "credit_code": null,
+      "error": "no_data"
+    },
+    {
+      "company_name": "(待清理)中国人民财产保险股份有限公司临高支公司第一营销服务部",
+      "credit_code": null,
+      "error": "no_data"
+    },
+    {
+      "company_name": "(待清理)中国人民财产保险股份有限公司琼中支公司驻琼中交警大队保险营销服务部",
+      "credit_code": null,
+      "error": "no_data"
+    },
+    {
+      "company_name": "(待清理)中国石油化工股份有限公司海南东方东海石油商店",
+      "credit_code": null,
+      "error": "no_data"
+    },
+    {
+      "company_name": "(待清理)中国石油化工股份有限公司海南东方新港加油站",
+      "credit_code": "91469007MA5RFNYCX2",
+      "error": "no_data"
+    }
+  ]
+}
