@@ -308,6 +308,8 @@ class UnifiedEngine:
         max_hop: int = 3,
         intent_hint: str | None = None,
         file_content: str | None = None,
+        confirmed_entities: list[dict[str, Any]] | None = None,
+        workflow: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """Run the full unified pipeline and yield SSE envelope lines.
 
@@ -328,6 +330,8 @@ class UnifiedEngine:
             intent_hint=intent_hint,
             max_hop=max_hop,
             file_content=file_content,
+            confirmed_entities=confirmed_entities or [],
+            workflow=workflow,
             demo=self.demo,
         )
         orchestrator = GovernanceOrchestrator(services=self)

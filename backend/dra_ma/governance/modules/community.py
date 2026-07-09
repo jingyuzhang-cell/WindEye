@@ -60,14 +60,20 @@ class CommunityModule(GovernanceModule):
                 for r in (ctx.resolved_entities or [])
                 if getattr(r, "canonical_name", None)
             ]
-            if seed_names:
+            seed_ids = [
+                str(r.kg_node_id)
+                for r in (ctx.resolved_entities or [])
+                if getattr(r, "kg_node_id", None)
+            ]
+            if seed_names or seed_ids:
                 logger.info(
-                    "[CommunityExpanded] seedNames=%s method=auto maxHop=3",
-                    seed_names[:5],
+                    "[CommunityExpanded] seedNames=%s seedIds=%s method=auto maxHop=3",
+                    seed_names[:5], seed_ids[:5],
                 )
                 try:
                     expanded = await services._run_expanded_community(
                         seed_names=seed_names,
+                        seed_ids=seed_ids,
                         method="auto",
                         max_hop=3,
                     )

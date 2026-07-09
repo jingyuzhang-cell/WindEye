@@ -330,10 +330,17 @@ def create_routes(app, kg_system, risk_engine=None):
                 if "Subject" in item.labels
                 or item.entity_type.upper() in {"COMPANY", "PERSON"}
             ][:safe_limit]
+            requires_confirmation = (
+                len(subject_candidates) != 1
+                or subject_candidates[0].match_score < 0.95
+                or len(query) <= 12
+            )
             return _api_ok({
                 "query": query,
                 "type": preferred_type,
                 "count": len(subject_candidates),
+                "requires_confirmation": bool(subject_candidates) and requires_confirmation,
+                "auto_resolved": len(subject_candidates) == 1 and not requires_confirmation,
                 "candidates": [asdict(item) for item in subject_candidates],
             })
         except Exception as exc:
@@ -429,6 +436,8 @@ def create_routes(app, kg_system, risk_engine=None):
         round_id: int = Field(default=1, alias="roundId")
         max_hop: int = Field(default=3, ge=1, le=5, alias="maxHop")
         intent_hint: str | None = Field(default=None, alias="intentHint")
+        confirmed_entities: list[dict[str, Any]] = Field(default_factory=list, alias="confirmedEntities")
+        workflow: str | None = Field(default=None)
 
     @app.post("/api/v1/chat/unified-stream")
     async def unified_stream(req: UnifiedStreamRequest, request: Request):
@@ -451,6 +460,8 @@ def create_routes(app, kg_system, risk_engine=None):
                     max_hop=req.max_hop,
                     intent_hint=req.intent_hint,
                     file_content=req.file_content,
+                    confirmed_entities=req.confirmed_entities,
+                    workflow=req.workflow,
                 ):
                     # UnifiedEngine yields JSON envelope strings — wrap as SSE
                     data = _json.loads(line) if isinstance(line, str) else line

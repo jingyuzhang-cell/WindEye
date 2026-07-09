@@ -171,6 +171,7 @@ export interface EntityCandidate {
   match_score: number
   confidence: number
   reason?: string
+  properties?: Record<string, unknown>
 }
 
 export interface EntityCandidatePrompt {

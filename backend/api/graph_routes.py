@@ -45,6 +45,28 @@ def _safe_int(value, default=100, min_val=1, max_val=1000):
         return default
 
 
+def _resolve_graph_limits(req) -> tuple[int, int]:
+    """Resolve effective graph caps.
+
+    `limit` is treated as the per-hop base node budget. With the default
+    limit=1000, depth=1/2/3 yields effective node caps of 1000/2000/3000.
+    `nodeLimit` remains an absolute override for callers that need strict caps.
+    """
+    depth = max(int(getattr(req, "depth", 1) or 1), 1)
+    base_limit = int(getattr(req, "limit", 1000) or 1000)
+    node_limit = (
+        int(req.nodeLimit)
+        if getattr(req, "nodeLimit", None) is not None
+        else min(base_limit * depth, 5000)
+    )
+    edge_limit = (
+        int(req.edgeLimit)
+        if getattr(req, "edgeLimit", None) is not None
+        else max(node_limit * 4, 2000)
+    )
+    return node_limit, edge_limit
+
+
 def _cross_stats(from_labels: list[str], to_labels: list[str]) -> dict:
     """Return relationship count and types between two label groups (directed from->to)."""
     query = f"""
@@ -107,7 +129,7 @@ class SearchAllRequest(BaseModel):
     query: str = Field(..., min_length=1, description="搜索关键词")
     layer: str = Field(default="all", description="all / Subject / Event / Feature / Regulation")
     depth: int = Field(default=2, ge=1, le=5, description="匹配节点周边展开深度")
-    limit: int = Field(default=500, ge=1, le=5000, description="最大返回数（兼容旧前端）")
+    limit: int = Field(default=1000, ge=1, le=1000, description="单跳基础节点上限；默认每跳 1000")
     type: str = Field(default="all", description="节点类型过滤，例如 COMPANY、PERSON、EVENT、Law")
     nodeLimit: int | None = Field(default=None, ge=1, le=5000, description="最大返回节点数")
     edgeLimit: int | None = Field(default=None, ge=1, le=10000, description="最大返回关系数")
@@ -134,6 +156,11 @@ class SearchAllRequest(BaseModel):
         default="bfs",
         description="遍历模式：bfs / cascade",
     )
+    prunePolicy: str = Field(default="degree_aware", description="剪枝策略：none / degree_aware / evidence_first")
+    maxExpandDegree: int = Field(default=200, ge=1, le=100000, description="超过该度数的节点默认不进入下一跳")
+    highDegreeLabels: list[str] = Field(default_factory=list, description="高出度低区分度节点标签")
+    keepHighDegreeNode: bool = Field(default=True, description="是否保留高出度节点本身及一跳边")
+    includePruningSummary: bool = Field(default=True, description="是否返回 summary.pruning")
 
     @field_validator("layer")
     @classmethod
@@ -157,6 +184,14 @@ class SearchAllRequest(BaseModel):
         allowed = {"bfs", "cascade"}
         if v not in allowed:
             raise ValueError(f"traversalMode must be one of {sorted(allowed)}")
+        return v
+
+    @field_validator("prunePolicy")
+    @classmethod
+    def _check_prune_policy(cls, v: str) -> str:
+        allowed = {"none", "degree_aware", "evidence_first"}
+        if v not in allowed:
+            raise ValueError(f"prunePolicy must be one of {sorted(allowed)}")
         return v
 
     @field_validator("layerWhitelist")
@@ -198,6 +233,7 @@ class SearchAllSummary(BaseModel):
     truncatedBy: str | None = None
     traversalMode: str = "bfs"
     cascadeStageCounts: dict[str, int] = Field(default_factory=dict)
+    pruning: dict = Field(default_factory=dict)
 
 
 class SearchAllResponse(BaseModel):
@@ -217,7 +253,7 @@ class ExpandRequest(BaseModel):
     """N-hop subgraph expansion request body."""
 
     depth: int = Field(default=2, ge=1, le=5, description="展开深度（跳数）")
-    limit: int = Field(default=500, ge=1, le=5000, description="最大返回数（兼容旧前端）")
+    limit: int = Field(default=1000, ge=1, le=1000, description="单跳基础节点上限；默认每跳 1000")
     nodeLimit: int | None = Field(default=None, ge=1, le=5000, description="最大返回节点数")
     edgeLimit: int | None = Field(default=None, ge=1, le=10000, description="最大返回关系数")
     relationWhitelist: list[str] = Field(
@@ -231,6 +267,12 @@ class ExpandRequest(BaseModel):
     includeCrossLayer: bool = Field(default=True, description="是否包含跨层关系")
     includeProperties: bool = Field(default=True, description="是否返回节点和关系属性")
     responseMode: str = Field(default="full", description="返回模式：full / summary")
+    traversalMode: str = Field(default="bfs", description="遍历模式：bfs / cascade")
+    prunePolicy: str = Field(default="degree_aware", description="剪枝策略：none / degree_aware / evidence_first")
+    maxExpandDegree: int = Field(default=200, ge=1, le=100000, description="超过该度数的节点默认不进入下一跳")
+    highDegreeLabels: list[str] = Field(default_factory=list, description="高出度低区分度节点标签")
+    keepHighDegreeNode: bool = Field(default=True, description="是否保留高出度节点本身及一跳边")
+    includePruningSummary: bool = Field(default=True, description="是否返回 summary.pruning")
     forceExpandHub: bool = Field(default=False, description="强制展开 hub 节点（配合 maxFanout）")
     maxFanout: int = Field(default=100, ge=1, le=500, description="强制展开 hub 时的最大邻居数")
 
@@ -253,6 +295,22 @@ class ExpandRequest(BaseModel):
             raise ValueError(
                 f"Invalid relation types: {invalid}. Allowed: {sorted(ALLOWED_REL_TYPES)}"
             )
+        return v
+
+    @field_validator("traversalMode")
+    @classmethod
+    def _check_traversal_mode(cls, v: str) -> str:
+        allowed = {"bfs", "cascade"}
+        if v not in allowed:
+            raise ValueError(f"traversalMode must be one of {sorted(allowed)}")
+        return v
+
+    @field_validator("prunePolicy")
+    @classmethod
+    def _check_prune_policy(cls, v: str) -> str:
+        allowed = {"none", "degree_aware", "evidence_first"}
+        if v not in allowed:
+            raise ValueError(f"prunePolicy must be one of {sorted(allowed)}")
         return v
 
 
@@ -400,6 +458,11 @@ HUB_NODE_TYPE_THRESHOLD: dict[str, int] = {
     "REGULATOR": 300, "Law": 1000, "Regulation": 1000,
 }
 
+DEFAULT_HIGH_DEGREE_LABELS = {
+    "BANK", "PFUND", "PFCOMPANY", "SECURITY", "REGULATOR", "EXCHANGE",
+    "TIME", "Law", "Regulation",
+}
+
 STRONG_SUBJECT_RELATIONS = {
     "GUARANTEE", "CONTROLLER", "CONTROL", "INVEST", "CAUSE", "TRIGGERS",
 }
@@ -469,12 +532,169 @@ def get_node_degrees(tx, node_ids: list[str]) -> dict[str, int]:
     return result
 
 
+def get_node_degrees_for_client(db: "Neo4jClient", node_ids: list[str]) -> dict[str, int]:
+    """Batch-fetch degrees through the shared Neo4j client wrapper."""
+    if not node_ids:
+        return {}
+    result: dict[str, int] = {}
+
+    try:
+        from services.graph_cache_service import (
+            get_node_degrees_cached,
+            set_node_degrees_batch,
+        )
+        result.update(get_node_degrees_cached(node_ids))
+    except Exception:
+        pass
+
+    uncached = [nid for nid in node_ids if nid not in result]
+    if uncached:
+        rows, _ = db.execute_read_with_summary(
+            """
+            MATCH (n)-[r]-()
+            WHERE elementId(n) IN $ids
+            RETURN elementId(n) AS id, count(r) AS degree
+            """,
+            {"ids": uncached},
+            timeout_seconds=15.0,
+        )
+        fresh: dict[str, int] = {}
+        for row in rows:
+            nid = str(row.get("id"))
+            degree = int(row.get("degree") or 0)
+            fresh[nid] = degree
+            result[nid] = degree
+        for nid in uncached:
+            result.setdefault(nid, 0)
+        if fresh:
+            try:
+                set_node_degrees_batch(fresh)
+            except Exception:
+                pass
+
+    return result
+
+
 def is_hub_node(labels: list[str], degree: int) -> bool:
     """Check whether a node qualifies as a super-node (hub)."""
     for label in labels:
         if label in HUB_NODE_TYPE_THRESHOLD:
             return degree >= HUB_NODE_TYPE_THRESHOLD[label]
     return degree >= HUB_NODE_DEGREE_THRESHOLD
+
+
+def build_pruning_config(req) -> dict:
+    labels = set(getattr(req, "highDegreeLabels", None) or DEFAULT_HIGH_DEGREE_LABELS)
+    return {
+        "policy": getattr(req, "prunePolicy", "degree_aware"),
+        "maxExpandDegree": int(getattr(req, "maxExpandDegree", 200) or 200),
+        "highDegreeLabels": labels,
+        "keepHighDegreeNode": bool(getattr(req, "keepHighDegreeNode", True)),
+        "includePruningSummary": bool(getattr(req, "includePruningSummary", True)),
+    }
+
+
+def new_pruning_stats(config: dict) -> dict:
+    return {
+        "policy": config["policy"],
+        "maxExpandDegree": config["maxExpandDegree"],
+        "highDegreeLabels": sorted(config["highDegreeLabels"]),
+        "prunedNodeCount": 0,
+        "terminalHubCount": 0,
+        "blockedExpansionCount": 0,
+        "blockedByReason": {},
+        "terminalHubs": [],
+        "_terminalHubIds": set(),
+    }
+
+
+def _increment_pruning_reason(stats: dict, reason: str, count: int = 1) -> None:
+    stats["blockedByReason"][reason] = stats["blockedByReason"].get(reason, 0) + count
+    stats["blockedExpansionCount"] += count
+
+
+def _node_label_set(node_or_labels) -> set[str]:
+    if isinstance(node_or_labels, dict):
+        labels = node_or_labels.get("labels", [])
+    else:
+        labels = node_or_labels or []
+    return {str(label) for label in labels}
+
+
+def _is_low_signal_hub(labels: list[str], config: dict) -> bool:
+    return bool(_node_label_set(labels) & set(config["highDegreeLabels"]))
+
+
+def _should_terminal_by_degree(
+    labels: list[str],
+    degree: int,
+    layer: str,
+    rel_type: str,
+    config: dict,
+) -> tuple[bool, str]:
+    if config["policy"] == "none":
+        return False, ""
+    if degree <= config["maxExpandDegree"]:
+        return False, ""
+    if layer in {"Subject", "Unknown"} or _is_low_signal_hub(labels, config):
+        return True, "high_degree"
+    if rel_type not in STRONG_SUBJECT_RELATIONS and config["policy"] == "degree_aware":
+        return True, "high_degree"
+    return False, ""
+
+
+def _record_terminal_hub(
+    stats: dict,
+    node: dict,
+    degree: int,
+    reason: str,
+    hop: int,
+) -> None:
+    node_id = str(node.get("id", ""))
+    if node_id in stats["_terminalHubIds"]:
+        _increment_pruning_reason(stats, reason)
+        return
+    stats["_terminalHubIds"].add(node_id)
+    stats["terminalHubCount"] += 1
+    stats["prunedNodeCount"] += 1
+    _increment_pruning_reason(stats, reason)
+    if len(stats["terminalHubs"]) < 20:
+        stats["terminalHubs"].append({
+            "id": node_id,
+            "name": _serialized_node_name(node),
+            "degree": degree,
+            "labels": node.get("labels", []),
+            "hop": hop,
+            "reason": f"degree>{stats['maxExpandDegree']}; kept as terminal; not expanded to next hop",
+        })
+
+
+def public_pruning_summary(stats: dict | None) -> dict:
+    if not stats:
+        return {}
+    public = dict(stats)
+    public.pop("_terminalHubIds", None)
+    return public
+
+
+def _node_pruning_score(node: dict, center_ids: set[str], keyword: str, config: dict) -> tuple[int, str]:
+    node_id = str(node.get("id", ""))
+    labels = _node_label_set(node)
+    props = node.get("properties") if isinstance(node.get("properties"), dict) else {}
+    text = _serialized_node_text(node)
+    layer = _serialized_node_layer(node) or "Unknown"
+    score = 0
+    if node_id in center_ids:
+        score += 1000
+    if layer in {"Event", "Feature", "Regulation"}:
+        score += 200
+    if any(key in props for key in ("RISK_INFO", "FACTOR_INFO", "RISK_LIST")):
+        score += 150
+    if keyword and keyword in text:
+        score += 120
+    if labels & set(config["highDegreeLabels"]):
+        score -= 150
+    return (score, _serialized_node_name(node))
 
 
 def should_include_neighbor(
@@ -1108,9 +1328,19 @@ def _search_subject_cascade(
     edge_limit: int = 2000,
     include_semantic_search: bool = True,
     semantic_terms: list[str] | None = None,
+    pruning_config: dict | None = None,
 ) -> dict:
     """Build a bounded, stage-oriented Subject → Event → Feature → Regulation graph."""
+    pruning_config = pruning_config or {
+        "policy": "none",
+        "maxExpandDegree": 200,
+        "highDegreeLabels": set(),
+        "keepHighDegreeNode": True,
+        "includePruningSummary": False,
+    }
+    pruning_stats = new_pruning_stats(pruning_config)
     node_map = {node["id"]: node for node in center_nodes}
+    center_id_set = set(node_map)
     edge_map: dict[str, dict] = {}
     warnings: list[str] = []
     subject_ids = set(node_map)
@@ -1118,7 +1348,7 @@ def _search_subject_cascade(
     effective_rel = relation_whitelist
     subject_labels = LAYER_LABEL_MAP["Subject"]
 
-    for _hop in range(subject_depth):
+    for hop in range(1, subject_depth + 1):
         if not frontier_ids:
             break
         params: dict = {
@@ -1143,6 +1373,12 @@ def _search_subject_cascade(
             timeout_seconds=120.0,
         )
         next_frontier: set[str] = set()
+        target_ids_for_degree = [
+            str(row.get("target").element_id)
+            for row in rows
+            if row.get("target") is not None
+        ]
+        target_degree_map = get_node_degrees_for_client(db, target_ids_for_degree)
         for row in rows:
             source = row.get("source")
             target = row.get("target")
@@ -1152,10 +1388,26 @@ def _search_subject_cascade(
             source_data = Neo4jClient.serialize_node(source)
             target_data = Neo4jClient.serialize_node(target)
             edge_data = Neo4jClient.serialize_relationship(relation)
+            target_degree = target_degree_map.get(target_data["id"], 0)
+            target_layer = _serialized_node_layer(target_data) or "Unknown"
+            terminal, reason = _should_terminal_by_degree(
+                target_data.get("labels", []),
+                target_degree,
+                target_layer,
+                edge_data.get("type", edge_data.get("relation", "")),
+                pruning_config,
+            )
+            if target_data["id"] in center_id_set:
+                terminal = False
+            if terminal:
+                if not pruning_config["keepHighDegreeNode"]:
+                    _increment_pruning_reason(pruning_stats, reason)
+                    continue
+                _record_terminal_hub(pruning_stats, target_data, target_degree, reason, hop)
             node_map[source_data["id"]] = source_data
             node_map[target_data["id"]] = target_data
             edge_map[edge_data["id"]] = edge_data
-            if target_data["id"] not in subject_ids:
+            if target_data["id"] not in subject_ids and not terminal:
                 next_frontier.add(target_data["id"])
             subject_ids.add(target_data["id"])
         frontier_ids = next_frontier
@@ -1489,11 +1741,12 @@ def _search_subject_cascade(
         layered_nodes = sorted(
             [node for node in nodes if node.get("id") not in center_id_set],
             key=lambda node: (
+                -_node_pruning_score(node, center_id_set, keyword, pruning_config)[0],
                 {"Event": 0, "Feature": 1, "Regulation": 2, "Subject": 3}.get(
                     _serialized_node_layer(node) or "Unknown",
                     4,
                 ),
-                _serialized_node_name(node),
+                _node_pruning_score(node, center_id_set, keyword, pruning_config)[1],
             ),
         )
         for node in layered_nodes:
@@ -1519,13 +1772,15 @@ def _search_subject_cascade(
             edge for edge in edges
             if edge.get("source") in kept_ids and edge.get("target") in kept_ids
         ]
-        warnings.append(f"NODE_LIMIT_REACHED: nodeLimit={node_limit}，已按四层证据优先裁剪")
+        warning_code = "NODE_LIMIT_REACHED_AFTER_PRUNING" if pruning_config["policy"] != "none" else "NODE_LIMIT_REACHED"
+        warnings.append(f"{warning_code}: nodeLimit={node_limit}，已按四层证据优先和度数感知策略裁剪")
 
     if len(edges) > edge_limit:
         truncated = True
         truncated_by = truncated_by or "edgeLimit"
         edges = edges[:edge_limit]
-        warnings.append(f"EDGE_LIMIT_REACHED: edgeLimit={edge_limit}，已裁剪关系数量")
+        warning_code = "EDGE_LIMIT_REACHED_AFTER_PRUNING" if pruning_config["policy"] != "none" else "EDGE_LIMIT_REACHED"
+        warnings.append(f"{warning_code}: edgeLimit={edge_limit}，已裁剪关系数量")
 
     stage_counts = {
         "Subject": sum(_serialized_node_layer(node) == "Subject" for node in nodes),
@@ -1533,27 +1788,42 @@ def _search_subject_cascade(
         "Feature": sum(_serialized_node_layer(node) == "Feature" for node in nodes),
         "Regulation": sum(_serialized_node_layer(node) == "Regulation" for node in nodes),
     }
+    if pruning_config["policy"] != "none" and pruning_stats["blockedExpansionCount"] > 0:
+        warnings.append(
+            "PRUNING_APPLIED: 已启用 degree_aware_evidence_pruning，"
+            "高出度低区分度节点保留为 terminal，不继续二跳扩展"
+        )
+        for hub in pruning_stats["terminalHubs"][:3]:
+            warnings.append(
+                f"HIGH_DEGREE_NODE_TERMINATED: 节点“{hub['name']}”度数 {hub['degree']} "
+                f"超过阈值 {pruning_config['maxExpandDegree']}，已保留一跳关系但不继续扩展"
+            )
+
+    summary = {
+        "requestedDepth": subject_depth,
+        "actualDepth": subject_depth,
+        "centerCount": len(center_nodes),
+        "nodeCount": len(nodes),
+        "edgeCount": len(edges),
+        "relationTypes": sorted({
+            edge.get("type", edge.get("relation", "")) for edge in edges
+        }),
+        "nodeTypeCounts": _count_node_types(nodes),
+        "edgeTypeCounts": _count_edge_types(edges),
+        "frontierCountsByHop": {},
+        "truncated": truncated,
+        "truncatedBy": truncated_by,
+        "traversalMode": "cascade",
+        "cascadeStageCounts": stage_counts,
+    }
+    if pruning_config["includePruningSummary"]:
+        summary["pruning"] = public_pruning_summary(pruning_stats)
+
     return {
         "nodes": nodes,
         "edges": edges,
         "warnings": warnings,
-        "summary": {
-            "requestedDepth": subject_depth,
-            "actualDepth": subject_depth,
-            "centerCount": len(center_nodes),
-            "nodeCount": len(nodes),
-            "edgeCount": len(edges),
-            "relationTypes": sorted({
-                edge.get("type", edge.get("relation", "")) for edge in edges
-            }),
-            "nodeTypeCounts": _count_node_types(nodes),
-            "edgeTypeCounts": _count_edge_types(edges),
-            "frontierCountsByHop": {},
-            "truncated": truncated,
-            "truncatedBy": truncated_by,
-            "traversalMode": "cascade",
-            "cascadeStageCounts": stage_counts,
-        },
+        "summary": summary,
     }
 
 
@@ -1759,6 +2029,7 @@ def expand_subgraph(
     expansion_policy: str = "safe_default",
     force_expand_hub: bool = False,
     max_fanout: int = 100,
+    pruning_config: dict | None = None,
 ) -> dict:
     """Unified N-hop subgraph expansion.
 
@@ -1777,6 +2048,14 @@ def expand_subgraph(
         "warnings": list[str],
     }
     """
+    pruning_config = pruning_config or {
+        "policy": "none",
+        "maxExpandDegree": 200,
+        "highDegreeLabels": set(),
+        "keepHighDegreeNode": True,
+        "includePruningSummary": False,
+    }
+    pruning_stats = new_pruning_stats(pruning_config)
     visited_ids: set[str] = set(center_ids)
     frontier_ids: set[str] = set(center_ids)
     frontier_counts_by_hop: dict[str, int] = {"0": len(center_ids)}
@@ -1824,7 +2103,7 @@ def expand_subgraph(
                 continue
 
             current_frontier = list(frontier_ids)
-            degree_map = get_node_degrees(db.driver.session(), current_frontier)
+            degree_map = get_node_degrees_for_client(db, current_frontier)
             next_frontier: set[str] = set()
 
             for current_id in current_frontier:
@@ -1832,7 +2111,17 @@ def expand_subgraph(
                 current_node_s = _fetch_node_slim(db, current_id)
                 current_labels = current_node_s.get("labels", []) if current_node_s else []
                 current_layer = resolve_layer(current_labels)
-                current_is_hub = use_evidence_first and is_hub_node(current_labels, current_degree)
+                current_is_hub = use_evidence_first and (
+                    is_hub_node(current_labels, current_degree)
+                    or (
+                        pruning_config["policy"] != "none"
+                        and current_degree > pruning_config["maxExpandDegree"]
+                        and (
+                            current_layer == "Subject"
+                            or _is_low_signal_hub(current_labels, pruning_config)
+                        )
+                    )
+                )
 
                 if current_is_hub:
                     hub_nodes.append({
@@ -1844,6 +2133,10 @@ def expand_subgraph(
                 # --- 1a) Evidence neighbors (always fetched, budget-checked) ---
                 evidence_rows = _query_neighbors_by_labels(
                     db, current_id, EVIDENCE_LABELS, EVIDENCE_LIMIT_PER_NODE, effective_rel,
+                )
+                evidence_degree_map = get_node_degrees_for_client(
+                    db,
+                    [str(row.get("m").element_id) for row in evidence_rows if row.get("m") is not None],
                 )
                 for row in evidence_rows:
                     m = row.get("m")
@@ -1862,8 +2155,22 @@ def expand_subgraph(
                     visited_ids.add(mid)
                     layer_counts[target_layer] = layer_counts.get(target_layer, 0) + 1
 
+                    target_degree = evidence_degree_map.get(mid, 0)
+                    rel_type = row.get("r").type if row.get("r") else "UNKNOWN"
+                    terminal, reason = _should_terminal_by_degree(
+                        m_labels, target_degree, target_layer, rel_type, pruning_config,
+                    )
+                    if terminal:
+                        _record_terminal_hub(
+                            pruning_stats,
+                            Neo4jClient.serialize_node(m),
+                            target_degree,
+                            reason,
+                            hop,
+                        )
+
                     allowed_targets = ALLOWED_LAYER_TRANSITIONS.get(current_layer, set())
-                    if target_layer in allowed_targets:
+                    if target_layer in allowed_targets and not terminal:
                         next_frontier.add(mid)
 
                     if len(visited_ids) >= node_limit:
@@ -1899,6 +2206,10 @@ def expand_subgraph(
                             HUB_STRONG_SUBJECT_LIMIT_PER_NODE,
                             strong_rel if effective_rel is not None else None,
                         )
+                        strong_degree_map = get_node_degrees_for_client(
+                            db,
+                            [str(row.get("m").element_id) for row in strong_rows if row.get("m") is not None],
+                        )
                         for row in strong_rows:
                             m = row.get("m")
                             if m is None:
@@ -1912,12 +2223,28 @@ def expand_subgraph(
                             visited_ids.add(mid)
                             layer_counts["Subject"] = layer_counts.get("Subject", 0) + 1
                             key_subject_ids.add(mid)
+                            target_degree = strong_degree_map.get(mid, 0)
+                            terminal, reason = _should_terminal_by_degree(
+                                m_labels, target_degree, "Subject", "STRONG_SUBJECT", pruning_config,
+                            )
+                            if terminal:
+                                _record_terminal_hub(
+                                    pruning_stats,
+                                    Neo4jClient.serialize_node(m),
+                                    target_degree,
+                                    reason,
+                                    hop,
+                                )
                             # terminal: do not add to next_frontier
                 else:
                     # Non-hub → Subject: budget-gated
                     if layer_counts.get("Subject", 0) < MAX_SUBJECT_NODES_TOTAL:
                         subject_rows = _query_neighbors_by_labels(
                             db, current_id, SUBJECT_LABELS, SUBJECT_LIMIT_PER_NODE, effective_rel,
+                        )
+                        subject_degree_map = get_node_degrees_for_client(
+                            db,
+                            [str(row.get("m").element_id) for row in subject_rows if row.get("m") is not None],
                         )
                         for row in subject_rows:
                             m, r = row.get("m"), row.get("r")
@@ -1935,13 +2262,28 @@ def expand_subgraph(
                             )
                             if decision in ("block_subject_expansion", "skip"):
                                 continue
+                            target_degree = subject_degree_map.get(mid, 0)
+                            terminal, reason = _should_terminal_by_degree(
+                                m_labels, target_degree, target_layer, rel_type, pruning_config,
+                            )
+                            if terminal and not pruning_config["keepHighDegreeNode"]:
+                                _increment_pruning_reason(pruning_stats, reason)
+                                continue
 
                             if not can_add_node_by_layer(mid, m_labels, layer_counts, layer_budget):
                                 break
 
                             visited_ids.add(mid)
                             layer_counts[target_layer] = layer_counts.get(target_layer, 0) + 1
-                            if decision == "include_and_expand":
+                            if terminal:
+                                _record_terminal_hub(
+                                    pruning_stats,
+                                    Neo4jClient.serialize_node(m),
+                                    target_degree,
+                                    reason,
+                                    hop,
+                                )
+                            if decision == "include_and_expand" and not terminal:
                                 next_frontier.add(mid)
                                 if rel_type in STRONG_SUBJECT_RELATIONS:
                                     key_subject_ids.add(mid)
@@ -2073,6 +2415,17 @@ def expand_subgraph(
                 f"但保留其关联事件、特征和法规证据。"
             )
 
+    if pruning_config["policy"] != "none" and pruning_stats["blockedExpansionCount"] > 0:
+        warnings.append(
+            "PRUNING_APPLIED: 已启用 degree_aware_evidence_pruning，"
+            "高出度低区分度节点保留为 terminal，不继续下一跳扩展。"
+        )
+        for hub in pruning_stats["terminalHubs"][:3]:
+            warnings.append(
+                f"HIGH_DEGREE_NODE_TERMINATED: 节点“{hub['name']}”度数 {hub['degree']} "
+                f"超过阈值 {pruning_config['maxExpandDegree']}，已保留一跳关系但不继续扩展。"
+            )
+
     summary = {
         "requestedDepth": depth,
         "actualDepth": actual_depth,
@@ -2096,6 +2449,8 @@ def expand_subgraph(
         "subjectExpansionBlocked": total_blocked > 0,
         "forceExpandHub": force_expand_hub,
     }
+    if pruning_config["includePruningSummary"]:
+        summary["pruning"] = public_pruning_summary(pruning_stats)
 
     # Evidence diagnosis when evidence layers are empty
     if use_evidence_first and all(evidence_counts.get(l, 0) == 0 for l in ("Event", "Feature", "Regulation")):
@@ -2469,11 +2824,11 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
         node_limit = 99999999
         edge_limit = 99999999
     else:
-        node_limit = req.nodeLimit if req.nodeLimit is not None else req.limit
-        edge_limit = req.edgeLimit if req.edgeLimit is not None else max(node_limit * 4, 2000)
+        node_limit, edge_limit = _resolve_graph_limits(req)
 
     # ── resolve relation whitelist ──
     effective_rel = _resolve_relation_whitelist(req.relationWhitelist)
+    pruning_config = build_pruning_config(req)
 
     # ── build layer filter for center nodes ──
     if req.layer != "all":
@@ -2619,6 +2974,9 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
                 subject_depth=req.depth,
                 relation_whitelist=effective_rel,
                 include_properties=req.includeProperties,
+                node_limit=node_limit,
+                edge_limit=edge_limit,
+                pruning_config=pruning_config,
             )
             matched_nodes_map = {
                 node["id"]: node for node in subject_centers
@@ -2636,6 +2994,7 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
                 include_cross_layer=req.includeCrossLayer,
                 include_properties=req.includeProperties,
                 expansion_policy="evidence_first",
+                pruning_config=pruning_config,
             )
 
         # Merge center nodes that may not appear in subgraph (no edges)
@@ -2738,6 +3097,7 @@ def search_all_layers_post(req: SearchAllRequest) -> SearchAllResponse:
                 truncatedBy=subgraph_summary.get("truncatedBy"),
                 traversalMode=subgraph_summary.get("traversalMode", req.traversalMode),
                 cascadeStageCounts=subgraph_summary.get("cascadeStageCounts", {}),
+                pruning=subgraph_summary.get("pruning", {}),
             ),
             warnings=combined_warnings,
         )
@@ -2982,11 +3342,11 @@ def expand_node_post(node_id: str, req: ExpandRequest):
     node_id = node_id.strip()
 
     # ── resolve limits ──
-    node_limit = req.nodeLimit if req.nodeLimit is not None else req.limit
-    edge_limit = req.edgeLimit if req.edgeLimit is not None else max(node_limit * 4, 2000)
+    node_limit, edge_limit = _resolve_graph_limits(req)
 
     # ── resolve relation whitelist ──
     effective_rel = _resolve_relation_whitelist(req.relationWhitelist)
+    pruning_config = build_pruning_config(req)
 
     try:
         # ── find center node ──
@@ -3011,21 +3371,40 @@ def expand_node_post(node_id: str, req: ExpandRequest):
             }
 
         # ── unified N-hop expansion ──
-        layer_whitelist = req.layerWhitelist if req.layerWhitelist else None
-        subgraph = expand_subgraph(
-            db=_client(),
-            center_ids=[node_id],
-            depth=req.depth,
-            node_limit=node_limit,
-            edge_limit=edge_limit,
-            relation_whitelist=effective_rel,
-            layer_whitelist=layer_whitelist,
-            include_cross_layer=req.includeCrossLayer,
-            include_properties=req.includeProperties,
-            expansion_policy="evidence_first",
-            force_expand_hub=req.forceExpandHub,
-            max_fanout=req.maxFanout,
-        )
+        center_layer = _serialized_node_layer(center_node)
+        if req.traversalMode == "cascade" and center_layer == "Subject":
+            subgraph = _search_subject_cascade(
+                db=_client(),
+                center_nodes=[center_node],
+                keyword=_serialized_node_name(center_node),
+                subject_depth=req.depth,
+                relation_whitelist=effective_rel,
+                include_properties=req.includeProperties,
+                node_limit=node_limit,
+                edge_limit=edge_limit,
+                pruning_config=pruning_config,
+            )
+        else:
+            if req.traversalMode == "cascade" and center_layer != "Subject":
+                warnings.append(
+                    "CASCADE_FALLBACK_TO_BFS: cascade 模式仅支持 Subject 层中心节点，已回退到普通展开"
+                )
+            layer_whitelist = req.layerWhitelist if req.layerWhitelist else None
+            subgraph = expand_subgraph(
+                db=_client(),
+                center_ids=[node_id],
+                depth=req.depth,
+                node_limit=node_limit,
+                edge_limit=edge_limit,
+                relation_whitelist=effective_rel,
+                layer_whitelist=layer_whitelist,
+                include_cross_layer=req.includeCrossLayer,
+                include_properties=req.includeProperties,
+                expansion_policy="evidence_first",
+                force_expand_hub=req.forceExpandHub,
+                max_fanout=req.maxFanout,
+                pruning_config=pruning_config,
+            )
 
         # Ensure center node is in the result
         all_nodes = subgraph["nodes"]
@@ -3034,6 +3413,7 @@ def expand_node_post(node_id: str, req: ExpandRequest):
             all_nodes.append(center_node)
 
         all_edges = subgraph["edges"]
+        triples = _build_triples(all_nodes, all_edges, deduplicate=True)
         sub_summary = subgraph.get("summary", {})
         sub_warnings = subgraph.get("warnings", [])
 
@@ -3050,11 +3430,14 @@ def expand_node_post(node_id: str, req: ExpandRequest):
             "centerNode": center_node,
             "nodes": all_nodes,
             "edges": all_edges,
+            "triples": triples,
             "subgraph": {
                 "nodeCount": len(all_nodes),
                 "edgeCount": len(all_edges),
+                "tripleCount": len(triples),
                 "nodes": all_nodes,
                 "edges": all_edges,
+                "triples": triples,
                 "relationTypes": sorted(set(
                     e.get("type", e.get("label", "")) for e in all_edges
                 )),
@@ -3065,6 +3448,7 @@ def expand_node_post(node_id: str, req: ExpandRequest):
                 **sub_summary,
                 "centerNodeId": node_id,
                 "depth": req.depth,
+                "tripleCount": len(triples),
             },
             "warnings": combined_warnings,
         }

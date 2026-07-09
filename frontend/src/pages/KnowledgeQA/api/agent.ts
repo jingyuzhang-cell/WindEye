@@ -462,6 +462,8 @@ export interface UnifiedStreamRequest {
   roundId: number
   maxHop?: number
   intentHint?: string | null
+  confirmedEntities?: EntityCandidate[]
+  workflow?: string | null
 }
 
 export interface UnifiedStreamCallbacks {
@@ -497,6 +499,8 @@ export const sendUnifiedStream = (
     roundId: req.roundId,
     maxHop: req.maxHop ?? 3,
     intentHint: req.intentHint ?? null,
+    confirmedEntities: req.confirmedEntities ?? [],
+    workflow: req.workflow ?? null,
   })
 
   let retryCount = 0

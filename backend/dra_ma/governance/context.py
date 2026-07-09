@@ -20,6 +20,8 @@ class GovernanceContext:
     intent_hint: str | None = None
     max_hop: int = 3
     file_content: str | None = None
+    confirmed_entities: list[dict[str, Any]] = field(default_factory=list)
+    workflow: str | None = None
     demo: bool = False
 
     intent_type: str = "graph_qa"

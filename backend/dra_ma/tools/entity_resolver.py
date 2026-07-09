@@ -47,6 +47,7 @@ class EntityCandidate:
     match_score: float = 0.0
     confidence: float = 0.0
     reason: str = ""
+    properties: dict[str, Any] = field(default_factory=dict)
 
 
 class EntityResolver:
@@ -497,6 +498,14 @@ class EntityResolver:
         score = max(0.0, min(1.0, score))
 
         reason = "名称包含或前缀相近" if containment_score or prefix_score else "字符相似"
+        summary_props = {
+            key: props.get(key)
+            for key in (
+                "name", "COMPANY_NM", "PERSON_NM", "ORGNUM", "STATUS",
+                "REG_CAPITAL", "WARNING_NUM", "alias", "aliases",
+            )
+            if props.get(key) not in (None, "")
+        }
         return EntityCandidate(
             raw=raw,
             canonical_name=str(name),
@@ -507,6 +516,7 @@ class EntityResolver:
             match_score=round(score, 4),
             confidence=round(score * 0.9, 4),
             reason=reason,
+            properties=summary_props,
         )
 
     @staticmethod

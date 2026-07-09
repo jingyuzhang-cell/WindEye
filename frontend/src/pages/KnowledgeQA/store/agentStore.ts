@@ -342,8 +342,13 @@ function buildPartialRiskAnswer(query: string, report: RiskReport | null, subgra
 }
 
 function extractAmbiguousShortMention(query: string): string | null {
-  if (/有限公司|有限责任|股份|集团|控股|投资管理|金融服务|证券|银行|保险/.test(query)) return null
-  const match = query.match(/^\s*([\u4e00-\u9fa5]{2,4})(?:公司)?(?:\s|与|和|的|有|关|查|风险|合规)/)
+  const trimmed = query.trim()
+  if (/^[\u4e00-\u9fa5]{2,12}(?:集团|公司|控股|证券|银行|保险|基金|资本)$/.test(trimmed)
+    && !/有限公司|有限责任|股份有限公司|集团有限公司|控股集团有限公司/.test(trimmed)) {
+    return trimmed
+  }
+  if (/有限公司|有限责任|股份有限公司|集团有限公司|控股集团有限公司|投资管理有限公司|金融服务有限公司/.test(query)) return null
+  const match = query.match(/^\s*([\u4e00-\u9fa5]{2,12}(?:集团|公司|控股|证券|银行|保险|基金|资本)?)(?:\s|与|和|的|有|关|查|风险|合规|传导|群体|社区|报告)/)
   const mention = match?.[1]?.trim()
   if (!mention) return null
   const stopWords = new Set(['哪些', '公司', '关系', '关联', '查询', '风险', '合规', '这个', '那个'])
@@ -467,6 +472,24 @@ function buildCandidateConfirmAnswer(mention: string, candidates: EntityCandidat
   return `你说的“${mention}”可能对应多个主体。请选择一个确认；确认后会把“${mention}”保存为该主体的别名，后续可直接用简称查询。\n${names}`
 }
 
+function shouldAutoResolveCandidate(originalQuery: string, candidates: EntityCandidate[]): boolean {
+  const trimmed = originalQuery.trim()
+  if (/^[\u4e00-\u9fa5]{2,12}(?:集团|公司|控股|证券|银行|保险|基金|资本)$/.test(trimmed)) {
+    return false
+  }
+  return candidates.length === 1 && (candidates[0].match_score || 0) >= 0.95
+}
+
+function buildConfirmedEntityRiskQuery(alias: string, candidate: EntityCandidate, originalQuery: string): string {
+  const canonicalName = candidate.canonical_name
+  const trimmed = originalQuery.trim()
+  const hasRiskTask = /风险|传导|群体|社区|报告|合规|治理|异常|路径/.test(trimmed)
+  if (hasRiskTask) {
+    return trimmed.replace(alias, canonicalName)
+  }
+  return `分析${canonicalName}的风险传导、群体发现和社区报告`
+}
+
 function buildReportAnswer(report: RiskReport): string {
   const paths = report.risk_paths || []
   const anomalies = report.anomaly_findings || []
@@ -579,7 +602,12 @@ interface AgentStore {
   lastRiskQuery: string
   sendMessage: (query: string, rewrittenQuery?: string) => Promise<void>
   sendRiskQuery: (query: string, communityId?: number) => Promise<void>
-  sendUnifiedMessage: (query: string, intentHint?: string) => Promise<void>
+  sendUnifiedMessage: (
+    query: string,
+    intentHint?: string,
+    confirmedEntities?: EntityCandidate[],
+    workflow?: string,
+  ) => Promise<void>
   confirmEntityCandidate: (alias: string, candidate: EntityCandidate, originalQuery: string) => Promise<void>
   retryRiskQuery: () => Promise<void>
   uploadFile: (file: File) => Promise<void>
@@ -634,11 +662,16 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     return get().sendUnifiedMessage(query, 'risk_analysis')
   },
 
-  sendUnifiedMessage: async (query: string, intentHint?: string) => {
+  sendUnifiedMessage: async (
+    query: string,
+    intentHint?: string,
+    confirmedEntities: EntityCandidate[] = [],
+    workflow?: string,
+  ) => {
     if (get().isLoading) return
 
     const originalQuery = query
-    const ambiguousMention = !intentHint ? extractAmbiguousShortMention(query) : null
+    const ambiguousMention = !intentHint && confirmedEntities.length === 0 ? extractAmbiguousShortMention(query) : null
     if (ambiguousMention) {
       const confirmedAlias = readConfirmedAlias(ambiguousMention)
       if (confirmedAlias) {
@@ -655,9 +688,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           console.warn('[agentStore] entity candidate search failed:', err)
         }
         const candidates = mergeEntityCandidates(ambiguousMention, remoteCandidates, resolved.candidates)
-        if (candidates.length === 1 && candidates[0].match_score >= 0.88) {
+        if (shouldAutoResolveCandidate(originalQuery, candidates)) {
           query = query.replace(ambiguousMention, candidates[0].canonical_name)
-        } else if (candidates.length > 1) {
+        } else if (candidates.length > 0) {
           const userMsg: ChatMessage = {
             id: `user_${Date.now()}`,
             role: 'user',
@@ -811,6 +844,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         roundId: roundId + 1,
         maxHop: 3,
         intentHint: intentHint ?? null,
+        confirmedEntities,
+        workflow: workflow ?? null,
       },
       {
         onStage: (_stage, data) => {
@@ -1120,11 +1155,11 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     try {
       await saveEntityAlias(alias, candidate)
       writeConfirmedAlias(alias, candidate)
-      const rewrittenQuery = originalQuery.replace(alias, canonicalName)
+      const rewrittenQuery = buildConfirmedEntityRiskQuery(alias, candidate, originalQuery)
       const confirmMsg: ChatMessage = {
         id: `asst_${Date.now()}`,
         role: 'assistant',
-        content: `已确认“${alias}”指代“${canonicalName}”，并已保存为别名。正在用完整主体继续查询。`,
+        content: `已确认“${alias}”指代“${canonicalName}”，并已保存为别名。正在继续做风险传导、群体发现和社区报告。`,
         timestamp: Date.now(),
         isLoading: false,
       }
@@ -1132,7 +1167,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         messages: [...state.messages, confirmMsg],
         clarifyMessage: null,
       }))
-      await get().sendUnifiedMessage(rewrittenQuery)
+      await get().sendUnifiedMessage(rewrittenQuery, 'risk_analysis', [candidate], 'entity_risk_full')
     } catch (err: any) {
       const msg = err?.message || '实体别名保存失败'
       set((state) => ({
