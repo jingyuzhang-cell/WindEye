@@ -1,0 +1,702 @@
+开放API接口文档
+RESTful API接口一般按这几个部分写：请求方法+接口路径+接口说明+请求参数+返回结果+示例
+文档项 | 内容
+版本 | v1.1
+适用模块 | 模块二：知识图谱检索分析；模块三：多元协同治理
+接口风格 | RESTful API；请求与响应均使用JSON；大对象建议支持summary/full返回模式
+核心链路 | 关键词检索→N跳子图展开→风险主体群体发现→风险传导路径→协同治理社区报告
+主要调用方 | 四层图谱展示、协同治理管线、外部业务系统
+设计原则 | 以Neo4j原生Node/Relationship数据模型为准；业务结果与前端渲染字段单独定义，不混入基础图谱结构
+1.接口总览
+序号 | 接口名称 | 方法与路径 | 输入核心 | 输出核心 | 用途
+1 | 跨层关键词搜索 | POST /api/v1/graph/search-all | query、layer、depth、limit、type | matchedNodes、nodes、edges、summary | 在主体层、事件层、特征层、法规层中检索关键词，返回匹配节点及其局部关联子图。
+2 | N跳展开子图 | POST /api/v1/graph/expand/{node_id} | nodeId、depth、limit、relationWhitelist | centerNode、nodes、edges、subgraph、summary | 以指定节点为中心展开N跳关联网络，用于前端交互展开、深度关联分析和模块三治理分析前置子图构建。
+3 | 风险主体群体发现 | POST /api/v1/governance/community-discovery | seedNames / seedIds、maxHop、method、communityMode | seedNodes、subgraph、communities、seedCommunityId、entityCommunityMap、communityGraph | 从风险主体出发抽取k-hop 子图并发现主体所在群体，为前端群体图和后续风险分析提供基础数据。
+4 | 风险传导路径分析 | POST /api/v1/governance/risk-paths | seedNames / seedIds、maxHop、maxPathLength、riskRelationWhitelist | riskPaths、communityRiskPaths、viewModel、summary | 识别风险主体到公司、人员、事件、法规等节点的风险传导路径，生成可评分、可解释、可高亮的路径结果。
+5 | 协同治理社区报告 | POST /api/v1/governance/compliance-report | query、seedNodes、subgraph、communities、riskPaths、anomalyFindings | compliance、complianceIndicators、governance、report、viewModel | 基于风险路径和证据子图进行合规匹配、指标评分、治理动作生成和报告输出。
+2.通用约定
+结点层级 | 结点类型
+Subject | "Subject", "COMPANY", "PERSON", "PFCOMPANY", "PFUND", "SECURITY","PartyWithResponsibility", "Actor", "Account"
+Event | "Event", "EVENT", "Means"
+Feature | "Feature", "AdvantageHolder", "Influence","DisadvantageHolder", "Advantage"
+Regulation | "Regulation", "Law", "Action", "Chapter"
+项目 | 约定
+Base URL | http://{host}:{port}，本地开发示例：http://127.0.0.1:8000
+Content-Type | application/json;charset=utf-8
+命名规范 | HTTP路径使用kebab-case；JSON字段使用camelCase。
+字符编码 | UTF-8，支持中文实体名称、中文关系与中文报告内容。
+traceId | 所有响应建议返回traceId，便于前后端与后端日志排查。
+success | 业务是否成功。success=false时必须返回errorCode/message或error字段。
+Response Mode | 建议支持full/summary。full返回完整可视化数据；summary返回摘要，适合外部系统轻量调用。
+节点ID优先级 | seedIds优先级高于seedNames；若传入seedIds，则优先按图谱elementId或内部节点ID定位。
+通用响应字段 | 类型 | 说明
+success | boolean | 请求是否成功。
+apiVersion | string | 接口版本，例如v1。建议开放给外部系统时返回。
+traceId | string | 链路追踪ID，例如trc-20260605-001。
+elapsedMs | number | 接口耗时，单位毫秒。可选。
+summary | object | 摘要统计。不同接口内字段略有差异。
+warnings | string[] | 非致命异常或降级信息。
+errorCode | string | 错误码。success=false时建议返回。
+message/error | string | 错误说明。
+3.公共数据结构
+3.1 Node节点对象
+字段 | 类型 | 说明
+id | string | 节点唯一ID，建议使用Neo4j elementId或系统内部统一ID。
+labels | string[] | Neo4j多标签数组
+properties | object | 原始属性或扩展属性，可选。
+3.2 Edge关系对象
+字段 | 类型 | 说明
+id | string | 关系唯一ID。前端高亮边时必须使用。
+source | string | 起点节点ID。
+target | string | 终点节点ID。
+type | string | 关系类型，如INVEST、WORK、GUARANTEE、CONTROLLER、映射法规。
+properties | object | 关系原始属性，可选。
+3.3 Subgraph子图对象
+字段 | 类型 | 说明
+nodeCount | number | 节点数量。
+edgeCount | number | 关系数量。
+nodes | Node[] | 节点数组。
+edges | Edge[] | 关系数组。
+relationTypes | string[] | 子图中包含的关系类型。可选。
+nodeTypeCounts | object | 节点类型统计。可选。
+edgeTypeCounts | object | 关系类型统计。可选。
+3.4 Community社区对象
+字段 | 类型 | 说明
+communityId | number | 社区ID。
+name | string | 社区显示名，例如群体#0。
+size | number | 社区成员数量。
+riskScore | number | 社区风险分，0–100。
+riskLevel | string | 社区风险等级。
+seedRelated | boolean | 是否为风险主体所在社区。
+density | number | 社区密度，可选。
+coreNodes | string[] | 核心节点ID列表。
+bridgeNodes | string[] | 桥接节点ID列表。
+members | Node[] | 社区成员节点。
+labelDistribution | object | 社区内节点类型分布。
+3.5 EntityCommunityMap实体-社区映射
+{
+"company_001": {
+"communityId": 0,
+"role": "core",
+"isSeed": true,
+"riskLevel": "high"
+}
+}
+说明：entityCommunityMap 必须使用 node_id 作为 key，不能使用实体名称作为 key，否则风险路径 communityPath 映射和前端高亮容易失败。
+4. 知识图谱检索与子图扩展API
+4.1 接口定义
+项目 | 内容
+接口名称 | 跨层关键词搜索API
+HTTP方法 | POST
+路径 | /api/v1/graph/search-all
+核心作用 | 输入关键词，在主体层、事件层、特征层、法规层中检索匹配节点，并以匹配节点为中心进行多跳扩展，输出匹配节点、关联子图和三元组JSON。适用于企业、人员、事件、风险特征、法规等跨层图谱检索。
+4.2 Request
+字段 | 类型 | 必填 | 默认值 | 说明
+query | string | 是 |  | 搜索关键词，例如“徐工集团工程机械股份有限公司”“鑫达”“担保风险”。
+layer | string | 否 | all | 搜索层级：all/Subject/Event/Feature/Regulation。
+depth | number | 否 | 1 | 匹配节点周边展开深度。
+limit | number | 否 | 50 | 最大返回节点数。
+type | string | 否 | all | 节点类型过滤，例如COMPANY、PERSON、EVENT、Law。
+relationWhitelist | string[] | 否 | [] | 允许返回的关系类型。为空时使用默认关系范围。
+includeProperties | boolean | 否 | true | 是否返回节点和关系属性。
+outputFormat | string | 否 | both | 输出格式：subgraph/triples/both。
+deduplicate | boolean | 否 | true | 是否对节点、边和三元组去重。
+4.3 Request示例
+{  "query": "徐工集团工程机械股份有限公司",  "layer": "all",  "depth": 1,  "limit": 50,  "type": "COMPANY",  "relationWhitelist": [    "INVEST",    "WORK",    "GUARANTEE",    "CONTROLLER",    "SUE",    "JOINDER",    "PARTICIPATE_IN",    "MENTION",    "TRIGGERS",    "REFLECTS",    "COMPLIES_WITH"  ],  "includeProperties": true}
+4.4 Response
+字段 | 类型 | 说明
+success | boolean | 是否成功。
+traceId | string | 链路追踪ID。
+matchedNodes | Node[] | 直接命中的节点列表。
+nodes | Node[] | 返回子图中的节点数组。
+edges | Edge[] | 返回子图中的关系数组。
+summary | object | 摘要统计，包括命中节点数、节点总数、关系总数、涉及层级、关系类型等。
+warnings | string[] | 非致命异常或降级信息。
+triples | object | 根据edges生成的三元组JSON。
+triples字段三元组JSON结构：
+字段 | 类型 | 说明
+headId | string | 头实体节点 ID。
+head | string | 头实体名称。
+headLabels | string[] | 头实体标签。
+relation | string | 关系类型，例如 INVEST、WORK、SUE。
+relationId | string | 关系 ID。
+tailId | string | 尾实体节点 ID。
+tail | string | 尾实体名称。
+tailLabels | string[] | 尾实体标签。
+properties | object | 关系属性。
+4.5 Response示例
+{
+"success": true,
+"traceId": "trc-20260605-graph-search-001",
+"matchedNodes": [
+{
+"id": "company_001",
+"labels": ["COMPANY", "Subject"],
+"properties": {
+"name": "徐工集团工程机械股份有限公司",
+"COMPANY_NM": "徐工集团工程机械股份有限公司"
+}
+}
+],
+"nodes": [
+{
+"id": "company_001",
+"labels": ["COMPANY", "Subject"],
+"properties": {
+"name": "徐工集团工程机械股份有限公司"
+}
+},
+{
+"id": "company_002",
+"labels": ["COMPANY", "Subject"],
+"properties": {
+"name": "某关联企业"
+}
+}
+],
+"edges": [
+{
+"id": "edge_001",
+"source": "company_001",
+"target": "company_002",
+"type": "INVEST",
+"properties": {}
+}
+],
+"triples": [
+{
+"headId": "company_001",
+"head": "徐工集团工程机械股份有限公司",
+"headLabels": ["COMPANY", "Subject"],
+"relationId": "edge_001",
+"relation": "INVEST",
+"tailId": "company_002",
+"tail": "某关联企业",
+"tailLabels": ["COMPANY", "Subject"],
+"properties": {}
+}
+],
+"summary": {
+"matchedCount": 1,
+"nodeCount": 2,
+"edgeCount": 1,
+"tripleCount": 1,
+"layers": ["Subject"],
+"relationTypes": ["INVEST"]
+},
+"warnings": []
+}
+5. N跳展开子图API
+项目 | 内容
+接口名称 | N跳展开子图API
+HTTP方法 | POST
+路径 | /api/v1/graph/expand/{node_id}
+核心作用 | 输入一个已知图谱节点ID，围绕该节点展开N跳关联子图，返回目标节点周边的多跳节点和关系。适用于图谱交互展开、风险主体深度分析、群体发现前置子图抽取。
+5.1 Request
+路径参数 | 类型 | 必填 | 说明
+node_id | string | 是 | 需要展开的中心节点ID，通常为Neo4j elementId或系统内部节点ID。
+Body字段 | 类型 | 必填 | 默认值 | 说明
+depth | number | 否 | 2 | 展开深度，即N跳。
+limit | number | 否 | 100 | 最大返回节点数。
+relationWhitelist | string[] | 否 | [] | 允许展开的关系类型。为空时使用默认关系范围。
+layerWhitelist | string[] | 否 | [] | 允许返回的层级，如Subject、Event、Feature、Regulation。
+includeCrossLayer | boolean | 否 | true | 是否包含跨层关系。
+includeProperties | boolean | 否 | true | 是否返回节点和关系属性。
+5.2 Request 示例
+{  "depth": 2,  "limit": 100,  "relationWhitelist": [    "INVEST",    "WORK",    "GUARANTEE",    "CONTROLLER",    "SUE",    "JOINDER",    "PARTICIPATE_IN",    "MENTION",    "TRIGGERS",    "REFLECTS",    "COMPLIES_WITH"  ],  "layerWhitelist": [    "Subject",    "Event",    "Feature",    "Regulation"  ],  "includeCrossLayer": true,  "includeProperties": true}
+5.3 Response
+字段 | 类型 | 说明
+success | boolean | 是否成功。
+traceId | string | 链路追踪 ID。
+centerNode | Node | 中心节点对象。
+nodes | Node[] | N 跳范围内的节点数组。
+edges | Edge[] | N 跳范围内的关系数组。
+subgraph | Subgraph | 标准子图对象。
+summary | object | 摘要统计，包括中心节点 ID、展开深度、节点数量、关系数量、关系类型统计等。
+warnings | string[] | 非致命异常或降级信息。
+5.4 Response 示例
+{  "success": true,  "traceId": "trc-20260605-graph-expand-001",  "centerNode": {    "id": "company_001",    "labels": [      "COMPANY",      "Subject"    ],    "properties": {      "name": "徐工集团工程机械股份有限公司"    }  },  "nodes": [],  "edges": [],  "subgraph": {    "nodeCount": 76,    "edgeCount": 119,    "nodes": [],    "edges": []  },  "summary": {    "centerNodeId": "company_001",    "depth": 2,    "nodeCount": 76,    "edgeCount": 119,    "relationTypes": [      "INVEST",      "WORK",      "SUE",      "JOINDER",      "MENTION"    ]  },  "warnings": []}
+6. 风险主体群体发现API
+6.1 接口定义
+项目 | 内容
+接口名称 | 风险主体群体发现API
+HTTP方法 | POST
+路径 | /api/v1/governance/community-discovery
+核心作用 | 输入风险主体名称或节点ID，从知识图谱中抽取k-hop Ego Network，进行WCC/Louvain/HGT+Graph K-means群体发现，输出主体所在群体、全部社区、实体-社区映射和前端可视化数据。
+6.2 Request
+字段 | 类型 | 必填 | 默认值 | 说明
+seedNames | string[] | 条件必填 | [] | 风险主体名称。seedNames 与 seedIds 至少一项非空；若前置 search-all 已确认节点，建议只传 seedIds，避免名称模糊解析带出多种子。
+seedIds | string[] | 条件必填 | [] | 图谱节点 ID，优先级高于 seedNames；确认节点后的风险传导分析推荐使用该字段。
+autoSelectSeeds | boolean | 否 | false | 是否自动从候选风险主体中选择高风险主体作为种子节点。适用于用户输入事件、文件或宽泛主体后，由系统自动筛选高风险主体。
+topKSeeds | number | 否 | 5 | 自动选择前 K 个高风险主体作为种子节点。仅当 autoSelectSeeds=true 时生效。
+seedSelectionMode | string | 否 | risk_score | 种子选择方式，可选 risk_score、degree、event_count、bridge_score。
+riskConstraints | object | 否 | {} | 控制扩展风险主体时使用哪些约束，包括主体关系、事件关系、风险特征关系和法规关系。
+riskConstraints.includeSubjectRelations | boolean | 否 | true | 是否纳入主体层关系，如 INVEST、WORK、GUARANTEE、CONTROLLER。
+riskConstraints.includeEventRelations | boolean | 否 | true | 是否纳入事件层关系，如 SUE、JOINDER、PARTICIPATE_IN、MENTION。
+riskConstraints.includeFeatureRelations | boolean | 否 | true | 是否纳入风险特征关系，如 TRIGGERS、REFLECTS、CAUSE。
+riskConstraints.includeRegulationRelations | boolean | 否 | false | 是否纳入法规映射关系，如 COMPLIES_WITH。
+maxHop | number | 否 | 3 | k-hop 子图扩展深度。
+method | string | 否 | auto | 群体发现算法：auto / wcc / louvain / hgt_gkmeans。
+communityMode | string | 否 | expanded | 子图模式：ego / expanded / global_seed。
+minCommunitySize | number | 否 | 2 | 最小社区规模。
+pathLimit | number | 否 | 5000 | 子图路径数量上限。
+maxNodes | number | 否 | 1000 | 最大返回节点数，避免前端过载。
+relationWhitelist | string[] | 否 | [] | 允许扩展的关系类型。为空时使用后端默认关系白名单。
+responseMode | string | 否 | full | 返回模式：summary / full。
+includeRawSubgraph | boolean | 否 | true | 是否返回原始 subgraph。
+includeCommunityGraph | boolean | 否 | true | 是否返回前端可直接绘制的 communityGraph。
+includeHgtEmbedding | boolean | 否 | false | 是否返回 HGT 节点向量摘要，默认不返回。
+6.3 Request示例
+{
+"seedNames": [
+"鑫达投资管理有限公司"
+],
+"seedIds": [],
+"maxHop": 3,
+"method": "auto",
+"communityMode": "expanded",
+"minCommunitySize": 2,
+"pathLimit": 5000,
+"maxNodes": 300,
+"relationWhitelist": [
+"INVEST",
+"CONTROLLER",
+"GUARANTEE",
+"WORK",
+"MENTION",
+"TRIGGERS",
+"REFLECTS",
+"CAUSE",
+"COMPLIES_WITH"
+],
+"responseMode": "full",
+"includeRawSubgraph": true,
+"includeCommunityGraph": true,
+"includeHgtEmbedding": false
+}
+6.4 Response
+字段 | 类型 | 说明
+success | boolean | 是否成功。
+apiVersion | string | 接口版本，例如 v1。
+traceId | string | 链路追踪 ID。
+elapsedMs | number | 接口耗时，单位毫秒。
+selectedMethod | string | 实际采用的社区发现算法。
+fallbackReason | string | null | 算法降级原因。
+seedNodes | Node[] | 已解析的风险主体节点。若 autoSelectSeeds=true，则为系统最终选中的种子节点。
+candidateSeeds | object[] | 候选风险主体列表。系统根据风险事件、主体关系、风险特征、法规约束等计算候选主体风险分。
+selectedSeedIds | string[] | 最终用于群体发现的种子节点 ID 列表。
+seedSelection | object | 种子选择信息，包括选择模式、Top-K 数量和最终选中数量。
+summary | object | 摘要统计，包括 seedNodeCount、nodeCount、edgeCount、communityCount、seedCommunityId 等。
+communities | Community[] | 社区列表。
+entityCommunityMap | object | 实体到社区的映射，key 必须是 node_id。
+communityEdges | object[] | 社区之间的聚合边。
+communityGraph | object | 前端默认展示用的社区聚合图。
+subgraph | Subgraph | k-hop 原始关联子图。
+connectedSubgraph | Subgraph | 最大连通子图。
+visualization | object | 前端展示建议，例如 defaultView、suggestedLayout、highlightCommunityId。
+warnings | string[] | 非致命异常或降级信息。
+6.4.1 Response Mode 说明
+community-discovery 支持 summary/full 两种返回模式。接口始终返回 success、apiVersion、traceId、elapsedMs、selectedMethod、fallbackReason、seedNodes、candidateSeeds、selectedSeedIds、seedSelection、summary、warnings。
+模式或开关 | 返回字段说明
+responseMode=summary | 仅返回通用字段和 summary，不返回 communities、entityCommunityMap、communityGraph、subgraph、connectedSubgraph、visualization。适合列表页、连通性检测和轻量预览。
+responseMode=full | 在通用字段基础上返回 communities、entityCommunityMap、communityEdges、communityGraph、connectedSubgraph、visualization，并根据开关返回 subgraph。适合群体图展示、风险传导和社区报告生成。
+includeRawSubgraph=false | full 模式下 subgraph 返回 null；connectedSubgraph 仍用于社区发现结果解释。
+includeCommunityGraph=false | full 模式下 communityGraph 返回空对象，communityEdges 返回空数组。
+业务链路建议：用户输入“徐工集团”等模糊关键词时，先调用 search-all 展示候选节点；用户确认“徐工集团工程机械股份有限公司”后，后续 community-discovery / risk-paths / compliance-report 应优先传 seedIds，而不是再次依赖 seedNames 模糊解析。
+6.5 Response示例
+{
+"success": true,
+"traceId": "trc-20260605-001",
+"elapsedMs": 1260,
+"selectedMethod": "louvain",
+"fallbackReason": null,
+"seedNodes": [
+{
+"id": "company_001",
+"labels": ["COMPANY", "Subject"],
+"properties": {
+"name": "鑫达投资管理有限公司",
+"COMPANY_NM": "鑫达投资管理有限公司"
+}
+}
+],
+"summary": {
+"nodeCount": 87,
+"edgeCount": 142,
+"communityCount": 3,
+"seedCommunityId": 0
+},
+"communities": [
+{
+"communityId": 0,
+"size": 32,
+"riskScore": null,
+"density": 0.42,
+"coreNodes": [
+"company_001"
+],
+"bridgeNodes": [
+"person_001"
+],
+"members": [
+{
+"id": "company_001",
+"labels": ["COMPANY", "Subject"],
+"properties": {
+"name": "鑫达投资管理有限公司",
+"COMPANY_NM": "鑫达投资管理有限公司"
+},
+"role": "core",
+"degree": 18,
+"internalDegree": 14,
+"externalDegree": 4
+}
+],
+"labelDistribution": {
+"COMPANY": 18,
+"PERSON": 6,
+"EVENT": 5,
+"Law": 3
+}
+}
+],
+"entityCommunityMap": {
+"company_001": {
+"communityId": 0,
+"role": "core",
+"isSeed": true,
+"riskLevel": "high"
+}
+},
+"communityEdges": [
+{
+"sourceCommunity": 0,
+"targetCommunity": 1,
+"relationCount": 8,
+"riskLevel": "high",
+"mainRelations": [
+"INVEST",
+"MENTION",
+"WORK"
+]
+}
+],
+"communityGraph": {
+"nodes": [
+{
+"id": "community-0",
+"communityId": 0,
+"label": "群体 #0",
+"size": 32,
+"riskScore": null,
+"seedRelated": true
+}
+],
+"edges": [
+{
+"source": "community-0",
+"target": "community-1",
+"relationCount": 8,
+"riskLevel": "high"
+}
+]
+},
+"subgraph": {
+"nodeCount": 87,
+"edgeCount": 142,
+"nodes": [],
+"edges": []
+},
+"connectedSubgraph": {
+"nodeCount": 79,
+"edgeCount": 128,
+"nodes": [],
+"edges": []
+},
+"warnings": []
+}
+6.6 本地开发实测结果
+测试对象：徐工集团工程机械股份有限公司；先通过 search-all 获取并确认 node_id，再调用 POST /api/v1/governance/community-discovery，且请求体仅传 seedIds，responseMode=full，includeRawSubgraph=true，includeCommunityGraph=true。
+指标 | 实测值
+HTTP 状态码 / JSON | 200 / 是
+success / selectedMethod / warnings | true / louvain_networkx / []
+seedNodeCount / selectedSeedCount / candidateSeedCount | 1 / 1 / 1
+summary.nodeCount / summary.edgeCount / communityCount / seedCommunityId | 1000 / 1143 / 13 / 1
+communities / entityCommunityMap | 13 / 802
+communityGraph.nodes / communityGraph.edges | 13 / 13
+subgraph.nodeCount / subgraph.edgeCount | 2332 / 2475
+connectedSubgraph.nodeCount / connectedSubgraph.edgeCount | 1000 / 1143
+结论：full 模式返回字段与本文档主响应定义一致；此前 summary 模式测试未返回 communities、entityCommunityMap、communityGraph、subgraph 等字段属于预期行为。connectedSubgraph 受 maxNodes 控制，本次为 1000 个节点；原始 subgraph 可大于 connectedSubgraph。
+7. 风险传导路径分析API
+7.1 接口定义
+项目 | 内容
+接口名称 | 风险传导路径分析 API
+HTTP 方法 | POST
+路径 | /api/v1/governance/risk-paths
+核心作用 | 输入一个或多个风险节点，自动查询其关联子图，识别风险传导路径，并可选择是否同步返回社区级路径。
+7.2 Request
+字段 | 类型 | 必填 | 默认值 | 说明
+seedNames | string[] | 是 | [] | 风险主体名称。
+seedIds | string[] | 否 | [] | 图谱节点ID，优先级高于seedNames。
+maxHop | number | 否 | 3 | 子图扩展深度。
+maxPathLength | number | 否 | 4 | 风险路径最大长度。
+method | string | 否 | auto | 社区发现算法：auto/wcc/louvain/hgt_gkmeans。
+communityMode | string | 否 | expanded | 社区网络模式：ego/expanded/global_seed。
+includeCommunityDiscovery | boolean | 否 | true | 是否在路径分析前自动做群体发现。
+includeCommunityPath | boolean | 否 | true | 是否返回社区级路径。
+includeNodePath | boolean | 否 | true | 是否返回节点级路径。
+riskRelationWhitelist | string[] | 否 | [] | 风险关系白名单。为空时由后端使用默认风险关系。
+subgraphPathLimit | number | 否 | 5000 | 子图抽取阶段路径数量上限。
+riskPathLimit | number | 否 | 20 | 最大返回风险路径数。
+maxBranchPerNode | number | 否 | 20 | 每个节点最大扩展分支，防止路径爆炸。
+minRiskScore | number | 否 | 50 | 最低风险路径分数。
+responseMode | string | 否 | full | 返回模式：summary/full。
+7.3 Request示例
+{
+"seedNames": [
+"鑫达投资管理有限公司"
+],
+"seedIds": [],
+"maxHop": 3,
+"maxPathLength": 4,
+"method": "auto",
+"communityMode": "expanded",
+"includeCommunityDiscovery": true,
+"includeCommunityPath": true,
+"includeNodePath": true,
+"riskRelationWhitelist": [
+"INVEST",
+"CONTROLLER",
+"CONTROL",
+"GUARANTEE",
+"WORK",
+"MENTION",
+"TRIGGERS",
+"REFLECTS",
+"CAUSE",
+"COMPLIES_WITH"
+],
+"subgraphPathLimit": 5000,
+"riskPathLimit": 20,
+"maxBranchPerNode": 20,
+"minRiskScore": 50,
+"responseMode": "full"
+}
+7.4 Response
+字段 | 类型 | 说明
+success | boolean | 是否成功。
+traceId | string | 链路追踪ID。
+summary | object | 路径统计，包括seedNodeCount、nodeCount、edgeCount、candidatePathCount、riskPathCount、highRiskCount等。
+seedNodes | Node[] | 风险主体解析结果。
+communityDiscovery | object | 社区发现摘要，包含seedCommunityId、selectedMethod、communityCount、communityGraph、entityCommunityMap。
+riskPaths | object[] | 节点级风险传导路径。
+communityRiskPaths | object[] | 社区级风险传导路径。
+viewModel | object | 前端高亮模型，包括highlightNodeIds、highlightEdgeIds、highlightCommunityIds、defaultSelectedPathId。
+warnings | string[] | Warning信息。
+7.5 riskPaths字段结构
+字段 | 类型 | 说明
+pathId | string | 路径ID，例如path-1。
+riskLevel | string | 风险等级：high/medium/low。
+score | number | 路径风险分，0–100。
+confidence | number | 置信度，通常为score/100。
+pathType | string | 路径类型，如company_event、company_to_person、cross_community。
+communityPath | number[] | 路径经过的社区ID序列。
+nodeIds | string[] | 路径节点ID序列。
+edgeIds | string[] | 路径边ID序列，edgeIds[i]必须对应nodeIds[i]→nodeIds[i+1]。
+relations | string[] | 路径关系类型序列。
+affectedEntities | string[] | 路径涉及实体名称。
+pathDescription | string | 中文路径解释。
+evidence | object[] | 证据项，通常由事件、法规或风险特征终点生成。
+7.6 风险评分规则
+Score=RelationRisk×0.40+NodeRisk×0.25+TargetType×0.15+CommunityCrossing×0.10+PathLength×0.10
+评分因子 | 权重 | 取值逻辑
+RelationRisk | 40% | 包含CONTROLLER/GUARANTEE/CAUSE为100；包含INVEST/TRIGGERS为70；包含WORK/MENTION/REFLECTS/COMPLIES_WITH为40；其他为20。
+NodeRisk | 25% | 路径节点风险均值：high=100，medium=60，low=30，unknown=20。
+TargetType | 15% | 终点Event/Regulation/Law/Action为100；RiskFeature为70；Person为50；Company为30；其他为20。
+CommunityCrossing | 10% | 跨越2个及以上社区边界为100；跨越1个为50；单社区为0。
+PathLength | 10% | 路径长度1为100；2为80；3为50；4及以上为30。
+分数范围 | 风险等级
+>=80 | high
+60–79 | medium
+<60 | low
+7.7 Response示例
+7.8 本地开发实测结果
+测试对象：徐工集团工程机械股份有限公司；先通过 search-all 获取并确认 node_id，再调用 POST /api/v1/governance/risk-paths，且请求体仅传 seedIds，responseMode=full，includeCommunityDiscovery=true，includeCommunityPath=true，includeNodePath=true。
+指标 | 实测值
+HTTP 状态码 / JSON | 200 / 是
+success / warnings | true / []
+seedNodeCount | 1
+summary.nodeCount / summary.edgeCount / communityCount | 500 / 643 / 26
+candidatePathCount / riskPathCount | 100 / 10
+highRiskCount / mediumRiskCount / lowRiskCount | 10 / 0 / 0
+riskPaths / communityRiskPaths | 10 / 4
+viewModel.highlightNodeIds / highlightEdgeIds / highlightCommunityIds | 15 / 21 / 7
+结论：risk-paths 的 full JSON 与本文档主响应字段一致，包含 summary、seedNodes、communityDiscovery、riskPaths、communityRiskPaths、viewModel、warnings。文档已补充 seedNames/seedIds 条件必填及确认节点后优先使用 seedIds 的说明。
+8. 协同治理社区报告API
+8.1 接口定义
+项目 | 内容
+接口名称 | 协同治理社区报告API
+HTTP方法 | POST
+路径 | /api/v1/governance/compliance-report
+核心作用 | 基于风险路径、异常发现、证据子图和合规指标体系，生成合规评分、合规风险解释、治理建议和社区风险报告。
+8.2 Request
+字段 | 类型 | 必填 | 说明
+query | string | 是 | 用户原始问题。
+seedNodes | array | 否 | 风险主体节点。
+subgraph | object | 是 | 证据子图。
+communities | array | 否 | 群体发现结果。
+riskPaths | array | 是 | API 2 输出的风险路径。
+anomalyFindings | array | 否 | 异常发现结果。
+complianceIndicatorConfig | object | 否 | 合规指标配置。
+reportOptions | object | 否 | 报告生成选项。
+8.3 Request示例
+{
+"query": "请分析鑫达投资管理有限公司与关联公司的风险传导路径、异常关系和合规风险，并生成社区风险报告",
+"seedNodes": [],
+"subgraph": {
+"nodes": [],
+"edges": []
+},
+"communities": [],
+"riskPaths": [],
+"anomalyFindings": [],
+"complianceIndicatorConfig": {
+"useDefaultIndicators": true,
+"includeSubjectiveScore": true
+},
+"reportOptions": {
+"includeExecutiveSummary": true,
+"includeRiskPaths": true,
+"includeComplianceScore": true,
+"includeGovernancePlan": true,
+"format": "markdown"
+}
+}
+8.4 Response
+字段 | 类型 | 说明
+success | boolean | 是否成功。
+traceId | string | 链路追踪ID。
+compliance | object | 法规匹配结果、违规点、建议动作和合规摘要。
+complianceIndicators | object | 3个一级指标、9个二级指标、34个三级指标及总分。
+governance | object | 治理动作、责任部门、优先级和升级规则。
+report | object | 治理报告内容，包括reportId、title、executiveSummary、markdownReport、recommendations。
+viewModel | object | 前端面板控制字段，如reportPanel、compliancePanel、ticketEnabled、exportEnabled。
+complianceIndicators字段 | 类型 | 说明
+level1 | array | 三个一级指标：数据合规性、算法合规性、内容合规性，包含weight与score。
+level2 | array | 九个二级指标，每个包含parent、name、score。
+level3 | array | 34个三级指标，每个包含objectiveScore、subjectiveAdjustment、finalScore、evidence。
+totalScore | number | 综合总分。
+8.5 Response示例
+8.6 本地开发实测结果与优化建议
+测试对象：徐工集团工程机械股份有限公司；按文档路径调用 POST /api/v1/governance/compliance-report。当前本地服务已返回 200 JSON，并可基于 community-discovery 与 risk-paths 的 JSON 生成协同治理社区报告。
+API | 状态码 | 是否 JSON | 与文档一致性 | 结论
+/api/v1/governance/compliance-report | 404 | 是 | 否 | 路由未注册，无法返回文档定义的 compliance、complianceIndicators、governance、report、viewModel。
+优化结果：已新增 /api/v1/governance/compliance-report 兼容路由。该路由接收 seedNodes、subgraph、communities、communityDiscovery、riskPaths、anomalyFindings 等字段，输出 compliance、complianceIndicators、governance、report、viewModel，并可引用 backend/report/community_reports 中的离线社区报告摘要。
+9. 三接口串联调用流程
+外部系统或 unified-stream 调用链路：
+1. POST /api/v1/governance/community-discovery
+输入seedNames/seedIds
+输出subgraph、communities、entityCommunityMap、communityGraph
+2. POST /api/v1/governance/risk-paths
+输入seedNames/seedIds，或复用上一步结果
+输出riskPaths、communityRiskPaths、viewModel
+3. POST /api/v1/governance/compliance-report
+输入subgraph、communities、riskPaths、anomalyFindings
+输出complianceIndicators、governance、report
+使用场景 | 推荐调用方式
+外部系统只想查主体群体 | 只调用community-discovery。
+外部系统只想查风险路径 | 直接调用risk-paths，传seedNames/seedIds即可。
+完整协同治理报告 | 按community-discovery→risk-paths→compliance-report顺序调用，或统一走/chat/unified-stream。
+前端可视化 | 优先使用communityGraph、riskPaths.viewModel、complianceIndicators和report。
+10. 错误码与Warning规范
+错误码/Warning | 级别 | 适用接口 | 说明
+MISSING_SEEDS | error | API1/API2 | seedNames和seedIds均为空。
+SEED_NOT_FOUND:{name} | warning/error | API1/API2 | 未在图谱中找到指定种子实体。
+SUBGRAPH_EMPTY | error | API1/API2 | 已找到种子节点，但子图为空。
+NO_EDGES_IN_SUBGRAPH | warning | API2 | 子图无边，不返回风险路径，仅高亮种子节点。
+COMMUNITY_DISCOVERY_FAILED | warning | API1/API2 | 社区发现失败，可继续返回节点级路径。
+ALL_PATHS_BELOW_THRESHOLD | warning | API2 | 候选路径均低于minRiskScore。
+MISSING_EDGE_ID:{src}-{tgt} | warning | API2 | 路径中的边ID缺失，可能影响前端边高亮。
+RISK_PATH_LIMIT_REACHED | warning | API2 | 达到风险路径数量上限，返回部分结果。
+COMPLIANCE_MATCH_FAILED | warning | API3 | 合规匹配失败或没有命中法规。
+REPORT_GENERATION_FAILED | error | API3 | 报告生成失败。
+附录：图谱查询上限与智能剪枝策略
+本节适用于 POST /api/v1/graph/search-all 与 POST /api/v1/graph/expand/{node_id}。当 depth 大于 1 或中心节点连接大量银行、基金、证券、监管机构、时间、公共法规等高出度节点时，接口不应仅依赖 limit/nodeLimit 进行结果截断，而应在遍历阶段启用度数感知与证据优先剪枝，尽量返回对风险传导、群体发现和社区报告更有效的图谱。
+A.1 剪枝原则
+• 中心节点必须保留。
+• 一跳强关系节点优先保留，包括 GUARANTEE、CONTROLLER、CONTROL、INVEST、CAUSE、TRIGGERS。
+• Event、Feature、Regulation 证据层优先保留，并优先形成可解释风险链路。
+• 一跳节点度数超过 maxExpandDegree 时，默认保留该节点及一跳关系，但不再将其加入下一跳 frontier。
+• BANK、PFUND、PFCOMPANY、SECURITY、REGULATOR、EXCHANGE、TIME、Law、Regulation 等标签默认视为高出度低区分度候选。
+• limit/nodeLimit 仍作为安全上限；若智能剪枝后仍达到上限，响应必须通过 warnings 与 summary.pruning 说明。
+A.2 新增 Request 字段
+字段 | 类型 | 默认值 | 说明
+traversalMode | string | bfs | 遍历模式：bfs/cascade。治理链路建议使用 cascade。
+prunePolicy | string | degree_aware | 剪枝策略：none/degree_aware/evidence_first。
+maxExpandDegree | number | 200 | 节点度数超过该值时默认不进入下一跳。
+highDegreeLabels | string[] | 内置列表 | 自定义高出度低区分度标签。为空时使用默认列表。
+keepHighDegreeNode | boolean | true | 是否保留高出度节点本身及一跳关系。
+includePruningSummary | boolean | true | 是否在 summary.pruning 中返回剪枝摘要。
+A.3 推荐请求示例
+{ "depth": 2, "limit": 500, "traversalMode": "cascade", "prunePolicy": "degree_aware", "maxExpandDegree": 200, "keepHighDegreeNode": true, "includePruningSummary": true }
+A.4 Response 剪枝摘要
+两个图谱查询 API 的响应 summary 中建议包含 pruning 对象，用于说明剪枝策略、阈值、被保留为 terminal 的高出度节点数量、阻断的扩展次数以及按原因统计的剪枝数量。
+字段 | 类型 | 说明
+summary.pruning.policy | string | 实际使用的剪枝策略。
+summary.pruning.maxExpandDegree | number | 本次请求使用的最大可扩展度数阈值。
+summary.pruning.terminalHubCount | number | 被保留为 terminal 且不继续扩展的高出度节点数量。
+summary.pruning.blockedExpansionCount | number | 被阻断的下一跳扩展次数。
+summary.pruning.blockedByReason | object | 按 high_degree、low_signal_label、layer_budget 等原因统计。
+summary.pruning.terminalHubs | array | 最多返回若干高出度 terminal 节点示例，含 id/name/degree/labels/reason。
+A.5 Warning Code
+Warning Code | 含义
+PRUNING_APPLIED | 已启用智能剪枝策略。
+HIGH_DEGREE_NODE_TERMINATED | 高出度节点已保留为一跳 terminal，但不继续进入下一跳。
+LOW_SIGNAL_HUB_FILTERED | 低区分度高出度节点被过滤或仅保留摘要。
+NODE_LIMIT_REACHED_AFTER_PRUNING | 智能剪枝后仍达到节点上限。
+EDGE_LIMIT_REACHED_AFTER_PRUNING | 智能剪枝后仍达到关系上限。
+A.6 与两个图谱 API 的关系
+POST /api/v1/graph/search-all 用于从关键词找到图谱入口；POST /api/v1/graph/expand/{node_id} 用于在用户确认节点后继续展开。若两者均使用 traversalMode=cascade、prunePolicy=degree_aware、maxExpandDegree=200、相同 depth 和 limit，则返回的业务子图应保持一致或高度一致。
+A.7 limit 默认值与按跳数放大规则
+POST /api/v1/graph/search-all 与 POST /api/v1/graph/expand/{node_id} 的 limit 默认值均为 1000。
+limit 表示单跳基础节点上限；当调用方未显式传入 nodeLimit 时，接口按 depth 自动计算有效节点上限：effectiveNodeLimit = min(limit × depth, 5000)。
+默认情况下，depth=1 返回上限为 1000，depth=2 返回上限为 2000，depth=3 返回上限为 3000，依此类推；当前接口 depth 最大为 5，因此默认最高有效节点上限为 5000。
+若调用方需要严格控制总节点数，可传入 nodeLimit。nodeLimit 优先级高于 limit × depth，将作为本次请求的绝对节点上限。
+edgeLimit 未传入时，默认按 effectiveNodeLimit × 4 计算，且不低于 2000。
+depth | limit 默认值 | 有效节点上限 | 说明
+1 | 1000 | 1000 | 一跳默认最多返回 1000 个节点
+2 | 1000 | 2000 | 二跳默认最多返回 2000 个节点
+3 | 1000 | 3000 | 三跳默认最多返回 3000 个节点
+N | 1000 | min(1000 × N, 5000) | 按跳数线性放大，并受接口最大深度约束
+12. 徐工集团工程机械股份有限公司完整 Request/Response 示例
+本节给出五个开放 API 的徐工集团示例。为保持文档可读性，Response 中大数组只展示代表项，但保留完整字段结构；完整返回体以 backend/report_outputs 中的 JSON 文件为准。
+12.1 跨层关键词搜索 API
+Request 示例
+{  "query": "徐工集团工程机械股份有限公司",  "layer": "all",  "depth": 1,  "limit": 1000,  "type": "all",  "relationWhitelist": [],  "includeProperties": true,  "outputFormat": "both",  "deduplicate": true,  "traversalMode": "cascade",  "prunePolicy": "degree_aware",  "maxExpandDegree": 200}
+Response 示例（字段完整，数组仅展示代表项；完整 JSON 见输出文件）
+{  "success": true,  "matchedNodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "nodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "edges": [    {      "id": "edge-sample",      "source": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "target": "node-sample",      "type": "SUE"    }  ],  "triples": [    {      "source": "徐工集团工程机械股份有限公司",      "relation": "SUE",      "target": "示例关联主体"    }  ],  "summary": {    "query": "徐工集团工程机械股份有限公司",    "depth": 1,    "nodeCount": 454,    "edgeCount": 451,    "tripleCount": 451  },  "warnings": []}
+完整输出文件：backend/report_outputs/01_search_all_xugong.json
+12.2 N跳展开子图 API
+Request 示例
+{  "path": "/api/v1/graph/expand/4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",  "body": {    "depth": 1,    "limit": 1000,    "relationWhitelist": [],    "layerWhitelist": [],    "includeCrossLayer": true,    "includeProperties": true,    "traversalMode": "cascade",    "prunePolicy": "degree_aware",    "maxExpandDegree": 200  }}
+Response 示例（字段完整，数组仅展示代表项；完整 JSON 见输出文件）
+{  "success": true,  "centerNode": {    "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",    "labels": [      "NODE",      "COMPANY",      "Entity"    ],    "properties": {      "COMPANYNm": "徐工集团工程机械股份有限公司",      "COMPANY_TYPE_LIST": [        "A股",        "发债企业"      ],      "STATUS": "存续(在营、开业、在册)"    }  },  "nodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "edges": [    {      "id": "edge-sample",      "source": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "target": "node-sample",      "type": "SUE"    }  ],  "triples": [    {      "source": "徐工集团工程机械股份有限公司",      "relation": "SUE",      "target": "示例关联主体"    }  ],  "subgraph": {    "nodeCount": 454,    "edgeCount": 451  },  "summary": {    "centerNodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",    "depth": 1,    "nodeCount": 454,    "edgeCount": 451,    "tripleCount": 451  },  "warnings": []}
+完整输出文件：backend/report_outputs/02_expand_xugong.json
+12.3 风险主体群体发现 API
+Request 示例
+{  "seedNames": [],  "seedIds": [    "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"  ],  "maxHop": 2,  "method": "auto",  "communityMode": "expanded",  "minCommunitySize": 2,  "pathLimit": 5000,  "maxNodes": 1000,  "responseMode": "full",  "includeRawSubgraph": true,  "includeCommunityGraph": true}
+Response 示例（字段完整，数组仅展示代表项；完整 JSON 见输出文件）
+{  "success": true,  "apiVersion": "v1",  "traceId": "trc-xugong-community",  "selectedMethod": "louvain_networkx",  "seedNodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "candidateSeeds": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "selectedSeedIds": [    "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"  ],  "seedSelection": {    "mode": "risk_score",    "selectedCount": 1  },  "summary": {    "seedNodeCount": 1,    "nodeCount": 1000,    "edgeCount": 1143,    "communityCount": 13,    "seedCommunityId": 1  },  "communities": [    {      "communityId": 1,      "size": 1,      "members": [        {          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",          "labels": [            "NODE",            "COMPANY",            "Entity"          ],          "properties": {            "COMPANYNm": "徐工集团工程机械股份有限公司",            "COMPANY_TYPE_LIST": [              "A股",              "发债企业"            ],            "STATUS": "存续(在营、开业、在册)"          }        }      ]    }  ],  "entityCommunityMap": {    "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761": {      "communityId": 1,      "role": "core",      "isSeed": true    }  },  "communityEdges": [    {      "sourceCommunity": 1,      "targetCommunity": 2,      "relationCount": 3    }  ],  "communityGraph": {    "nodes": [      {        "id": "community-1",        "communityId": 1      }    ],    "edges": []  },  "subgraph": {    "nodeCount": 2332,    "edgeCount": 2475,    "nodes": [      {        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",        "labels": [          "NODE",          "COMPANY",          "Entity"        ],        "properties": {          "COMPANYNm": "徐工集团工程机械股份有限公司",          "COMPANY_TYPE_LIST": [            "A股",            "发债企业"          ],          "STATUS": "存续(在营、开业、在册)"        }      }    ],    "edges": []  },  "connectedSubgraph": {    "nodeCount": 1000,    "edgeCount": 1143,    "nodes": [      {        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",        "labels": [          "NODE",          "COMPANY",          "Entity"        ],        "properties": {          "COMPANYNm": "徐工集团工程机械股份有限公司",          "COMPANY_TYPE_LIST": [            "A股",            "发债企业"          ],          "STATUS": "存续(在营、开业、在册)"        }      }    ],    "edges": []  },  "visualization": {    "defaultView": "community_graph",    "suggestedLayout": "clustered_force",    "highlightCommunityId": 1  },  "warnings": []}
+完整输出文件：backend/report_outputs/03_community_discovery_xugong.json
+12.4 风险传导路径分析 API
+Request 示例
+{  "seedNames": [],  "seedIds": [    "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"  ],  "maxHop": 2,  "maxPathLength": 4,  "method": "auto",  "communityMode": "expanded",  "includeCommunityDiscovery": true,  "includeCommunityPath": true,  "includeNodePath": true,  "subgraphPathLimit": 5000,  "riskPathLimit": 10,  "maxBranchPerNode": 10,  "minRiskScore": 0,  "responseMode": "full"}
+Response 示例（字段完整，数组仅展示代表项；完整 JSON 见输出文件）
+{  "success": true,  "traceId": "trc-xugong-risk-paths",  "summary": {    "seedNodeCount": 1,    "nodeCount": 500,    "edgeCount": 643,    "communityCount": 26,    "candidatePathCount": 100,    "riskPathCount": 10,    "highRiskCount": 10  },  "seedNodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "communityDiscovery": {    "seedCommunityId": 1,    "selectedMethod": "louvain_networkx",    "communityCount": 26,    "communityGraph": {},    "entityCommunityMap": {}  },  "riskPaths": [    {      "pathId": "path-36",      "riskLevel": "high",      "score": 100,      "nodeIds": [        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"      ],      "edgeIds": [],      "relations": [        "SUE",        "INVEST"      ]    }  ],  "communityRiskPaths": [    {      "sourceCommunity": 1,      "targetCommunity": 2,      "riskPathIds": [        "path-36"      ]    }  ],  "viewModel": {    "highlightNodeIds": [      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"    ],    "highlightEdgeIds": [],    "highlightCommunityIds": [      1,      2    ],    "defaultSelectedPathId": "path-36"  },  "warnings": []}
+完整输出文件：backend/report_outputs/04_risk_paths_xugong.json
+12.5 协同治理社区报告 API
+Request 示例
+{  "query": "分析徐工集团工程机械股份有限公司的风险传导、群体发现和协同治理社区报告",  "seedNodes": [    {      "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",      "labels": [        "NODE",        "COMPANY",        "Entity"      ],      "properties": {        "COMPANYNm": "徐工集团工程机械股份有限公司",        "COMPANY_TYPE_LIST": [          "A股",          "发债企业"        ],        "STATUS": "存续(在营、开业、在册)"      }    }  ],  "subgraph": {    "nodeCount": 2332,    "edgeCount": 2475,    "nodes": [      {        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",        "labels": [          "NODE",          "COMPANY",          "Entity"        ],        "properties": {          "COMPANYNm": "徐工集团工程机械股份有限公司",          "COMPANY_TYPE_LIST": [            "A股",            "发债企业"          ],          "STATUS": "存续(在营、开业、在册)"        }      }    ],    "edges": []  },  "communities": [    {      "communityId": 1,      "members": [        {          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761",          "labels": [            "NODE",            "COMPANY",            "Entity"          ],          "properties": {            "COMPANYNm": "徐工集团工程机械股份有限公司",            "COMPANY_TYPE_LIST": [              "A股",              "发债企业"            ],            "STATUS": "存续(在营、开业、在册)"          }        }      ]    }  ],  "communityDiscovery": {    "summary": {      "communityCount": 13    },    "communityGraph": {},    "entityCommunityMap": {}  },  "riskPaths": {    "riskPaths": [      {        "pathId": "path-36",        "riskLevel": "high",        "score": 100,        "nodeIds": [          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"        ],        "edgeIds": []      }    ],    "communityRiskPaths": []  },  "anomalyFindings": [],  "complianceIndicatorConfig": {    "useDefaultIndicators": true  },  "reportOptions": {    "includeRiskPaths": true,    "includeGovernancePlan": true,    "format": "markdown"  },  "exportFormats": [    "markdown"  ]}
+Response 示例（字段完整，数组仅展示代表项；完整 JSON 见输出文件）
+{  "success": true,  "apiVersion": "v1",  "traceId": "trc-xugong-compliance-report",  "reportId": "WIND-COMP-xxxxxxxx",  "subject": "徐工集团工程机械股份有限公司",  "compliance": {    "status": "warning",    "riskLevel": "high",    "score": 55,    "summary": "识别到风险路径和风险社区，建议进行协同治理闭环。",    "matchedRules": [      {        "code": "GRAPH-RISK-PATH",        "name": "风险传导路径监测",        "matched": true      }    ],    "violations": [      {        "pathId": "path-36",        "riskLevel": "high",        "score": 100      }    ]  },  "complianceIndicators": {    "totalScore": 55,    "riskLevel": "high",    "level1": [],    "level2": [],    "level3": []  },  "governance": {    "priority": "high",    "actions": [      {        "actionId": "GOV-001",        "title": "核验高分风险路径"      }    ],    "timeline": []  },  "report": {    "reportId": "WIND-COMP-xxxxxxxx",    "title": "徐工集团工程机械股份有限公司协同治理社区报告",    "executiveSummary": "基于群体发现和风险传导路径生成。",    "markdownReport": "# 协同治理社区报告",    "recommendations": []  },  "communityReportSources": [    {      "perspective": "监管机构",      "title": "离线社区报告摘要"    }  ],  "viewModel": {    "reportPanel": "compliance-report",    "highlightNodeIds": [      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1083761"    ],    "highlightEdgeIds": [],    "highlightCommunityIds": [      1    ],    "exportEnabled": true  },  "warnings": []}
+完整输出文件：backend/report_outputs/05_compliance_report_xugong_response.json

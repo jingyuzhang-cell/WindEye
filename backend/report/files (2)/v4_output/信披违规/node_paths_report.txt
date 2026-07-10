@@ -1,0 +1,83 @@
+=================================================================
+节点级穿透路径报告（v4）
+=================================================================
+
+事件：某科技公司在年度报告中虚增收入2亿元，
+隐瞒重大对外担保事项，误导投资者。
+财务总监和审计机构均涉嫌参与造假。
+交易所对公司及相关责任人进行问询和处分。
+
+
+【合规路径】
+  路径#1（5跳  质量分:12.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 监事（PartyWithResponsibility）
+    监事（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证监会（RegulatoryAuthority）
+  路径#2（5跳  质量分:12.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证监会（RegulatoryAuthority）
+  路径#3（5跳  质量分:12.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[处理]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 监事（PartyWithResponsibility）
+    监事（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#4（5跳  质量分:12.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[处理]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#5（5跳  质量分:12.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[处理]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+
+【违规路径】
+  路径#1（9跳  质量分:21.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 监事（PartyWithResponsibility）
+    监事（PartyWithResponsibility） -[包含责任方(↔)]-> 第三条（Section）
+    第三条（Section） -[包含责任方]-> 发行人（PartyWithResponsibility）
+    发行人（PartyWithResponsibility） -[履行]-> 信息披露义务（Responsibility）
+    信息披露义务（Responsibility） -[履行(↔)]-> 信息披露义务人（PartyWithResponsibility）
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 所披露的信息有重大遗漏（Action）
+    所披露的信息有重大遗漏（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+  路径#2（9跳  质量分:21.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[包含责任方(↔)]-> 第三条（Section）
+    第三条（Section） -[包含责任方]-> 发行人（PartyWithResponsibility）
+    发行人（PartyWithResponsibility） -[履行]-> 信息披露义务（Responsibility）
+    信息披露义务（Responsibility） -[履行(↔)]-> 信息披露义务人（PartyWithResponsibility）
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 所披露的信息有重大遗漏（Action）
+    所披露的信息有重大遗漏（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+  路径#3（9跳  质量分:21.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第三条（Section）
+    第三条（Section） -[包含责任方]-> 发行人（PartyWithResponsibility）
+    发行人（PartyWithResponsibility） -[履行]-> 信息披露义务（Responsibility）
+    信息披露义务（Responsibility） -[履行(↔)]-> 信息披露义务人（PartyWithResponsibility）
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 所披露的信息有重大遗漏（Action）
+    所披露的信息有重大遗漏（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+  路径#4（9跳  质量分:21.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 所披露的信息有重大遗漏（Action）
+    所披露的信息有重大遗漏（Action） -[做出(↔)]-> 信息披露义务人（PartyWithResponsibility）
+    信息披露义务人（PartyWithResponsibility） -[履行]-> 信息披露义务（Responsibility）
+    信息披露义务（Responsibility） -[履行(↔)]-> 发行人（PartyWithResponsibility）
+    发行人（PartyWithResponsibility） -[包含责任方(↔)]-> 第三条（Section）
+    第三条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+  路径#5（9跳  质量分:21.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 所披露的信息有重大遗漏（Action）
+    所披露的信息有重大遗漏（Action） -[做出(↔)]-> 信息披露义务人（PartyWithResponsibility）
+    信息披露义务人（PartyWithResponsibility） -[履行]-> 信息披露义务（Responsibility）
+    信息披露义务（Responsibility） -[履行(↔)]-> 发行人（PartyWithResponsibility）
+    发行人（PartyWithResponsibility） -[包含责任方(↔)]-> 第三条（Section）
+    第三条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证监会（RegulatoryAuthority）

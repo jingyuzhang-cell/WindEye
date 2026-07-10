@@ -1,18 +1,17 @@
-"""Shared browser and download utilities for scrapers.
-
-Supports Edge (default, built into Windows Server) and Chrome.
-"""
+"""Shared browser and download utilities for scrapers."""
 
 from __future__ import annotations
 
 import functools
 import logging
 import os
+import platform
 import re
 import shutil
 import time
 from html import unescape
 from typing import Optional, Set
+from urllib.parse import urlparse
 
 import requests
 from selenium import webdriver
@@ -25,6 +24,16 @@ from selenium.webdriver.support import expected_conditions as EC
 logger = logging.getLogger(__name__)
 
 BROWSER_ORDER = os.getenv("SCRAPER_BROWSER", "edge,chrome").split(",")
+DEFAULT_HEADERS = {
+    "User-Agent": os.getenv(
+        "SCRAPER_USER_AGENT",
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+    ),
+    "Accept": "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
+}
 
 
 # ── Driver locating ────────────────────────────────────────────────────
@@ -34,13 +43,16 @@ def _find_edge_driver() -> Optional[str]:
     explicit = os.getenv("EDGEDRIVER_PATH", "")
     if explicit and os.path.isfile(explicit):
         return explicit
-    # Project-bundled
-    project = os.path.join(
-        os.path.dirname(__file__),
-        "edgedriver-win64", "msedgedriver.exe",
-    )
-    if os.path.isfile(project):
-        return project
+    driver_dir = os.path.dirname(__file__)
+    candidates = [
+        os.path.join(driver_dir, "edgedriver-win64", "msedgedriver.exe"),
+        os.path.join(driver_dir, "edgedriver-linux64", "msedgedriver"),
+        os.path.join(driver_dir, "edgedriver", "msedgedriver.exe"),
+        os.path.join(driver_dir, "edgedriver", "msedgedriver"),
+    ]
+    for project in candidates:
+        if os.path.isfile(project):
+            return project
     return shutil.which("msedgedriver")
 
 
@@ -49,12 +61,17 @@ def _find_chrome_driver() -> Optional[str]:
     explicit = os.getenv("CHROMEDRIVER_PATH", "")
     if explicit and os.path.isfile(explicit):
         return explicit
-    project = os.path.join(
-        os.path.dirname(__file__),
-        "chromedriver-win64", "chromedriver-win64", "chromedriver.exe",
-    )
-    if os.path.isfile(project):
-        return project
+    driver_dir = os.path.dirname(__file__)
+    candidates = [
+        os.path.join(driver_dir, "chromedriver-win64", "chromedriver-win64", "chromedriver.exe"),
+        os.path.join(driver_dir, "chromedriver-win64", "chromedriver.exe"),
+        os.path.join(driver_dir, "chromedriver-linux64", "chromedriver"),
+        os.path.join(driver_dir, "chromedriver", "chromedriver.exe"),
+        os.path.join(driver_dir, "chromedriver", "chromedriver"),
+    ]
+    for project in candidates:
+        if os.path.isfile(project):
+            return project
     return shutil.which("chromedriver")
 
 
@@ -84,6 +101,21 @@ def _build_download_prefs(download_dir: str) -> dict:
     }
 
 
+def _server_default_headless() -> bool:
+    raw = os.getenv("SCRAPER_HEADLESS", "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    if platform.system().lower() != "windows":
+        return True
+    return not bool(os.getenv("SESSIONNAME"))
+
+
+def _headless_args() -> list[str]:
+    return ["--headless=new", "--disable-dev-shm-usage"]
+
+
 # ── Unified driver creation (Edge-first) ──────────────────────────────
 
 def create_driver(
@@ -96,6 +128,7 @@ def create_driver(
     Edge is built into Windows Server — no extra install needed.
     """
     errors = []
+    headless = headless or _server_default_headless()
 
     for browser in BROWSER_ORDER:
         browser = browser.strip().lower()
@@ -125,13 +158,13 @@ def _create_edge_driver(
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--ignore-ssl-errors")
 
     if headless:
-        options.add_argument("--headless")
+        for arg in _headless_args():
+            options.add_argument(arg)
 
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
@@ -163,13 +196,13 @@ def _create_chrome_driver(
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--ignore-ssl-errors")
 
     if headless:
-        options.add_argument("--headless")
+        for arg in _headless_args():
+            options.add_argument(arg)
 
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
@@ -277,6 +310,51 @@ def safe_pdf_name(title: str, max_len: int = 120) -> str:
     if not name.lower().endswith(".pdf"):
         name += ".pdf"
     return name
+
+
+def download_pdf(
+    url: str,
+    output_path: str,
+    timeout: int = 60,
+    headers: Optional[dict[str, str]] = None,
+    cookies: Optional[dict[str, str]] = None,
+    referer: str = "",
+) -> bool:
+    """Download a PDF directly as a fallback when browser-triggered downloads fail."""
+    if not url:
+        return False
+    final_headers = dict(DEFAULT_HEADERS)
+    if headers:
+        final_headers.update(headers)
+    if referer:
+        final_headers["Referer"] = referer
+    try:
+        with requests.get(
+            url,
+            headers=final_headers,
+            cookies=cookies,
+            timeout=timeout,
+            stream=True,
+            allow_redirects=True,
+        ) as resp:
+            resp.raise_for_status()
+            content_type = (resp.headers.get("Content-Type") or "").lower()
+            if "pdf" not in content_type and not urlparse(resp.url).path.lower().endswith(".pdf"):
+                logger.warning("download_pdf: non-pdf response for %s content-type=%s", url, content_type)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+        return is_valid_pdf(output_path, min_size=256)
+    except Exception as exc:
+        logger.warning("download_pdf failed for %s: %s", url, exc)
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except OSError:
+            pass
+        return False
 
 
 def is_valid_pdf(path: str, min_size: int = 1024) -> bool:

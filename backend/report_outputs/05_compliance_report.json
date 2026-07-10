@@ -1,0 +1,27 @@
+{
+  "name": "compliance_report_open_api_path",
+  "method": "POST",
+  "path": "/api/v1/governance/compliance-report",
+  "url": "http://127.0.0.1:8001/api/v1/governance/compliance-report",
+  "statusCode": 404,
+  "ok": false,
+  "contentType": "application/json",
+  "isJson": true,
+  "error": "HTTP Error 404: Not Found",
+  "requestBody": {
+    "query": "分析濉溪县徐工装载机配件有限公司的风险传导、群体发现和协同治理社区报告",
+    "focusEntities": [
+      "濉溪县徐工装载机配件有限公司"
+    ],
+    "maxHop": 2,
+    "exportFormats": [
+      "markdown"
+    ],
+    "sessionId": "api-json-test",
+    "roundId": 1
+  },
+  "response": {
+    "detail": "Not Found"
+  },
+  "testedAt": "2026-07-09T16:45:31"
+}

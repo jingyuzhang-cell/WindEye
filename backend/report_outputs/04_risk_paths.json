@@ -1,0 +1,4829 @@
+{
+  "name": "risk_paths",
+  "method": "POST",
+  "path": "/api/v1/governance/risk-paths",
+  "url": "http://127.0.0.1:8001/api/v1/governance/risk-paths",
+  "statusCode": 200,
+  "ok": true,
+  "contentType": "application/json",
+  "isJson": true,
+  "error": null,
+  "requestBody": {
+    "seedNames": [
+      "濉溪县徐工装载机配件有限公司"
+    ],
+    "seedIds": [
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511"
+    ],
+    "maxHop": 2,
+    "maxPathLength": 4,
+    "method": "auto",
+    "communityMode": "expanded",
+    "includeCommunityDiscovery": true,
+    "includeCommunityPath": true,
+    "includeNodePath": true,
+    "subgraphPathLimit": 1000,
+    "riskPathLimit": 10,
+    "maxBranchPerNode": 10,
+    "minRiskScore": 0,
+    "responseMode": "full"
+  },
+  "response": {
+    "success": true,
+    "traceId": "trc-1783586731420",
+    "elapsedMs": 4488,
+    "summary": {
+      "seedNodeCount": 28,
+      "nodeCount": 445,
+      "edgeCount": 444,
+      "communityCount": 1,
+      "candidatePathCount": 10,
+      "riskPathCount": 10,
+      "highRiskCount": 0,
+      "mediumRiskCount": 9,
+      "lowRiskCount": 1
+    },
+    "seedNodes": [
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "properties": {
+          "REG_CAPITAL": "30.0000",
+          "ORGNUM": "91340621748939077A",
+          "COMPANY_NM": "濉溪县徐工装载机配件有限公司",
+          "STATUS": "存续(在营、开业、在册)",
+          "WARNING_NUM": 3,
+          "id": "62250312",
+          "NODE_ID": "151993913",
+          "COMPANY_ID": "58009916",
+          "RISK_LIST": [
+            "11"
+          ]
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927682",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774927062698334"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927705",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775125067748148"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927016",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775042073678674"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927026",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775042158429317"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926929",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774929045708409"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926988",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775041863431630"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927001",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775041972431811"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926898",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878650666822"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926912",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878785519056"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926753",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878040159848"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926637",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774877271689798"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926235",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775296302215756"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926206",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775296174158087"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925914",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775294546141409"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925425",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775292445492069"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924735",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775289511360299"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924768",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775289657479905"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924514",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288560786908"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924517",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288606464624"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924610",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288934272549"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924466",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288074614070"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924485",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288449110933"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924026",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511829446104"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924087",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774512063637842"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923957",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511497948142"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923979",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511591679524"
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:208423",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "properties": {
+          "REG_CAPITAL": "10.0000",
+          "COMPANY_NM": "有限公司",
+          "STATUS": "注销",
+          "WARNING_NUM": 8,
+          "id": "93729650",
+          "NODE_ID": "179042786",
+          "COMPANY_ID": "63759134",
+          "RISK_LIST": [
+            "13",
+            "10"
+          ]
+        },
+        "matched_input": "濉溪县徐工装载机配件有限公司"
+      }
+    ],
+    "communityDiscovery": {
+      "seedCommunityId": 0,
+      "selectedMethod": "louvain_networkx",
+      "communityCount": 1,
+      "communityGraph": {
+        "nodes": [
+          {
+            "id": "community-0",
+            "communityId": 0,
+            "label": "群体 #0",
+            "size": 445,
+            "density": 0.0045,
+            "dominantLayer": "Subject",
+            "riskScore": null,
+            "seedRelated": true,
+            "topEntities": [
+              "潍柴动力股份有限公司",
+              "潍柴(山东)动力总成有限公司",
+              "南通春威汽车配件有限公司",
+              "江苏红日防静电地板有限公司",
+              "广发银行股份有限公司台州分行"
+            ],
+            "coreNodes": [
+              {
+                "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+                "name": "潍柴动力股份有限公司",
+                "type": "NODE",
+                "label": "NODE",
+                "role": "core",
+                "degree": 444,
+                "internalDegree": 444,
+                "externalDegree": 0,
+                "riskLevel": ""
+              },
+              {
+                "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284255",
+                "name": "潍柴(山东)动力总成有限公司",
+                "type": "NODE",
+                "label": "NODE",
+                "role": "member",
+                "degree": 1,
+                "internalDegree": 1,
+                "externalDegree": 0,
+                "riskLevel": ""
+              },
+              {
+                "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284497",
+                "name": "南通春威汽车配件有限公司",
+                "type": "NODE",
+                "label": "NODE",
+                "role": "member",
+                "degree": 1,
+                "internalDegree": 1,
+                "externalDegree": 0,
+                "riskLevel": ""
+              },
+              {
+                "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:177819",
+                "name": "江苏红日防静电地板有限公司",
+                "type": "NODE",
+                "label": "NODE",
+                "role": "member",
+                "degree": 1,
+                "internalDegree": 1,
+                "externalDegree": 0,
+                "riskLevel": ""
+              },
+              {
+                "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284391",
+                "name": "广发银行股份有限公司台州分行",
+                "type": "NODE",
+                "label": "NODE",
+                "role": "member",
+                "degree": 1,
+                "internalDegree": 1,
+                "externalDegree": 0,
+                "riskLevel": ""
+              }
+            ],
+            "bridgeNodes": []
+          }
+        ],
+        "edges": []
+      },
+      "entityCommunityMap": {
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "name": "潍柴动力股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "core",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284255": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284255",
+          "name": "潍柴(山东)动力总成有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284497": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284497",
+          "name": "南通春威汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:177819": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:177819",
+          "name": "江苏红日防静电地板有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284391": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284391",
+          "name": "广发银行股份有限公司台州分行",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:283947": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:283947",
+          "name": "长春阔尔科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284569": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284569",
+          "name": "杭州银行股份有限公司宁波余姚支行",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "name": "濉溪县徐工装载机配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": true,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284550": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284550",
+          "name": "烟台友谊汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284377": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284377",
+          "name": "无锡鑫起航汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284254": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284254",
+          "name": "株洲齿轮股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284230": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284230",
+          "name": "潍柴控股集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284475": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284475",
+          "name": "杭州尚龙过滤器有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284418": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284418",
+          "name": "福州华士特汽车零部件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284222": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284222",
+          "name": "潍柴动力股份有限公司嘉兴办事处",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284305": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284305",
+          "name": "潍柴动力(上海)科技发展有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284531": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284531",
+          "name": "郑州景宏汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284564": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284564",
+          "name": "蚌埠市华风滤清器有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284582": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284582",
+          "name": "郑州百通汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284236": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284236",
+          "name": "陕西同力重工股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284328": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284328",
+          "name": "河北中农博远农业装备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289087": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289087",
+          "name": "孙少军",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284578": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284578",
+          "name": "昆明昌旻商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284596": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284596",
+          "name": "大连海建企业总公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284545": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284545",
+          "name": "淮南市重汽汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284359": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284359",
+          "name": "大同市瑞实商贸有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284536": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284536",
+          "name": "驻天津办事处",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16532": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16532",
+          "name": "浙江淘宝网络有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284566": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284566",
+          "name": "上海鸣东工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284522": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284522",
+          "name": "上海超胜贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284503": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284503",
+          "name": "济南绿源石化有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284295": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284295",
+          "name": "潍柴动力(潍坊)再制造有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284423": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284423",
+          "name": "上海浦东东珠供销商业公司元祥汽配商店",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284605": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284605",
+          "name": "西安建丰工矿汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284366": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284366",
+          "name": "青岛日通涵宇商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284445": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284445",
+          "name": "太原鑫实越工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17032": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17032",
+          "name": "达索系统股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284322": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284322",
+          "name": "哈密新华夏中力汽车连锁有限责任公司丙寅汽车修理厂",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284567": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284567",
+          "name": "山东壳英能润滑油有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284442": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284442",
+          "name": "东莞市杰益汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284320": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284320",
+          "name": "凤城市东方增压器制造有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284409": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284409",
+          "name": "上海金涔实业发展有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284380": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284380",
+          "name": "成都市恒鑫汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284403": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284403",
+          "name": "郑州崇明商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284337": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284337",
+          "name": "中国银行股份有限公司烟台开发区支行",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284275": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284275",
+          "name": "山东欧润油品有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284412": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284412",
+          "name": "山东卡潍德汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284351": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284351",
+          "name": "安庆市华俊汽车销售服务有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284268": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284268",
+          "name": "北汽福田汽车股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284271": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284271",
+          "name": "潍柴动力液压科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284470": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284470",
+          "name": "沈阳珠城滤清器有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284520": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284520",
+          "name": "广州精星益机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284382": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284382",
+          "name": "南京仙林国际汽车城投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284287": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284287",
+          "name": "潍柴动力(潍坊)集约配送有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284513": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284513",
+          "name": "莱州市骋达汽车服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284602": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284602",
+          "name": "大同市凡昌机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284374": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284374",
+          "name": "宁波盈青进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284538": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284538",
+          "name": "瑞安市发达汽车配件厂",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284561": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284561",
+          "name": "太原市沃德通宝汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284227": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284227",
+          "name": "潍柴动力股份有限公司株洲湘火炬分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284282": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284282",
+          "name": "陕西法士特齿轮有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284277": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284277",
+          "name": "博杜安(潍坊)动力有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284387": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284387",
+          "name": "上海燎沃汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284360": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284360",
+          "name": "沈阳鸿瑞商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284510": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284510",
+          "name": "合肥向伟汽车贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284415": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284415",
+          "name": "上海景凌贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284495": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284495",
+          "name": "杭州鸿本汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284494": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284494",
+          "name": "沈阳达丽方商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284270": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284270",
+          "name": "山东发潍车辆制造有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289091": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289091",
+          "name": "王延磊",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294008": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294008",
+          "name": "潍柴动力股份有限公司2011年度第一期中期票据",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284226": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284226",
+          "name": "潍柴动力股份有限公司重庆分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289095": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289095",
+          "name": "徐兵",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284240": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284240",
+          "name": "江苏正大富通股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284490": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284490",
+          "name": "上海杰狮贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284331": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284331",
+          "name": "山东省寿光市六丰实业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284296": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284296",
+          "name": "株洲齿轮有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284592": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284592",
+          "name": "烟台恒邦集团有限公司经贸分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284239": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284239",
+          "name": "新疆机械研究院股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284461": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284461",
+          "name": "宝鸡聚力进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284261": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284261",
+          "name": "潍柴(青岛)科技孵化中心有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284344": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284344",
+          "name": "合肥双诚工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289093": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289093",
+          "name": "赵福全",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284570": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284570",
+          "name": "天津市亚拓汽车部件制造有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284345": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284345",
+          "name": "淄柴动力有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284459": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284459",
+          "name": "南京江山工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284476": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284476",
+          "name": "杭州斯达汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284555": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284555",
+          "name": "江苏海纳石油制品有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284293": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284293",
+          "name": "山东同心智行数智科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284504": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284504",
+          "name": "山东亚罗工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289096": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289096",
+          "name": "王德成",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284501": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284501",
+          "name": "杭州起码科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284565": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284565",
+          "name": "乌海市盛达工程机械有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284332": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284332",
+          "name": "上海坤义汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284317": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284317",
+          "name": "大连普天运输有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284544": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284544",
+          "name": "重庆和腾汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284399": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284399",
+          "name": "大连辽南伟业汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284312": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284312",
+          "name": "中国机械工业第四建设工程有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284252": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284252",
+          "name": "中国机械工业海南股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284416": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284416",
+          "name": "青岛日通涵商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284369": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284369",
+          "name": "临沂泰洛滨贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284335": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284335",
+          "name": "武汉广通工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284235": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284235",
+          "name": "华丰动力股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289081": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289081",
+          "name": "王翠萍",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284421": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284421",
+          "name": "上海鑫易汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284420": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284420",
+          "name": "重庆中柳矿隧机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284242": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284242",
+          "name": "浙江科马摩擦材料股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284259": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284259",
+          "name": "山东五星车辆股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284447": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284447",
+          "name": "郑州天硕汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284491": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284491",
+          "name": "河南鑫中汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284519": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284519",
+          "name": "济南景荣汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284507": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284507",
+          "name": "河南省里诺德汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:501103": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:501103",
+          "name": "湖州盈灿投资合伙企业(有限合伙)",
+          "type": "PFUND",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284362": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284362",
+          "name": "湘潭市湘辉工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284575": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284575",
+          "name": "山东卡客节能科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284276": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284276",
+          "name": "潍柴动力(上海)投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284535": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284535",
+          "name": "苏州何奇商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284325": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284325",
+          "name": "新疆金山推工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284449": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284449",
+          "name": "青岛皓顺汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284458": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284458",
+          "name": "成都联盛物资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284559": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284559",
+          "name": "鑫腾博(厦门)机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284407": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284407",
+          "name": "安徽泰邦信富汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284302": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284302",
+          "name": "潍柴巴拉德氢能科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284460": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284460",
+          "name": "无锡宏博康动力机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17085": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17085",
+          "name": "香港中央结算(代理人)有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284524": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284524",
+          "name": "江苏清拖装备制造有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284404": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284404",
+          "name": "重庆曼昊汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284401": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284401",
+          "name": "济宁柳工机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284591": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284591",
+          "name": "成都宏运重型汽配销售有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284314": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284314",
+          "name": "公主岭市奇瑞农业机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284395": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284395",
+          "name": "淮北汉德盛商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289098": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289098",
+          "name": "Richard Robinson Smith",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284500": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284500",
+          "name": "沈阳市冀龙工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284372": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284372",
+          "name": "东营市通达汽车修理有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284224": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284224",
+          "name": "潍柴动力股份有限公司杭州研发中心",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284479": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284479",
+          "name": "大同市金众贸易有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284402": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284402",
+          "name": "济南卓尔汽车配件销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289097": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289097",
+          "name": "王学文",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284269": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284269",
+          "name": "潍柴动力(北京)国际资源投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284509": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284509",
+          "name": "济南大运重柴工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289077": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289077",
+          "name": "支保京",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284228": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284228",
+          "name": "潍柴动力股份有限公司北京办事处",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284446": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284446",
+          "name": "上海熙远汽车配件销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284478": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284478",
+          "name": "昆山市成山物资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284355": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284355",
+          "name": "界首市鑫星汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284329": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284329",
+          "name": "烟台新锦康食品有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284562": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284562",
+          "name": "上海常铭汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:286361": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:286361",
+          "name": "马旭耀",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284266": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284266",
+          "name": "飞速潍柴(潍坊)燃料电池空压机有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284249": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284249",
+          "name": "山东省企业托管经营股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284319": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284319",
+          "name": "青州市飞达实业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284324": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284324",
+          "name": "烟台德润润滑油有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284263": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284263",
+          "name": "山东潍柴进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284466": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284466",
+          "name": "上海双兴汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284383": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284383",
+          "name": "沈阳市欧德诚跃汽车配件销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284368": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284368",
+          "name": "上海利赫汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284280": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284280",
+          "name": "潍柴(潍坊)中型柴油机有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284304": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284304",
+          "name": "潍柴动力(潍坊)装备技术服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284286": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284286",
+          "name": "潍坊内燃机质量检验中心有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:25665": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:25665",
+          "name": "机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284245": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284245",
+          "name": "微积分创新科技(北京)股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284576": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284576",
+          "name": "西安聚辉建筑工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:89498": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:89498",
+          "name": "中国第一汽车集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284468": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284468",
+          "name": "通盛达贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284464": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284464",
+          "name": "宿迁泛达电子商务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:10116": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:10116",
+          "name": "易方达沪深300交易型开放式指数发起式证券投资基金",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284394": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284394",
+          "name": "上海鼎昊汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284481": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284481",
+          "name": "上海韦首工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284493": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284493",
+          "name": "陕西四达重型汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294009": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294009",
+          "name": "2008年潍柴动力股份有限公司第一期短期融资券",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289085": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289085",
+          "name": "陶化安",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17063": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17063",
+          "name": "中国人民财产保险股份有限公司北京市分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284485": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284485",
+          "name": "济南坤赛汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289076": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289076",
+          "name": "程广旭",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:15028": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:15028",
+          "name": "香港中央结算有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284389": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284389",
+          "name": "山东森鑫贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284601": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284601",
+          "name": "南京派通工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284558": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284558",
+          "name": "上海端龙汽车服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284318": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284318",
+          "name": "青岛即建建设集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284316": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284316",
+          "name": "连云港赣榆金建建材有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284373": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284373",
+          "name": "青岛洁尔汽车零部件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289090": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289090",
+          "name": "胡云云",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284338": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284338",
+          "name": "东莞丰裕电机有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284598": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284598",
+          "name": "淄博美沃工程机械销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284238": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284238",
+          "name": "山推工程机械股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284323": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284323",
+          "name": "潍坊中维物流有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284568": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284568",
+          "name": "广州若谷电子商务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284299": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284299",
+          "name": "株洲湘火炬汽车密封有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284437": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284437",
+          "name": "马鞍山润盛柳工机械商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284471": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284471",
+          "name": "济南悦实达鑫进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289082": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289082",
+          "name": "王丽",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284456": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284456",
+          "name": "合肥一发汽车用品有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284321": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284321",
+          "name": "北部湾财产保险股份有限公司柳州分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284443": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284443",
+          "name": "日照九山商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:10117": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:10117",
+          "name": "华泰柏瑞沪深300交易型开放式指数证券投资基金",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284379": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284379",
+          "name": "常州力压工程机械有限公司泰州分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284548": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284548",
+          "name": "丹东铁威机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284452": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284452",
+          "name": "杭州费洛诗贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284554": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284554",
+          "name": "中国工商银行股份有限公司南通崇川支行",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289094": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289094",
+          "name": "赵永昌",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284386": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284386",
+          "name": "徐州胜创工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284506": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284506",
+          "name": "上海隆丰商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284482": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284482",
+          "name": "青岛帅捷贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284262": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284262",
+          "name": "潍柴(青岛)科技研究院有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284288": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284288",
+          "name": "潍柴新能源动力科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284488": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284488",
+          "name": "青岛益丰汇鑫工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284428": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284428",
+          "name": "汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284365": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284365",
+          "name": "上海粲伟汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284300": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284300",
+          "name": "山东重工集团财务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284433": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284433",
+          "name": "东营市辰凯工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284253": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284253",
+          "name": "潍柴(潍坊)电力设备成套有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16991": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16991",
+          "name": "上海寻梦信息技术有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284388": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284388",
+          "name": "烟台市双兴工程机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284523": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284523",
+          "name": "山东田中机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284528": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284528",
+          "name": "杭州曼柴汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284225": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284225",
+          "name": "潍柴动力股份有限公司杭州分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284408": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284408",
+          "name": "无锡市百城汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284346": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284346",
+          "name": "成都立鹏汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284411": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284411",
+          "name": "重庆市闽南机械配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284256": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284256",
+          "name": "潍柴(青岛)智慧重工有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17086": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:17086",
+          "name": "中国证券金融股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284406": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284406",
+          "name": "江苏天建混凝土有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284577": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284577",
+          "name": "龙口隆基三泵有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284290": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284290",
+          "name": "火炬进出口有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:85082": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:85082",
+          "name": "中国平安财产保险股份有限公司潍坊中心支公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284580": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284580",
+          "name": "杭州大功汽车零部件有限公司上海分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284462": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284462",
+          "name": "河北峰晟工程机械配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284516": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284516",
+          "name": "湖北沃德鑫威工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284431": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284431",
+          "name": "莒县大发汽车贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284267": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284267",
+          "name": "潍柴(潍坊)创业投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284436": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284436",
+          "name": "沈阳华运通汽车保养设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284350": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284350",
+          "name": "新疆将军贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284354": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284354",
+          "name": "沈阳瑞颐工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284265": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284265",
+          "name": "江苏航浦国创复材研究院有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289075": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289075",
+          "name": "黄维彪",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284307": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284307",
+          "name": "潍柴数字科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284571": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284571",
+          "name": "连云港远泰国际贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284278": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284278",
+          "name": "潍柴液压传动有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16753": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16753",
+          "name": "商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284306": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284306",
+          "name": "上海鑫联创业投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284429": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284429",
+          "name": "义乌市妍臻进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284330": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284330",
+          "name": "益阳金程汽车销售服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284465": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284465",
+          "name": "安徽壹陆捌捌汽车科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284512": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284512",
+          "name": "襄阳市华绒商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284498": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284498",
+          "name": "烟台市公交集团有限公司汽车修理分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284371": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284371",
+          "name": "江苏携诚同启机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284414": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284414",
+          "name": "南京昊超汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284333": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284333",
+          "name": "重庆博资汽车配件销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284243": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284243",
+          "name": "营口华峰动力发展股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284294": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284294",
+          "name": "潍柴火炬科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294007": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294007",
+          "name": "潍柴动力股份有限公司2009年度第一期中期票据",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1959834": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1959834",
+          "name": "众合创业投资管理有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284396": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284396",
+          "name": "山西天力腾达商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16524": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16524",
+          "name": "北京京东叁佰陆拾度电子商务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284434": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284434",
+          "name": "安徽省中宽贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284581": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284581",
+          "name": "北京第云天进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284477": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284477",
+          "name": "北京口袋时尚科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284556": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284556",
+          "name": "济南杭曼汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284547": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284547",
+          "name": "无锡市路达汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284244": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284244",
+          "name": "哈尔滨岛田大鹏工业股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284364": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284364",
+          "name": "南京闽培力汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284301": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284301",
+          "name": "潍柴动力(潍坊)投资有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284352": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284352",
+          "name": "江苏亿安物流有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284248": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284248",
+          "name": "潍柴动力(香港)国际发展有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284525": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284525",
+          "name": "江苏华威滤清器有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284375": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284375",
+          "name": "陕西旭辉汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:25663": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:25663",
+          "name": "华强方特(深圳)动漫有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284247": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284247",
+          "name": "公司客户",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284340": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284340",
+          "name": "北京九龙祥和客运有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289084": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289084",
+          "name": "袁宏明",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284450": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284450",
+          "name": "潍坊潍动润滑油有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284600": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284600",
+          "name": "芜湖福凯汽贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284594": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284594",
+          "name": "沈阳宣工推土机配件销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284474": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284474",
+          "name": "济南阿尔顿精细化工有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284455": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284455",
+          "name": "上海虔蕴汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284586": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284586",
+          "name": "招远市工程机械配件中心",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284326": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284326",
+          "name": "益阳市东益汽车贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284583": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284583",
+          "name": "山西四方盛天贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284529": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284529",
+          "name": "重庆裕华汽车配件有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284417": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284417",
+          "name": "杭州双余汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284597": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284597",
+          "name": "山东中曼海汽车销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284453": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284453",
+          "name": "上海厦特贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284343": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284343",
+          "name": "天津市鹏翔瑞丰汽配销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284357": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284357",
+          "name": "济南易恒技术有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289086": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289086",
+          "name": "蒋彦",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284541": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284541",
+          "name": "大同市中工工程机械有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284289": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284289",
+          "name": "潍坊潍柴动力科技有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284339": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284339",
+          "name": "柳州市坚利进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284438": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284438",
+          "name": "义乌市珑腾进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284444": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284444",
+          "name": "瑞安市五矿进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284483": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284483",
+          "name": "中国太平洋财产保险股份有限公司潍坊市坊子支公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284291": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284291",
+          "name": "宝鸡法士特齿轮有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284273": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284273",
+          "name": "株洲湘火炬机械制造有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284334": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284334",
+          "name": "山东鑫力达润滑油有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284515": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284515",
+          "name": "淮南市神威商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284348": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284348",
+          "name": "四川汇友机电设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284258": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284258",
+          "name": "Weichai America Corp",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284457": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284457",
+          "name": "泰州佳尚工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284487": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284487",
+          "name": "南通昊远汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284439": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284439",
+          "name": "云南福颂商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284430": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284430",
+          "name": "珠海乐天进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284484": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284484",
+          "name": "烟台恒邦集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284606": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284606",
+          "name": "南京欧沃商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289078": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289078",
+          "name": "王令金",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284376": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284376",
+          "name": "中国银行股份有限公司宿州埇桥支行",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284435": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284435",
+          "name": "沈阳市宏宇汽车配件经销处",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284451": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284451",
+          "name": "陕西辰德进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284432": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284432",
+          "name": "重庆多马商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284392": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284392",
+          "name": "山东云航机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284441": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284441",
+          "name": "大同市泰祥源达工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294012": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294012",
+          "name": "2007年潍柴动力股份有限公司短期融资券",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284397": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284397",
+          "name": "山东新华锦国际商务集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284454": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284454",
+          "name": "洛阳万牛机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284472": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284472",
+          "name": "南京派通工程机械有限公司六合分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294010": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294010",
+          "name": "Weichai Power Company Ltd. Ordinary Shares",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284585": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284585",
+          "name": "杭州鹏传汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284292": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284292",
+          "name": "潍柴动力(潍坊)油品有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284552": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284552",
+          "name": "常州力压工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284534": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284534",
+          "name": "山西晋峰腾翔工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284281": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284281",
+          "name": "株洲湘火炬汽车电器有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284499": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284499",
+          "name": "济南振中重汽经贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284590": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284590",
+          "name": "石家庄鑫北腾商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284310": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284310",
+          "name": "安徽古井贡酒股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284313": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284313",
+          "name": "动力股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284496": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284496",
+          "name": "青岛博宇工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289092": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289092",
+          "name": "迟德强",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284309": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284309",
+          "name": "新疆机械设备进出口有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284604": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284604",
+          "name": "淮北迈腾工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284336": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284336",
+          "name": "淄博柴油机总公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284426": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284426",
+          "name": "沈阳市达克斯商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284298": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284298",
+          "name": "重庆金福企业服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284553": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284553",
+          "name": "泉州市常兴汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284546": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284546",
+          "name": "杭州金鑫达汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284385": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284385",
+          "name": "广州通用汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284390": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284390",
+          "name": "上海继勤贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284251": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284251",
+          "name": "潍坊市投资集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284233": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284233",
+          "name": "临工重机股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:29955": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:29955",
+          "name": "东风柳州汽车有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289089": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289089",
+          "name": "Michael Martin Macht",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284549": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284549",
+          "name": "上海鲁江汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284410": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284410",
+          "name": "富士重工过滤系统(大连)有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284422": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284422",
+          "name": "南京苏浩宁岩贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289080": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289080",
+          "name": "郭圣刚",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284413": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284413",
+          "name": "杭州唐氏汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284384": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284384",
+          "name": "南通市金日汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284279": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284279",
+          "name": "北京汇科盈高新技术有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284527": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284527",
+          "name": "金华市飞润贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284260": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284260",
+          "name": "江苏吉泰科电气有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284505": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284505",
+          "name": "山西高氏伟业商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284370": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284370",
+          "name": "济南鼎恒重型汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284250": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284250",
+          "name": "奥地利IVM技术咨询维也纳有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284533": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284533",
+          "name": "郑州变形金刚汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284303": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284303",
+          "name": "潍柴动力(青州)传控技术有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284508": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284508",
+          "name": "常熟市华鑫汽配物资有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284595": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284595",
+          "name": "北京领顿石油化工科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284283": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284283",
+          "name": "清智汽车科技(苏州)有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284530": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284530",
+          "name": "上海微盟企业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284502": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284502",
+          "name": "成都棠泰商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:206994": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:206994",
+          "name": "中国化学工程第十六建设有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284246": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284246",
+          "name": "北京中科芯元科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289088": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289088",
+          "name": "张良富",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284542": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284542",
+          "name": "江苏携诚同启机械设备有限公司泰州分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284237": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284237",
+          "name": "山东亿嘉农业机械装备股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:95851": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:95851",
+          "name": "苏州弗尔赛能源科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284353": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284353",
+          "name": "乌鲁木齐明会伟业商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284347": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284347",
+          "name": "公主岭市北方农机种植专业合作社联合社",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284229": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284229",
+          "name": "山东重工集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:205070": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:205070",
+          "name": "金华青年汽车制造有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:28291": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:28291",
+          "name": "陕西汉德车桥有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284400": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284400",
+          "name": "武汉市亚凯达汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284361": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284361",
+          "name": "新疆齐鲁联众商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284593": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284593",
+          "name": "江阴市九龙汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284517": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284517",
+          "name": "烟台市公交集团有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284272": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284272",
+          "name": "潍柴动力(重庆)西部发展有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284539": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284539",
+          "name": "龙岩永定权顺丽进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284358": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284358",
+          "name": "天津市滨海新区强顺商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:178245": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:178245",
+          "name": "上海普天物流有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284427": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284427",
+          "name": "大同市同宣兴工程机械有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284405": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284405",
+          "name": "深圳市一达通企业服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294011": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:294011",
+          "name": "Weichai Power Company Ltd. Unsponsored ADR (1 ADS : 8 Ordinary)",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284563": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284563",
+          "name": "合肥瑞煌汽车零部件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284480": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284480",
+          "name": "山东星城石油化工有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284469": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284469",
+          "name": "苏州新东方汽配城经营管理有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284532": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284532",
+          "name": "西安红盛汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284467": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284467",
+          "name": "马鞍山市众力工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284584": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284584",
+          "name": "成都市神力实业有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284424": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284424",
+          "name": "杭州喜勒汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284419": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284419",
+          "name": "上海萧江实业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284315": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284315",
+          "name": "资源有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284393": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284393",
+          "name": "济南鲁燕汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284540": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284540",
+          "name": "成都锦鸿重型汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284232": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284232",
+          "name": "东风汽车集团股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284342": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284342",
+          "name": "潍坊市潍发发动机配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284551": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284551",
+          "name": "南京潍玉汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284560": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284560",
+          "name": "南京展宏汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:501102": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:501102",
+          "name": "冠亚(上海)股权投资基金合伙企业(有限合伙)",
+          "type": "PFUND",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284514": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284514",
+          "name": "成都华严三河工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284486": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284486",
+          "name": "济南腾十龙汽车服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284223": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284223",
+          "name": "潍柴动力股份有限公司上海分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284440": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284440",
+          "name": "成都昊瑞源商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284573": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284573",
+          "name": "上海磊鸿实业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284589": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284589",
+          "name": "湘潭市君航工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284381": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284381",
+          "name": "东营市欧力特机械有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284257": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284257",
+          "name": "山东启星机械制造股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284526": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284526",
+          "name": "成都宁源商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284537": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284537",
+          "name": "太原市巨祥工程机械有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284285": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284285",
+          "name": "潍柴动力空气净化科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284463": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284463",
+          "name": "重庆庞越汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284341": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284341",
+          "name": "广州安达精密工业股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284572": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284572",
+          "name": "上海倾发实业有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284367": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284367",
+          "name": "石家庄市申鑫商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284311": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284311",
+          "name": "和林建设(北京)有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284264": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284264",
+          "name": "重油高科电控燃油喷射系统有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284473": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284473",
+          "name": "福清市中泰汽车配件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284557": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284557",
+          "name": "杭州萌购信息科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284398": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284398",
+          "name": "山东龙口隆基制泵有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284284": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284284",
+          "name": "稀土催化创新研究院(东营)有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284327": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284327",
+          "name": "济南同心汽配商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284356": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284356",
+          "name": "江西省高安汽运集团佳宇汽运有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284599": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284599",
+          "name": "扬州龙佑工程叉车有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284297": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284297",
+          "name": "凯傲(济南)叉车有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284579": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284579",
+          "name": "山东集鑫汽车销售有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284543": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284543",
+          "name": "上海首帆贸易有限公司第一分公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284378": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284378",
+          "name": "哈尔滨玛琅科技开发有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284448": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284448",
+          "name": "上海鑫昊汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:19889": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:19889",
+          "name": "潍柴雷沃智慧农业科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284231": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284231",
+          "name": "陕西重型汽车有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284363": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284363",
+          "name": "济南航诺汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284574": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284574",
+          "name": "上海欣奕工贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284518": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284518",
+          "name": "大同市远大宏业汽车销售服务有限责任公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284234": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284234",
+          "name": "河北英虎农业机械股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284587": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284587",
+          "name": "广州和义宏机械设备有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284603": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284603",
+          "name": "山东汉壳能源科技有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284349": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284349",
+          "name": "怀来县诚信建筑装饰工程有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289079": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289079",
+          "name": "丁迎东",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284521": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284521",
+          "name": "重庆鸿任汽车销售服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284308": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284308",
+          "name": "潍柴(潍坊)材料成型制造中心有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284241": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284241",
+          "name": "合肥恒信动力科技股份有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284492": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284492",
+          "name": "杭州耀烁汽配有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289074": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289074",
+          "name": "谭旭光",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284425": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284425",
+          "name": "镇江太和进出口贸易有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284588": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284588",
+          "name": "上海奔远汽车零部件有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289083": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:289083",
+          "name": "马常海",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284274": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284274",
+          "name": "潍柴(潍坊)后市场服务有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        },
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284489": {
+          "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284489",
+          "name": "河南满义久商贸有限公司",
+          "type": "NODE",
+          "communityId": 0,
+          "role": "member",
+          "isSeed": false,
+          "riskLevel": ""
+        }
+      }
+    },
+    "riskPaths": [
+      {
+        "pathId": "path-10",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284361"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177289"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "新疆齐鲁联众商贸有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 新疆齐鲁联众商贸有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-2",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284247"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917530127152993879"
+        ],
+        "relations": [
+          "SUE",
+          "GUARANTEE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "公司客户"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过担保关系关联至 公司客户，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-3",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284248"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917530127152993880"
+        ],
+        "relations": [
+          "SUE",
+          "GUARANTEE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "潍柴动力(香港)国际发展有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过担保关系关联至 潍柴动力(香港)国际发展有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-4",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16524"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:1155197493676941362"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "北京京东叁佰陆拾度电子商务有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 北京京东叁佰陆拾度电子商务有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-5",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16532"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6940071215033761940"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "浙江淘宝网络有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 浙江淘宝网络有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-6",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16753"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6964841012984299889"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "商贸有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 商贸有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-7",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16991"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6933315815592706655"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "上海寻梦信息技术有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 上海寻梦信息技术有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-8",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284359"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177287"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "大同市瑞实商贸有限责任公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 大同市瑞实商贸有限责任公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-9",
+        "riskLevel": "medium",
+        "score": 65,
+        "confidence": 0.65,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284360"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177288"
+        ],
+        "relations": [
+          "SUE",
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司",
+          "沈阳鸿瑞商贸有限公司"
+        ],
+        "pathDescription": "中风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，随后 潍柴动力股份有限公司 通过诉讼关系关联至 沈阳鸿瑞商贸有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      },
+      {
+        "pathId": "path-1",
+        "riskLevel": "low",
+        "score": 35,
+        "confidence": 0.35,
+        "pathType": "company_to_company",
+        "communityPath": [
+          0
+        ],
+        "nodeIds": [
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+          "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066"
+        ],
+        "edgeIds": [
+          "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439"
+        ],
+        "relations": [
+          "SUE"
+        ],
+        "affectedEntities": [
+          "濉溪县徐工装载机配件有限公司",
+          "潍柴动力股份有限公司"
+        ],
+        "pathDescription": "低风险传导路径：濉溪县徐工装载机配件有限公司 通过诉讼关系关联至 潍柴动力股份有限公司，表明存在潜在风险传导链路。",
+        "evidence": []
+      }
+    ],
+    "communityRiskPaths": [],
+    "viewModel": {
+      "highlightNodeIds": [
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16524",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16532",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16753",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:16991",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284247",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284248",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284359",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284360",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284361",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+        "4:a33932a8-3530-4bd7-bb14-ce721f494adf:598066"
+      ],
+      "highlightEdgeIds": [
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:1155197493676941362",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917530127152993879",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917530127152993880",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177287",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177288",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177289",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6917553216897177439",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6933315815592706655",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6940071215033761940",
+        "5:a33932a8-3530-4bd7-bb14-ce721f494adf:6964841012984299889"
+      ],
+      "highlightCommunityIds": [
+        0
+      ],
+      "defaultSelectedPathId": "path-10"
+    },
+    "warnings": []
+  },
+  "testedAt": "2026-07-09T16:45:31"
+}

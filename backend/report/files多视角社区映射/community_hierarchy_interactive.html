@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多视角社区层级结构可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px 20px;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .visualization {
+            padding: 30px;
+            background: white;
+        }
+        
+        .canvas-container {
+            width: 100%;
+            height: 700px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            position: relative;
+            overflow: auto;
+            background: #fafafa;
+        }
+        
+        canvas {
+            cursor: move;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #333;
+        }
+        
+        .tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-panel {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .info-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .info-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-card h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .info-card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ 多视角社区层级结构可视化</h1>
+            <p>L0:责任方 → L1:违规行为 → L2:监管机构</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">15</div>
+                <div class="stat-label">责任方社区 (L0)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">13</div>
+                <div class="stat-label">违规行为社区 (L1)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">11</div>
+                <div class="stat-label">监管机构社区 (L2)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">174</div>
+                <div class="stat-label">总连接数</div>
+            </div>
+        </div>
+        
+        <div class="visualization">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FF6B6B;"></div>
+                    <span>L0: 责任方</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4ECDC4;"></div>
+                    <span>L1: 违规行为</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #95E1D3;"></div>
+                    <span>L2: 监管机构</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: transparent; border: 2px solid #555; border-style: solid;"></div>
+                    <span>强连接</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: transparent; border: 2px dashed #aaa;"></div>
+                    <span>弱连接</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button onclick="resetView()">🔄 重置视图</button>
+                <button onclick="toggleStrongLinks()">💪 切换强连接</button>
+                <button onclick="toggleWeakLinks()">🔗 切换弱连接</button>
+                <button onclick="exportImage()">📸 导出图片</button>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-title">📊 数据统计</div>
+            <div class="info-content">
+                <div class="info-card">
+                    <h3>连接分布</h3>
+                    <p>
+                        责任方→违规行为: 65 个<br>
+                        违规行为→监管机构: 47 个<br>
+                        责任方→监管机构: 62 个
+                    </p>
+                </div>
+                <div class="info-card">
+                    <h3>平均连接强度</h3>
+                    <p>
+                        整体平均分数: 0.510<br>
+                        强连接数量: 112 个<br>
+                        弱连接数量: 62 个
+                    </p>
+                </div>
+                <div class="info-card">
+                    <h3>操作说明</h3>
+                    <p>
+                        • 鼠标悬停在节点上查看详细信息<br>
+                        • 使用控制按钮切换显示内容<br>
+                        • 滚轮缩放，拖动移动画布
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        // 数据
+        const nodes = [{"id": "responsibility_2", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 2, "level": 0, "node_count": 91, "core_node_count": 3, "main_node_types": "Section:40 | PunishmentMeasure:11 | Law:11", "key_regulations": "第四十一条、第八条、第三十一条、第二十三条、第二十五条"}, {"id": "responsibility_14", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 14, "level": 0, "node_count": 4, "core_node_count": 1, "main_node_types": "Action:1 | AdvantageHolder:1 | Section:1", "key_regulations": "第十五条"}, {"id": "responsibility_6", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 6, "level": 0, "node_count": 26, "core_node_count": 16, "main_node_types": "Actor:16 | Section:7 | Chapter:1", "key_regulations": "第六条、第七条、第八条、第十条、第五条"}, {"id": "responsibility_1", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 1, "level": 0, "node_count": 98, "core_node_count": 4, "main_node_types": "Means:38 | Section:35 | Influence:13", "key_regulations": "第四十五条、第三十条、第五十五条、第四十一条、第十九条"}, {"id": "responsibility_5", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 5, "level": 0, "node_count": 30, "core_node_count": 3, "main_node_types": "Section:12 | Chapter:7 | RegulatoryAuthority:4", "key_regulations": "第四条、第三条、第五十一条、第五十条、第一条"}, {"id": "responsibility_9", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 9, "level": 0, "node_count": 13, "core_node_count": 5, "main_node_types": "Actor:5 | Section:4 | Means:3", "key_regulations": "第三十六条、第十一条、第三十七条、第三十五条"}, {"id": "responsibility_3", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 3, "level": 0, "node_count": 86, "core_node_count": 12, "main_node_types": "Section:25 | Action:21 | PartyWithResponsibility:12", "key_regulations": "第五条、第四条、第三十一条、第十三条、第九条"}, {"id": "responsibility_0", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 0, "level": 0, "node_count": 127, "core_node_count": 11, "main_node_types": "Action:43 | Section:29 | Responsibility:28", "key_regulations": "第二十六条、第二十三条、第二条、第二十八条、第十二条"}, {"id": "responsibility_12", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 12, "level": 0, "node_count": 4, "core_node_count": 2, "main_node_types": "PartyWithResponsibility:2 | Responsibility:1 | Section:1", "key_regulations": "第三十条"}, {"id": "responsibility_10", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 10, "level": 0, "node_count": 11, "core_node_count": 1, "main_node_types": "Law:7 | Responsibility:2 | Section:1", "key_regulations": "第一条"}, {"id": "responsibility_8", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 8, "level": 0, "node_count": 14, "core_node_count": 2, "main_node_types": "Action:6 | PunishmentMeasure:3 | PartyWithResponsibility:2", "key_regulations": "第二十三条、第六条"}, {"id": "responsibility_4", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 4, "level": 0, "node_count": 61, "core_node_count": 13, "main_node_types": "Section:21 | PartyWithResponsibility:13 | Action:12", "key_regulations": "第三条、第十三条、第二十四条、第二十九条、第二十五条"}, {"id": "responsibility_7", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 7, "level": 0, "node_count": 23, "core_node_count": 6, "main_node_types": "Section:9 | PartyWithResponsibility:6 | Action:6", "key_regulations": "第十五条、第十八条、第二十三条、第二十二条、第十九条"}, {"id": "responsibility_11", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 11, "level": 0, "node_count": 7, "core_node_count": 2, "main_node_types": "Punishment:2 | Violation:2 | PartyWithResponsibility:2", "key_regulations": "第三十一条"}, {"id": "responsibility_13", "perspective": "responsibility", "perspective_name": "责任方", "community_id": 13, "level": 0, "node_count": 4, "core_node_count": 3, "main_node_types": "PartyWithResponsibility:3 | Section:1", "key_regulations": "第二十七条"}, {"id": "violation_1", "perspective": "violation", "perspective_name": "违规行为", "community_id": 1, "level": 1, "node_count": 95, "core_node_count": 8, "main_node_types": "Section:41 | PunishmentMeasure:11 | Law:11", "key_regulations": "第四十一条、第八条、第三十一条、第二十三条、第二十五条"}, {"id": "violation_5", "perspective": "violation", "perspective_name": "违规行为", "community_id": 5, "level": 1, "node_count": 60, "core_node_count": 3, "main_node_types": "Section:23 | Actor:19 | Chapter:8", "key_regulations": "第六条、第七条、第五十五条、第四条、第十一条"}, {"id": "violation_8", "perspective": "violation", "perspective_name": "违规行为", "community_id": 8, "level": 1, "node_count": 13, "core_node_count": 5, "main_node_types": "Means:5 | Advantage:3 | Actor:2", "key_regulations": "第二十二条"}, {"id": "violation_3", "perspective": "violation", "perspective_name": "违规行为", "community_id": 3, "level": 1, "node_count": 82, "core_node_count": 33, "main_node_types": "Means:33 | Section:31 | Influence:11", "key_regulations": "第四十五条、第三十条、第四十一条、第十九条、第十八条"}, {"id": "violation_9", "perspective": "violation", "perspective_name": "违规行为", "community_id": 9, "level": 1, "node_count": 12, "core_node_count": 3, "main_node_types": "Actor:5 | Section:3 | Means:3", "key_regulations": "第三十六条、第三十七条、第三十五条"}, {"id": "violation_2", "perspective": "violation", "perspective_name": "违规行为", "community_id": 2, "level": 1, "node_count": 87, "core_node_count": 21, "main_node_types": "Section:24 | Action:21 | PartyWithResponsibility:13", "key_regulations": "第四条、第三十一条、第十三条、第九条、第八条"}, {"id": "violation_0", "perspective": "violation", "perspective_name": "违规行为", "community_id": 0, "level": 1, "node_count": 119, "core_node_count": 41, "main_node_types": "Action:41 | Responsibility:28 | Section:27", "key_regulations": "第二十六条、第二十三条、第五条、第二条、第二十八条"}, {"id": "violation_10", "perspective": "violation", "perspective_name": "违规行为", "community_id": 10, "level": 1, "node_count": 12, "core_node_count": 2, "main_node_types": "Section:4 | PartyWithResponsibility:2 | Law:2", "key_regulations": "第三十三条、第三十二条、第三十四条、第三十条"}, {"id": "violation_12", "perspective": "violation", "perspective_name": "违规行为", "community_id": 12, "level": 1, "node_count": 10, "core_node_count": 0, "main_node_types": "Law:6 | Responsibility:2 | Section:1", "key_regulations": "第一条"}, {"id": "violation_7", "perspective": "violation", "perspective_name": "违规行为", "community_id": 7, "level": 1, "node_count": 14, "core_node_count": 6, "main_node_types": "Action:6 | PunishmentMeasure:3 | PartyWithResponsibility:2", "key_regulations": "第二十三条、第六条"}, {"id": "violation_4", "perspective": "violation", "perspective_name": "违规行为", "community_id": 4, "level": 1, "node_count": 60, "core_node_count": 7, "main_node_types": "Section:22 | PartyWithResponsibility:13 | Event:8", "key_regulations": "第三条、第十三条、第二十四条、第二十九条、第二十五条"}, {"id": "violation_11", "perspective": "violation", "perspective_name": "违规行为", "community_id": 11, "level": 1, "node_count": 12, "core_node_count": 5, "main_node_types": "PartyWithResponsibility:5 | Action:5 | Event:1", "key_regulations": "第十四条"}, {"id": "violation_6", "perspective": "violation", "perspective_name": "违规行为", "community_id": 6, "level": 1, "node_count": 23, "core_node_count": 6, "main_node_types": "Section:9 | PartyWithResponsibility:6 | Action:6", "key_regulations": "第十五条、第十八条、第二十三条、第二十二条、第十九条"}, {"id": "regulatory_2", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 2, "level": 2, "node_count": 85, "core_node_count": 5, "main_node_types": "Section:35 | PunishmentMeasure:11 | Law:11", "key_regulations": "第四十一条、第八条、第三十一条、第二十三条、第二十五条"}, {"id": "regulatory_8", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 8, "level": 2, "node_count": 10, "core_node_count": 3, "main_node_types": "Section:6 | RegulatoryAuthority:3 | Chapter:1", "key_regulations": "第四条、第六条、第二条、第一条、第五条"}, {"id": "regulatory_6", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 6, "level": 2, "node_count": 45, "core_node_count": 2, "main_node_types": "Section:17 | Actor:16 | Chapter:7", "key_regulations": "第六条、第七条、第十一条、第三条、第五十一条"}, {"id": "regulatory_1", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 1, "level": 2, "node_count": 105, "core_node_count": 1, "main_node_types": "Means:41 | Section:33 | Influence:14", "key_regulations": "第四十五条、第三十条、第三十六条、第四十一条、第十八条"}, {"id": "regulatory_5", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 5, "level": 2, "node_count": 60, "core_node_count": 1, "main_node_types": "Section:18 | PartyWithResponsibility:11 | Responsibility:9", "key_regulations": "第五十五条、第十九条、第五十六条、第十四条、第四十八条"}, {"id": "regulatory_4", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 4, "level": 2, "node_count": 60, "core_node_count": 3, "main_node_types": "Section:18 | Action:18 | PunishmentMeasure:6", "key_regulations": "第四条、第十三条、第九条、第二十三条、第八条"}, {"id": "regulatory_0", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 0, "level": 2, "node_count": 130, "core_node_count": 1, "main_node_types": "Action:43 | Section:30 | Responsibility:29", "key_regulations": "第二十六条、第二十三条、第二条、第二十八条、第十二条"}, {"id": "regulatory_9", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 9, "level": 2, "node_count": 10, "core_node_count": 0, "main_node_types": "Law:6 | Responsibility:2 | Section:1", "key_regulations": "第一条"}, {"id": "regulatory_3", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 3, "level": 2, "node_count": 64, "core_node_count": 0, "main_node_types": "Section:21 | PartyWithResponsibility:16 | Action:12", "key_regulations": "第三条、第十三条、第二十四条、第二十九条、第二十五条"}, {"id": "regulatory_7", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 7, "level": 2, "node_count": 23, "core_node_count": 0, "main_node_types": "Section:9 | PartyWithResponsibility:6 | Action:6", "key_regulations": "第十五条、第十八条、第二十三条、第二十二条、第十九条"}, {"id": "regulatory_10", "perspective": "regulatory", "perspective_name": "监管机构", "community_id": 10, "level": 2, "node_count": 7, "core_node_count": 0, "main_node_types": "Punishment:2 | Violation:2 | PartyWithResponsibility:2", "key_regulations": "第三十一条"}];
+        const links = [{"source": "responsibility_0", "target": "violation_0", "score": 0.5822374210063195, "is_strong": true, "evidence": "Section重叠:96.30% | 核心节点:0.00% | 跨边:67.17%", "relation_type": "leads_to"}, {"source": "responsibility_0", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_0", "target": "violation_6", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_0", "target": "violation_7", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_0", "target": "violation_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_0", "target": "violation_11", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_1", "target": "violation_3", "score": 0.5491666666666667, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:32.78%", "relation_type": "leads_to"}, {"source": "responsibility_1", "target": "violation_6", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_1", "target": "violation_8", "score": 0.5083333333333333, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:5.56%", "relation_type": "leads_to"}, {"source": "responsibility_1", "target": "violation_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_1", "target": "violation_11", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_1", "score": 0.5397058823529411, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:26.47%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_4", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_7", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_11", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_2", "target": "violation_12", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_3", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_3", "target": "violation_2", "score": 0.58, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:53.33%", "relation_type": "leads_to"}, {"source": "responsibility_3", "target": "violation_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_3", "target": "violation_11", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_3", "target": "violation_12", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_4", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_4", "target": "violation_4", "score": 0.5120113717128643, "is_strong": true, "evidence": "Section重叠:95.24% | 核心节点:0.00% | 跨边:23.88%", "relation_type": "leads_to"}, {"source": "responsibility_4", "target": "violation_11", "score": 0.5123134328358209, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:8.21%", "relation_type": "leads_to"}, {"source": "responsibility_4", "target": "violation_12", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_5", "target": "violation_5", "score": 0.5333333333333333, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:22.22%", "relation_type": "leads_to"}, {"source": "responsibility_5", "target": "violation_12", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_6", "target": "violation_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_6", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_6", "target": "violation_4", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_6", "target": "violation_5", "score": 0.603448275862069, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:68.97%", "relation_type": "leads_to"}, {"source": "responsibility_7", "target": "violation_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_7", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_7", "target": "violation_6", "score": 0.5724137931034483, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:48.28%", "relation_type": "leads_to"}, {"source": "responsibility_7", "target": "violation_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_8", "target": "violation_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_8", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_8", "target": "violation_7", "score": 0.53, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:20.00%", "relation_type": "leads_to"}, {"source": "responsibility_9", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_9", "target": "violation_9", "score": 0.63, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:86.67%", "relation_type": "leads_to"}, {"source": "responsibility_10", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_10", "target": "violation_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_10", "target": "violation_4", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_10", "target": "violation_5", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_10", "target": "violation_12", "score": 0.545, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:30.00%", "relation_type": "leads_to"}, {"source": "responsibility_11", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_11", "target": "violation_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_11", "target": "violation_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_11", "target": "violation_4", "score": 0.59, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:60.00%", "relation_type": "leads_to"}, {"source": "responsibility_12", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_12", "target": "violation_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_12", "target": "violation_4", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_12", "target": "violation_10", "score": 0.62, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:80.00%", "relation_type": "leads_to"}, {"source": "responsibility_13", "target": "violation_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_13", "target": "violation_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_13", "target": "violation_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_13", "target": "violation_4", "score": 0.65, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:100.00%", "relation_type": "leads_to"}, {"source": "responsibility_14", "target": "violation_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_14", "target": "violation_1", "score": 0.6125, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:75.00%", "relation_type": "leads_to"}, {"source": "responsibility_14", "target": "violation_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_14", "target": "violation_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "responsibility_14", "target": "violation_6", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "leads_to"}, {"source": "violation_0", "target": "regulatory_0", "score": 0.555317401658865, "is_strong": true, "evidence": "Section重叠:96.30% | 核心节点:0.00% | 跨边:49.22%", "relation_type": "enforced_by"}, {"source": "violation_0", "target": "regulatory_4", "score": 0.47125342376418417, "is_strong": true, "evidence": "Section重叠:94.12% | 核心节点:0.00% | 跨边:0.44%", "relation_type": "enforced_by"}, {"source": "violation_0", "target": "regulatory_7", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_2", "score": 0.5096428571428572, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:6.43%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_4", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_7", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_1", "target": "regulatory_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_2", "target": "regulatory_4", "score": 0.48602696892710573, "is_strong": true, "evidence": "Section重叠:88.24% | 核心节点:0.00% | 跨边:29.90%", "relation_type": "enforced_by"}, {"source": "violation_2", "target": "regulatory_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_2", "target": "regulatory_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_3", "target": "regulatory_1", "score": 0.5411461908030198, "is_strong": true, "evidence": "Section重叠:93.55% | 核心节点:0.00% | 跨边:48.94%", "relation_type": "enforced_by"}, {"source": "violation_3", "target": "regulatory_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_4", "target": "regulatory_3", "score": 0.5403126135950563, "is_strong": true, "evidence": "Section重叠:95.24% | 核心节点:0.00% | 跨边:42.75%", "relation_type": "enforced_by"}, {"source": "violation_4", "target": "regulatory_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_4", "target": "regulatory_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_4", "target": "regulatory_10", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_5", "target": "regulatory_6", "score": 0.5017045454545455, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:1.14%", "relation_type": "enforced_by"}, {"source": "violation_5", "target": "regulatory_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_5", "target": "regulatory_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_6", "target": "regulatory_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_6", "target": "regulatory_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_6", "target": "regulatory_7", "score": 0.5310344827586206, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:20.69%", "relation_type": "enforced_by"}, {"source": "violation_7", "target": "regulatory_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_7", "target": "regulatory_4", "score": 0.62375, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:82.50%", "relation_type": "enforced_by"}, {"source": "violation_8", "target": "regulatory_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_8", "target": "regulatory_1", "score": 0.6157142857142857, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:77.14%", "relation_type": "enforced_by"}, {"source": "violation_8", "target": "regulatory_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_8", "target": "regulatory_5", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_8", "target": "regulatory_7", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_9", "target": "regulatory_1", "score": 0.5827586206896551, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:55.17%", "relation_type": "enforced_by"}, {"source": "violation_9", "target": "regulatory_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_10", "target": "regulatory_0", "score": 0.51875, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:12.50%", "relation_type": "enforced_by"}, {"source": "violation_10", "target": "regulatory_1", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_10", "target": "regulatory_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_11", "target": "regulatory_0", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_11", "target": "regulatory_2", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_11", "target": "regulatory_3", "score": 0.546875, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:31.25%", "relation_type": "enforced_by"}, {"source": "violation_11", "target": "regulatory_5", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_12", "target": "regulatory_3", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_12", "target": "regulatory_5", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_12", "target": "regulatory_6", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_12", "target": "regulatory_8", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "violation_12", "target": "regulatory_9", "score": 0.5, "is_strong": true, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "enforced_by"}, {"source": "responsibility_0", "target": "regulatory_0", "score": 0.6017278617710583, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:67.82%", "relation_type": "regulated_by"}, {"source": "responsibility_0", "target": "regulatory_2", "score": 0.4482758620689655, "is_strong": false, "evidence": "Section重叠:89.66% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_0", "target": "regulatory_3", "score": 0.40476190476190477, "is_strong": false, "evidence": "Section重叠:80.95% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_0", "target": "regulatory_4", "score": 0.44182441875238215, "is_strong": false, "evidence": "Section重叠:88.24% | 核心节点:0.00% | 跨边:0.43%", "relation_type": "regulated_by"}, {"source": "responsibility_0", "target": "regulatory_7", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_1", "target": "regulatory_1", "score": 0.5128787878787878, "is_strong": false, "evidence": "Section重叠:90.91% | 核心节点:0.00% | 跨边:38.89%", "relation_type": "regulated_by"}, {"source": "responsibility_1", "target": "regulatory_7", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_1", "target": "regulatory_10", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_0", "score": 0.48333333333333334, "is_strong": false, "evidence": "Section重叠:96.67% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_2", "score": 0.5254201680672269, "is_strong": false, "evidence": "Section重叠:97.14% | 核心节点:0.00% | 跨边:26.47%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_3", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_4", "score": 0.47058823529411764, "is_strong": false, "evidence": "Section重叠:94.12% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_7", "score": 0.4444444444444444, "is_strong": false, "evidence": "Section重叠:88.89% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_8", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_9", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_2", "target": "regulatory_10", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_0", "score": 0.41554347826086957, "is_strong": false, "evidence": "Section重叠:82.61% | 核心节点:0.00% | 跨边:1.67%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_4", "score": 0.4611764705882353, "is_strong": false, "evidence": "Section重叠:88.24% | 核心节点:0.00% | 跨边:13.33%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_5", "score": 0.40375, "is_strong": false, "evidence": "Section重叠:68.75% | 核心节点:0.00% | 跨边:40.00%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_7", "score": 0.4444444444444444, "is_strong": false, "evidence": "Section重叠:88.89% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_8", "score": 0.4166666666666667, "is_strong": false, "evidence": "Section重叠:83.33% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_9", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_3", "target": "regulatory_10", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_4", "target": "regulatory_0", "score": 0.42969083155650317, "is_strong": false, "evidence": "Section重叠:85.71% | 核心节点:0.00% | 跨边:0.75%", "relation_type": "regulated_by"}, {"source": "responsibility_4", "target": "regulatory_3", "score": 0.5243248045486851, "is_strong": false, "evidence": "Section重叠:95.24% | 核心节点:0.00% | 跨边:32.09%", "relation_type": "regulated_by"}, {"source": "responsibility_4", "target": "regulatory_8", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_4", "target": "regulatory_9", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_5", "target": "regulatory_9", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_6", "target": "regulatory_0", "score": 0.42857142857142855, "is_strong": false, "evidence": "Section重叠:85.71% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_6", "target": "regulatory_3", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_6", "target": "regulatory_4", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_6", "target": "regulatory_6", "score": 0.603448275862069, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:68.97%", "relation_type": "regulated_by"}, {"source": "responsibility_7", "target": "regulatory_0", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_7", "target": "regulatory_1", "score": 0.4444444444444444, "is_strong": false, "evidence": "Section重叠:88.89% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_7", "target": "regulatory_2", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_7", "target": "regulatory_7", "score": 0.5724137931034483, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:48.28%", "relation_type": "regulated_by"}, {"source": "responsibility_8", "target": "regulatory_0", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_8", "target": "regulatory_4", "score": 0.53, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:20.00%", "relation_type": "regulated_by"}, {"source": "responsibility_9", "target": "regulatory_1", "score": 0.51, "is_strong": false, "evidence": "Section重叠:75.00% | 核心节点:0.00% | 跨边:90.00%", "relation_type": "regulated_by"}, {"source": "responsibility_9", "target": "regulatory_2", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_10", "target": "regulatory_3", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_10", "target": "regulatory_5", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_10", "target": "regulatory_6", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_10", "target": "regulatory_8", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_10", "target": "regulatory_9", "score": 0.545, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:30.00%", "relation_type": "regulated_by"}, {"source": "responsibility_11", "target": "regulatory_1", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_11", "target": "regulatory_2", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_11", "target": "regulatory_5", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_11", "target": "regulatory_10", "score": 0.59, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:60.00%", "relation_type": "regulated_by"}, {"source": "responsibility_12", "target": "regulatory_0", "score": 0.65, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:100.00%", "relation_type": "regulated_by"}, {"source": "responsibility_12", "target": "regulatory_1", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_12", "target": "regulatory_2", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_12", "target": "regulatory_3", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_13", "target": "regulatory_0", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_13", "target": "regulatory_1", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_13", "target": "regulatory_2", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_13", "target": "regulatory_3", "score": 0.65, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:100.00%", "relation_type": "regulated_by"}, {"source": "responsibility_14", "target": "regulatory_0", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_14", "target": "regulatory_1", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_14", "target": "regulatory_2", "score": 0.6125, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:75.00%", "relation_type": "regulated_by"}, {"source": "responsibility_14", "target": "regulatory_4", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}, {"source": "responsibility_14", "target": "regulatory_7", "score": 0.5, "is_strong": false, "evidence": "Section重叠:100.00% | 核心节点:0.00% | 跨边:0.00%", "relation_type": "regulated_by"}];
+        
+        // 配置
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        
+        let showStrongLinks = true;
+        let showWeakLinks = true;
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        
+        // 颜色配置
+        const colors = {
+            0: '#FF6B6B',
+            1: '#4ECDC4',
+            2: '#95E1D3'
+        };
+        
+        // 计算画布大小
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            draw();
+        }
+        
+        // 计算节点位置
+        function calculatePositions() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const positions = {};
+            
+            // 按层级分组
+            const levels = {0: [], 1: [], 2: []};
+            nodes.forEach(node => {
+                levels[node.level].push(node);
+            });
+            
+            // Y坐标
+            const yPositions = {
+                0: height * 0.2,
+                1: height * 0.5,
+                2: height * 0.8
+            };
+            
+            // 为每层计算X坐标
+            Object.keys(levels).forEach(level => {
+                const levelNodes = levels[level];
+                const n = levelNodes.length;
+                const spacing = width / (n + 1);
+                
+                levelNodes.forEach((node, i) => {
+                    positions[node.id] = {
+                        x: spacing * (i + 1),
+                        y: yPositions[level]
+                    };
+                });
+            });
+            
+            return positions;
+        }
+        
+        const positions = calculatePositions();
+        
+        // 绘制函数
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+            
+            // 绘制连接
+            links.forEach(link => {
+                if (link.is_strong && !showStrongLinks) return;
+                if (!link.is_strong && !showWeakLinks) return;
+                
+                const source = positions[link.source];
+                const target = positions[link.target];
+                
+                if (!source || !target) return;
+                
+                ctx.beginPath();
+                ctx.moveTo(source.x, source.y);
+                ctx.lineTo(target.x, target.y);
+                
+                if (link.is_strong) {
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([]);
+                } else {
+                    ctx.strokeStyle = '#aaa';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                }
+                
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // 绘制箭头
+                const angle = Math.atan2(target.y - source.y, target.x - source.x);
+                const arrowSize = 10;
+                ctx.fillStyle = link.is_strong ? '#555' : '#aaa';
+                ctx.beginPath();
+                ctx.moveTo(target.x, target.y);
+                ctx.lineTo(
+                    target.x - arrowSize * Math.cos(angle - Math.PI / 6),
+                    target.y - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    target.x - arrowSize * Math.cos(angle + Math.PI / 6),
+                    target.y - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+            });
+            
+            // 绘制节点
+            nodes.forEach(node => {
+                const pos = positions[node.id];
+                if (!pos) return;
+                
+                const boxWidth = 120;
+                const boxHeight = 60;
+                const x = pos.x - boxWidth / 2;
+                const y = pos.y - boxHeight / 2;
+                
+                // 绘制矩形
+                ctx.fillStyle = colors[node.level];
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.roundRect(x, y, boxWidth, boxHeight, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                // 绘制文本
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.fillText(node.perspective_name, pos.x, pos.y - 10);
+                ctx.font = '11px sans-serif';
+                ctx.fillText(`C${node.community_id}`, pos.x, pos.y + 5);
+                ctx.font = 'italic 10px sans-serif';
+                ctx.fillText(`(${node.node_count}节点)`, pos.x, pos.y + 20);
+            });
+            
+            ctx.restore();
+        }
+        
+        // 鼠标事件
+        let isDragging = false;
+        let lastX, lastY;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - offsetX) / scale;
+            const y = (e.clientY - rect.top - offsetY) / scale;
+            
+            if (isDragging) {
+                offsetX += e.clientX - lastX;
+                offsetY += e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                draw();
+                return;
+            }
+            
+            // 检查鼠标是否在节点上
+            let hoverNode = null;
+            for (const node of nodes) {
+                const pos = positions[node.id];
+                if (!pos) continue;
+                
+                if (Math.abs(x - pos.x) < 60 && Math.abs(y - pos.y) < 30) {
+                    hoverNode = node;
+                    break;
+                }
+            }
+            
+            if (hoverNode) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY + 10 + 'px';
+                tooltip.innerHTML = `
+                    <strong>${hoverNode.perspective_name} - 社区${hoverNode.community_id}</strong><br>
+                    节点数: ${hoverNode.node_count}<br>
+                    核心节点: ${hoverNode.core_node_count}<br>
+                    主要类型: ${hoverNode.main_node_types}<br>
+                    关键法规: ${hoverNode.key_regulations}
+                `;
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            tooltip.style.display = 'none';
+        });
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= delta;
+            scale = Math.max(0.1, Math.min(5, scale));
+            draw();
+        });
+        
+        // 控制函数
+        function resetView() {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            showStrongLinks = true;
+            showWeakLinks = true;
+            draw();
+        }
+        
+        function toggleStrongLinks() {
+            showStrongLinks = !showStrongLinks;
+            draw();
+        }
+        
+        function toggleWeakLinks() {
+            showWeakLinks = !showWeakLinks;
+            draw();
+        }
+        
+        function exportImage() {
+            const link = document.createElement('a');
+            link.download = 'community_hierarchy.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // 初始化
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    </script>
+</body>
+</html>

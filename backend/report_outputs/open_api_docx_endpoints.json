@@ -1,0 +1,74 @@
+﻿[
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/search-all"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/expand/{node_id}"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/community-discovery"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/risk-paths"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/compliance-report"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/community-discovery"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/risk-paths"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/compliance-report"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/search-all"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/expand/{node_id}"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/community-discovery"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/risk-paths"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/compliance-report"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/search-all"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/graph/expand/{node_id}"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/community-discovery"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/risk-paths"
+    },
+    {
+        "method":  "POST",
+        "path":  "/api/v1/governance/compliance-report"
+    }
+]

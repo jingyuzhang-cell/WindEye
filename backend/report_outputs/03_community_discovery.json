@@ -1,0 +1,749 @@
+{
+  "name": "community_discovery",
+  "method": "POST",
+  "path": "/api/v1/governance/community-discovery",
+  "url": "http://127.0.0.1:8001/api/v1/governance/community-discovery",
+  "statusCode": 200,
+  "ok": true,
+  "contentType": "application/json",
+  "isJson": true,
+  "error": null,
+  "requestBody": {
+    "seedNames": [
+      "濉溪县徐工装载机配件有限公司"
+    ],
+    "seedIds": [
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511"
+    ],
+    "maxHop": 2,
+    "method": "auto",
+    "communityMode": "expanded",
+    "minCommunitySize": 2,
+    "pathLimit": 1000,
+    "maxNodes": 300,
+    "responseMode": "summary",
+    "includeRawSubgraph": false,
+    "includeCommunityGraph": true
+  },
+  "response": {
+    "success": true,
+    "apiVersion": "v1",
+    "traceId": "trc-1783586726924",
+    "elapsedMs": 5836,
+    "selectedMethod": "louvain_networkx",
+    "fallbackReason": null,
+    "seedNodes": [
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "properties": {
+          "REGCapital": "30.0000",
+          "ORGNUM": "91340621748939077A",
+          "COMPANYNm": "濉溪县徐工装载机配件有限公司",
+          "STATUS": "存续(在营、开业、在册)",
+          "WARNINGNum": 3,
+          "id": "62250312",
+          "NODEId": "151993913",
+          "COMPANYId": "58009916",
+          "RISKList": [
+            "11"
+          ]
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927682",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774927062698334"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927705",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775125067748148"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927016",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775042073678674"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927026",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775042158429317"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926929",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774929045708409"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926988",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775041863431630"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927001",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775041972431811"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926898",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878650666822"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926912",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878785519056"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926753",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774878040159848"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926637",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774877271689798"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926235",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775296302215756"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926206",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775296174158087"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925914",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775294546141409"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925425",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775292445492069"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924735",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775289511360299"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924768",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775289657479905"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924514",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288560786908"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924517",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288606464624"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924610",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288934272549"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924466",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288074614070"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924485",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1775288449110933"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924026",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511829446104"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924087",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774512063637842"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923957",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511497948142"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923979",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "properties": {
+          "name": "公司",
+          "id": "E1774511591679524"
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      },
+      {
+        "id": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:208423",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "properties": {
+          "REGCapital": "10.0000",
+          "COMPANYNm": "有限公司",
+          "STATUS": "注销",
+          "WARNINGNum": 8,
+          "id": "93729650",
+          "NODEId": "179042786",
+          "COMPANYId": "63759134",
+          "RISKList": [
+            "13",
+            "10"
+          ]
+        },
+        "matchedInput": "濉溪县徐工装载机配件有限公司"
+      }
+    ],
+    "candidateSeeds": [
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+        "name": "",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927682",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927705",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927016",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927026",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926929",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926988",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927001",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926898",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926912",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926753",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926637",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926235",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926206",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925914",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925425",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924735",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924768",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924514",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924517",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924610",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924466",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924485",
+        "name": "",
+        "labels": [
+          "PartyWithResponsibility",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924026",
+        "name": "",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924087",
+        "name": "",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923957",
+        "name": "",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923979",
+        "name": "",
+        "labels": [
+          "Actor",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      },
+      {
+        "nodeId": "4:a33932a8-3530-4bd7-bb14-ce721f494adf:208423",
+        "name": "",
+        "labels": [
+          "NODE",
+          "COMPANY",
+          "Entity"
+        ],
+        "riskScore": 100,
+        "riskFactors": {},
+        "reason": "Direct input"
+      }
+    ],
+    "selectedSeedIds": [
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:284511",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927682",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927705",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927016",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927026",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926929",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926988",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1927001",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926898",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926912",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926753",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926637",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926235",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1926206",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925914",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1925425",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924735",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924768",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924514",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924517",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924610",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924466",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924485",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924026",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1924087",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923957",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:1923979",
+      "4:a33932a8-3530-4bd7-bb14-ce721f494adf:208423"
+    ],
+    "seedSelection": {
+      "mode": "risk_score",
+      "topK": 5,
+      "selectedCount": 28
+    },
+    "summary": {
+      "nodeCount": 300,
+      "edgeCount": 299,
+      "communityCount": 1,
+      "seedCommunityId": 0
+    },
+    "warnings": []
+  },
+  "testedAt": "2026-07-09T16:45:26"
+}

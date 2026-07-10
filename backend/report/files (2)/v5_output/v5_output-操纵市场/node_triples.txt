@@ -1,0 +1,40 @@
+
+[合规路径  质量分:40.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+  单一的行为人（Actor） -[做出]-> 连续交易操纵（Means）
+  连续交易操纵（Means） -[旨在导致]-> 影响证券交易价格或证券交易量（Influence）
+  影响证券交易价格或证券交易量（Influence） -[旨在导致(↔)]-> 连续买卖证券（Means）
+  连续买卖证券（Means） -[做出(↔)]-> 2个以上行为人（Actor）
+  2个以上行为人（Actor） -[做出]-> 事先约定的时间、价格和方式相互进行证券交易（Means）
+  事先约定的时间、价格和方式相互进行证券交易（Means） -[旨在导致]-> 影响证券交易价格或者证券交易量（Influence）
+  影响证券交易价格或者证券交易量（Influence） -[旨在导致(↔)]-> 在自己实际控制的账户之间进行证券交易（Means）
+  在自己实际控制的账户之间进行证券交易（Means） -[做出(↔)]-> 行为人（Actor）
+  行为人（Actor） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+
+[合规路径  质量分:39.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+  影响证券交易价格或证券交易量（Influence） -[旨在导致(↔)]-> 联合买卖证券（Means）
+  联合买卖证券（Means） -[做出(↔)]-> 2个以上行为人（Actor）
+  影响证券交易价格或者证券交易量（Influence） -[旨在导致(↔)]-> 频繁申报和撤销申报的行为（Means）
+  频繁申报和撤销申报的行为（Means） -[做出(↔)]-> 行为人（Actor）
+
+[合规路径  质量分:38.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+  行为人（Actor） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+
+[合规路径  质量分:37.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+
+[合规路径  质量分:35.7  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+  影响证券交易价格或者证券交易量（Influence） -[旨在导致(↔)]-> 不正当手段（Means）
+  不正当手段（Means） -[做出(↔)]-> 行为人（Actor）
+  行为人（Actor） -[监管(↔)]-> 证券执法人员（RegulatoryAuthority）
+
+[违规路径  质量分:40.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+
+[违规路径  质量分:39.7  层次覆盖:['responsibility', 'other', 'legal', 'violation', 'regulatory']]
+  连续交易操纵（Means） -[做出(↔)]-> 2个以上行为人（Actor）
+  中国证监会（RegulatoryAuthority） -[依照]-> 《证券法》（Law）
+  《证券法》（Law） -[依照(↔)]-> 证券交易所（RegulatoryAuthority）
+
+[违规路径  质量分:33.7  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+
+[违规路径  质量分:38.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]
+
+[违规路径  质量分:37.5  层次覆盖:['responsibility', 'other', 'violation', 'regulatory']]

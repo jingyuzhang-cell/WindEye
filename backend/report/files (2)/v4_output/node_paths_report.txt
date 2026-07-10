@@ -1,0 +1,82 @@
+=================================================================
+节点级穿透路径报告（v4）
+=================================================================
+
+事件：某上市公司董事长王某在公司重大资产重组信息公开前，
+利用职务便利获取的内幕信息，通过亲属账户买入公司股票，
+获利500万元。证监会对其立案调查。
+
+
+【合规路径】
+  路径#1（5跳  质量分:10.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第三十一条（Section）
+    第三十一条（Section） -[包含监管机构]-> 中国证监会（RegulatoryAuthority）
+  路径#2（5跳  质量分:10.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[做出]-> 信息披露违法行为（Action）
+    信息披露违法行为（Action） -[处理(↔)]-> 证监会（RegulatoryAuthority）
+  路径#3（5跳  质量分:10.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证监会（RegulatoryAuthority）
+  路径#4（5跳  质量分:10.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[处理]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#5（5跳  质量分:10.0）：
+    信息披露义务人（PartyWithResponsibility） -[监管(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[处理]-> 信息披露违法（Action）
+    信息披露违法（Action） -[做出(↔)]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+
+【违规路径】
+  路径#1（9跳  质量分:17.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第四条（Section）
+    第四条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[履行]-> 保证信息披露真实、准确、完整、及时、公平（Responsibility）
+    保证信息披露真实、准确、完整、及时、公平（Responsibility） -[履行(↔)]-> 上市公司（PartyWithResponsibility）
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#2（9跳  质量分:17.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第四条（Section）
+    第四条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[履行]-> 保护投资者的合法权益（Responsibility）
+    保护投资者的合法权益（Responsibility） -[履行(↔)]-> 上市公司（PartyWithResponsibility）
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#3（9跳  质量分:17.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第四条（Section）
+    第四条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[履行]-> 真实、准确、完整、及时、公平披露信息（Responsibility）
+    真实、准确、完整、及时、公平披露信息（Responsibility） -[履行(↔)]-> 上市公司（PartyWithResponsibility）
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#4（9跳  质量分:17.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第三十一条（Section）
+    第三十一条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[履行]-> 保证信息披露真实、准确、完整、及时、公平（Responsibility）
+    保证信息披露真实、准确、完整、及时、公平（Responsibility） -[履行(↔)]-> 上市公司（PartyWithResponsibility）
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#5（9跳  质量分:17.5）：
+    信息披露义务人（PartyWithResponsibility） -[做出]-> 信息披露违法（Action）
+    信息披露违法（Action） -[处理(↔)]-> 证券交易所（RegulatoryAuthority）
+    证券交易所（RegulatoryAuthority） -[监管]-> 董事（PartyWithResponsibility）
+    董事（PartyWithResponsibility） -[包含责任方(↔)]-> 第三十一条（Section）
+    第三十一条（Section） -[包含责任方]-> 高级管理人员（PartyWithResponsibility）
+    高级管理人员（PartyWithResponsibility） -[履行]-> 保护投资者的合法权益（Responsibility）
+    保护投资者的合法权益（Responsibility） -[履行(↔)]-> 上市公司（PartyWithResponsibility）
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）

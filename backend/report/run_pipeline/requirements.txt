@@ -1,0 +1,33 @@
+# GNN多视角社区发现与因果映射 - 依赖包
+# 安装命令: pip install -r requirements.txt
+
+# ── 核心图计算 ────────────────────────────────
+networkx>=3.0
+python-igraph>=0.10.0
+leidenalg>=0.10.0
+
+# ── PyTorch + PyG ────────────────────────────
+# 请根据CUDA版本选择合适的安装命令：
+# CPU版本:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install torch-geometric
+# CUDA 11.8:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+#   pip install torch-geometric
+torch>=2.0.0
+torch-geometric>=2.3.0
+
+# ── NLP / 嵌入 ────────────────────────────────
+sentence-transformers>=2.2.0    # BERT嵌入（可选，不安装时自动用TF-IDF）
+scikit-learn>=1.2.0             # TF-IDF回退 + NMI计算
+
+# ── 数据处理 ──────────────────────────────────
+pandas>=2.0.0
+numpy>=1.24.0
+openpyxl>=3.1.0
+
+# ── HTTP ──────────────────────────────────────
+requests>=2.28.0
+
+# ── 可视化 ────────────────────────────────────
+matplotlib>=3.7.0

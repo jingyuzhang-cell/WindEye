@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>带权Leiden社区聚类可视化</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #e8e8ed;
+            --text-secondary: #8888a0;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --border: #2a2a3a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --core-highlight: #fbbf24;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 340px 1fr 380px;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            gap: 1px;
+            background: var(--border);
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+        }
+        
+        .logo span {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 400;
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 32px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+        
+        .perspective-selector {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .perspective-btn {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .perspective-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        
+        .perspective-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .perspective-btn .data-indicator {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 10px;
+            height: 10px;
+            background: var(--success);
+            border-radius: 50%;
+            border: 2px solid var(--bg-secondary);
+            display: none;
+        }
+        
+        .perspective-btn.has-data .data-indicator {
+            display: block;
+        }
+        
+        .sidebar {
+            background: var(--bg-secondary);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        
+        .section-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .community-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .community-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .community-item:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        
+        .community-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        
+        .community-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .community-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        
+        .community-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .community-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .community-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .community-stat .value {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .core-badge {
+            background: var(--core-highlight);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .weight-info {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .weight-info h4 {
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .weight-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+        }
+        
+        .weight-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .weight-bar {
+            height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        
+        .graph-container {
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .graph-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent);
+        }
+        
+        .detail-panel {
+            background: var(--bg-secondary);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .detail-card {
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .detail-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        .detail-type {
+            background: var(--accent);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .detail-name {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .detail-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .detail-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .metric {
+            background: var(--bg-secondary);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--accent);
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .neighbor-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+        
+        .neighbor-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .neighbor-item:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .neighbor-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .neighbor-name {
+            flex: 1;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .neighbor-type {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .filter-section {
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .filter-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+        
+        .filter-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        .filter-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .filter-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .checkbox-item input {
+            accent-color: var(--accent);
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+        
+        .node.core {
+            stroke: var(--core-highlight);
+            stroke-width: 3px;
+        }
+        
+        .node.dimmed {
+            opacity: 0.15;
+        }
+        
+        .node.highlighted {
+            stroke: white;
+            stroke-width: 3px;
+        }
+        
+        .link {
+            stroke-opacity: 0.4;
+        }
+        
+        .link.highlighted {
+            stroke-opacity: 1;
+            stroke: var(--accent);
+        }
+        
+        .link.cross-community {
+            stroke-dasharray: 4,2;
+        }
+        
+        .label {
+            font-size: 10px;
+            fill: var(--text-secondary);
+            pointer-events: none;
+        }
+        
+        #nodeDetail, #emptyDetail {
+            display: none;
+        }
+        
+        #nodeDetail.active, #emptyDetail.active {
+            display: block;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            max-width: 250px;
+        }
+        
+        .tooltip-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .tooltip-info {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+        
+        .file-input-wrapper {
+            margin-bottom: 20px;
+        }
+        
+        .file-input-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .file-input-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        
+        .file-input-btn input {
+            display: none;
+        }
+        
+        .file-input-btn.has-file {
+            border-color: var(--success);
+            border-style: solid;
+            color: var(--success);
+        }
+        
+        .current-perspective-label {
+            background: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        
+        .clear-data-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .clear-data-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        .no-data-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .no-data-message svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        
+        .no-data-message p {
+            margin-bottom: 8px;
+        }
+        
+        .no-data-message .hint {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <div>
+                    <h1>带权Leiden社区聚类可视化</h1>
+                    <span id="perspectiveName">加载中...</span>
+                </div>
+            </div>
+            
+            <div class="perspective-selector">
+                <button class="perspective-btn active" data-perspective="responsibility">
+                    责任方社区
+                    <span class="data-indicator"></span>
+                </button>
+                <button class="perspective-btn" data-perspective="regulatory">
+                    监管机构社区
+                    <span class="data-indicator"></span>
+                </button>
+                <button class="perspective-btn" data-perspective="violation">
+                    违规行为社区
+                    <span class="data-indicator"></span>
+                </button>
+            </div>
+            
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-value" id="totalNodes">-</div>
+                    <div class="stat-label">节点</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalEdges">-</div>
+                    <div class="stat-label">边</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalCommunities">-</div>
+                    <div class="stat-label">社区</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="modularity">-</div>
+                    <div class="stat-label">模块度</div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="sidebar">
+            <div class="file-input-wrapper">
+                <span class="current-perspective-label" id="currentPerspectiveLabel">责任方社区</span>
+                <button class="clear-data-btn" id="clearDataBtn" style="display: none;" onclick="clearCurrentData()">清除数据</button>
+                <label class="file-input-btn" id="fileInputLabel">
+                    📁 上传数据文件 (.json)
+                    <input type="file" id="jsonFileInput" accept=".json">
+                </label>
+            </div>
+            
+            <div class="weight-info" id="weightInfo">
+                <h4>权重配置</h4>
+                <div class="weight-legend" id="weightLegend">
+                    <div class="weight-legend-item">
+                        <div class="weight-bar" style="width: 60px; background: var(--success);"></div>
+                        <span>高权重 (0.8-1.0)</span>
+                    </div>
+                    <div class="weight-legend-item">
+                        <div class="weight-bar" style="width: 40px; background: var(--warning);"></div>
+                        <span>中权重 (0.4-0.7)</span>
+                    </div>
+                    <div class="weight-legend-item">
+                        <div class="weight-bar" style="width: 20px; background: var(--text-secondary);"></div>
+                        <span>低权重 (0.1-0.3)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="section-title">筛选器</div>
+                <div class="filter-row">
+                    <span class="filter-label">最小度数</span>
+                    <input type="range" class="filter-slider" id="degreeFilter" min="0" max="50" value="0">
+                    <span class="filter-value" id="degreeValue">0</span>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">最小权重</span>
+                    <input type="range" class="filter-slider" id="weightFilter" min="0" max="100" value="0">
+                    <span class="filter-value" id="weightValue">0</span>
+                </div>
+                <div class="checkbox-group" style="margin-top: 12px;">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showCoreOnly"> 仅显示核心节点
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showCrossEdges" checked> 显示跨社区边
+                    </label>
+                </div>
+            </div>
+            
+            <div class="section-title">
+                社区列表 
+                <span id="communityCount" style="color: var(--accent);">0</span>
+            </div>
+            <div class="community-list" id="communityList">
+                <div class="loading">请上传数据...</div>
+            </div>
+        </div>
+        
+        <div class="graph-container">
+            <svg id="graph"></svg>
+            <div id="noDataMessage" class="no-data-message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+                <p>当前视角暂无数据</p>
+                <p class="hint">请在左侧上传对应的 JSON 数据文件</p>
+            </div>
+            <div class="graph-controls">
+                <button class="control-btn" onclick="zoomIn()" title="放大">+</button>
+                <button class="control-btn" onclick="zoomOut()" title="缩小">−</button>
+                <button class="control-btn" onclick="resetZoom()" title="重置">⟲</button>
+                <button class="control-btn" onclick="toggleLabels()" title="标签">T</button>
+            </div>
+        </div>
+        
+        <div class="detail-panel">
+            <div class="section-title">节点详情</div>
+            
+            <div id="emptyDetail" class="active">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 8v4M12 16h.01"></path>
+                    </svg>
+                    <p>点击节点查看详细信息</p>
+                </div>
+            </div>
+            
+            <div id="nodeDetail">
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <span class="detail-type" id="detailType">-</span>
+                        <span class="core-badge" id="coreBadge" style="display: none;">核心类型</span>
+                    </div>
+                    <div class="detail-name" id="detailName">-</div>
+                    <div class="detail-id" id="detailId">-</div>
+                    
+                    <div class="detail-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="detailDegree">-</div>
+                            <div class="metric-label">度数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="detailWeightedDegree">-</div>
+                            <div class="metric-label">加权度数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="detailInDegree">-</div>
+                            <div class="metric-label">入度</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="detailOutDegree">-</div>
+                            <div class="metric-label">出度</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="detailCommunity">-</div>
+                            <div class="metric-label">所属社区</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="detailClustering">-</div>
+                            <div class="metric-label">聚类系数</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-title">
+                    相邻节点 
+                    <span id="detailNeighbors" style="color: var(--accent);">0</span>
+                </div>
+                <div class="neighbor-list" id="neighborList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+    
+    <script>
+        // ==================== 核心修改：为每个视角维护独立的数据 ====================
+        
+        // 存储每个视角的独立数据
+        const perspectiveDataStore = {
+            responsibility: null,  // 责任方社区数据
+            regulatory: null,      // 监管机构社区数据
+            violation: null        // 违规行为社区数据
+        };
+        
+        // 视角名称映射
+        const perspectiveNames = {
+            responsibility: '责任方社区',
+            regulatory: '监管机构社区',
+            violation: '违规行为社区'
+        };
+        
+        // 当前活动的数据（指向当前视角的数据）
+        let graphData = null;
+        let simulation = null;
+        let svg, g, zoom;
+        let showLabels = false;
+        let selectedCommunity = null;
+        let currentPerspective = 'responsibility';
+        
+        function initGraph() {
+            svg = d3.select('#graph');
+            const container = document.querySelector('.graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            svg.attr('width', width).attr('height', height);
+            
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            g = svg.append('g');
+            
+            // Arrow marker for directed edges
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 20)
+                .attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .append('svg:path')
+                .attr('d', 'M 0,-5 L 10,0 L 0,5')
+                .attr('fill', '#666');
+        }
+        
+        // 更新视角按钮的数据指示器
+        function updatePerspectiveIndicators() {
+            document.querySelectorAll('.perspective-btn').forEach(btn => {
+                const perspective = btn.dataset.perspective;
+                if (perspectiveDataStore[perspective]) {
+                    btn.classList.add('has-data');
+                } else {
+                    btn.classList.remove('has-data');
+                }
+            });
+        }
+        
+        // 更新UI显示当前视角
+        function updateCurrentPerspectiveUI() {
+            // 更新标签
+            document.getElementById('currentPerspectiveLabel').textContent = perspectiveNames[currentPerspective];
+            
+            // 更新文件输入按钮
+            const fileInputLabel = document.getElementById('fileInputLabel');
+            const clearDataBtn = document.getElementById('clearDataBtn');
+            
+            if (perspectiveDataStore[currentPerspective]) {
+                fileInputLabel.classList.add('has-file');
+                fileInputLabel.innerHTML = `
+                    ✓ 已加载 ${perspectiveNames[currentPerspective]} 数据
+                    <input type="file" id="jsonFileInput" accept=".json">
+                `;
+                clearDataBtn.style.display = 'inline-block';
+            } else {
+                fileInputLabel.classList.remove('has-file');
+                fileInputLabel.innerHTML = `
+                    📁 上传 ${perspectiveNames[currentPerspective]} 数据文件 (.json)
+                    <input type="file" id="jsonFileInput" accept=".json">
+                `;
+                clearDataBtn.style.display = 'none';
+            }
+            
+            // 重新绑定文件输入事件
+            document.getElementById('jsonFileInput').addEventListener('change', handleFileSelect);
+        }
+        
+        // 清除当前视角的数据
+        function clearCurrentData() {
+            if (confirm(`确定要清除 "${perspectiveNames[currentPerspective]}" 的数据吗？`)) {
+                perspectiveDataStore[currentPerspective] = null;
+                graphData = null;
+                updatePerspectiveIndicators();
+                updateCurrentPerspectiveUI();
+                clearGraph();
+                showNoDataMessage();
+                resetStats();
+                document.getElementById('communityList').innerHTML = '<div class="loading">请上传数据...</div>';
+            }
+        }
+        
+        // 显示无数据消息
+        function showNoDataMessage() {
+            document.getElementById('noDataMessage').style.display = 'flex';
+        }
+        
+        // 隐藏无数据消息
+        function hideNoDataMessage() {
+            document.getElementById('noDataMessage').style.display = 'none';
+        }
+        
+        // 清空图形
+        function clearGraph() {
+            if (simulation) {
+                simulation.stop();
+            }
+            g.selectAll('*').remove();
+        }
+        
+        // 重置统计数据
+        function resetStats() {
+            document.getElementById('totalNodes').textContent = '-';
+            document.getElementById('totalEdges').textContent = '-';
+            document.getElementById('totalCommunities').textContent = '-';
+            document.getElementById('modularity').textContent = '-';
+            document.getElementById('perspectiveName').textContent = perspectiveNames[currentPerspective];
+            document.getElementById('communityCount').textContent = '0';
+        }
+        
+        // 切换视角
+        function switchPerspective(perspective) {
+            currentPerspective = perspective;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.perspective-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.perspective === perspective);
+            });
+            
+            // 更新UI
+            updateCurrentPerspectiveUI();
+            
+            // 加载对应视角的数据
+            graphData = perspectiveDataStore[perspective];
+            
+            if (graphData) {
+                hideNoDataMessage();
+                loadData(graphData);
+            } else {
+                clearGraph();
+                showNoDataMessage();
+                resetStats();
+                document.getElementById('communityList').innerHTML = '<div class="loading">请上传数据...</div>';
+            }
+            
+            // 重置节点详情面板
+            document.getElementById('emptyDetail').classList.add('active');
+            document.getElementById('nodeDetail').classList.remove('active');
+        }
+        
+        function loadData(data) {
+            graphData = data;
+            
+            // Update stats
+            document.getElementById('totalNodes').textContent = data.stats.totalNodes;
+            document.getElementById('totalEdges').textContent = data.stats.totalEdges;
+            document.getElementById('totalCommunities').textContent = data.stats.totalCommunities;
+            document.getElementById('modularity').textContent = data.stats.modularity?.toFixed(4) || '-';
+            document.getElementById('perspectiveName').textContent = data.stats.perspective || perspectiveNames[currentPerspective];
+            
+            // Update weight info
+            if (data.weightConfig) {
+                updateWeightInfo(data.weightConfig);
+            }
+            
+            // Update community list
+            updateCommunityList(data.communities);
+            
+            // Render graph
+            renderGraph(data);
+            
+            // 隐藏无数据消息
+            hideNoDataMessage();
+        }
+        
+        function updateWeightInfo(config) {
+            const legend = document.getElementById('weightLegend');
+            if (config.highWeightRelations) {
+                const highRels = Object.entries(config.highWeightRelations)
+                    .slice(0, 3)
+                    .map(([k, v]) => `${k}(${v})`)
+                    .join(', ');
+                
+                legend.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        <strong>核心类型:</strong> ${config.coreTypes?.join(', ') || '-'}
+                    </div>
+                    <div class="weight-legend-item">
+                        <div class="weight-bar" style="width: 60px; background: var(--success);"></div>
+                        <span>高权重: ${highRels}...</span>
+                    </div>
+                `;
+            }
+        }
+        
+        function updateCommunityList(communities) {
+            const list = document.getElementById('communityList');
+            document.getElementById('communityCount').textContent = communities.length;
+            
+            list.innerHTML = communities.map(c => `
+                <div class="community-item" data-id="${c.id}" onclick="selectCommunity(${c.id})">
+                    <div class="community-header">
+                        <div class="community-color" style="background: ${c.color}"></div>
+                        <span class="community-name">社区 ${c.id}</span>
+                        ${c.coreNodeCount > 0 ? `<span class="core-badge">${c.coreNodeCount} 核心</span>` : ''}
+                    </div>
+                    <div class="community-stats">
+                        <div class="community-stat">
+                            节点: <span class="value">${c.nodeCount}</span>
+                        </div>
+                        <div class="community-stat">
+                            边: <span class="value">${c.edgeCount}</span>
+                        </div>
+                        <div class="community-stat">
+                            密度: <span class="value">${c.density?.toFixed(3) || '-'}</span>
+                        </div>
+                        <div class="community-stat">
+                            总权重: <span class="value">${c.totalWeight?.toFixed(1) || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderGraph(data) {
+            clearGraph();
+            
+            const container = document.querySelector('.graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // 深拷贝节点和边数据，避免修改原始数据
+            const nodes = data.nodes.map(n => ({...n}));
+            const edges = data.edges.map(e => ({...e}));
+            
+            // Create force simulation
+            simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(edges)
+                    .id(d => d.id)
+                    .distance(d => 80 / (d.weight || 0.1))
+                    .strength(d => Math.min(d.weight || 0.1, 0.5)))
+                .force('charge', d3.forceManyBody()
+                    .strength(d => d.isCore ? -150 : -80))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => getNodeRadius(d) + 5));
+            
+            // Draw links
+            const link = g.append('g')
+                .selectAll('line')
+                .data(edges)
+                .enter().append('line')
+                .attr('class', d => `link ${d.crossCommunity ? 'cross-community' : ''}`)
+                .attr('stroke', d => d.crossCommunity ? '#666' : '#444')
+                .attr('stroke-width', d => Math.max(0.5, (d.weight || 0.1) * 3));
+            
+            // Draw nodes
+            const node = g.append('g')
+                .selectAll('circle')
+                .data(nodes)
+                .enter().append('circle')
+                .attr('class', d => `node ${d.isCore ? 'core' : ''}`)
+                .attr('r', d => getNodeRadius(d))
+                .attr('fill', d => d.color)
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded))
+                .on('click', selectNode)
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip);
+            
+            // Draw labels
+            const label = g.append('g')
+                .selectAll('text')
+                .data(nodes)
+                .enter().append('text')
+                .attr('class', 'label')
+                .text(d => d.name?.substring(0, 8) || '')
+                .style('display', showLabels ? 'block' : 'none');
+            
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x + getNodeRadius(d) + 3)
+                    .attr('y', d => d.y + 3);
+            });
+        }
+        
+        function getNodeRadius(d) {
+            const baseRadius = d.isCore ? 8 : 5;
+            const degreeBonus = Math.sqrt(d.weightedDegree || d.degree || 1) * 0.8;
+            return Math.min(baseRadius + degreeBonus, 20);
+        }
+        
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${d.name || d.id}</div>
+                <div class="tooltip-info">
+                    类型: ${d.type}<br>
+                    社区: ${d.community}<br>
+                    度数: ${d.degree} (加权: ${d.weightedDegree?.toFixed(2) || '-'})<br>
+                    ${d.isCore ? '⭐ 核心节点' : ''}
+                </div>
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY + 10) + 'px';
+        }
+        
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+        
+        function selectNode(event, d) {
+            document.getElementById('emptyDetail').classList.remove('active');
+            document.getElementById('nodeDetail').classList.add('active');
+            
+            document.getElementById('detailType').textContent = d.type;
+            document.getElementById('detailName').textContent = d.name || d.id;
+            document.getElementById('detailId').textContent = d.id;
+            document.getElementById('detailDegree').textContent = d.degree;
+            document.getElementById('detailWeightedDegree').textContent = d.weightedDegree?.toFixed(2) || '-';
+            document.getElementById('detailInDegree').textContent = d.inDegree || 0;
+            document.getElementById('detailOutDegree').textContent = d.outDegree || 0;
+            document.getElementById('detailCommunity').textContent = d.community;
+            document.getElementById('detailClustering').textContent = d.clustering?.toFixed(4) || '-';
+            
+            const coreBadge = document.getElementById('coreBadge');
+            coreBadge.style.display = d.isCore ? 'inline-block' : 'none';
+            
+            // Find neighbors
+            const neighbors = graphData.edges
+                .filter(e => e.source === d.id || e.target === d.id || 
+                            (e.source.id && e.source.id === d.id) || 
+                            (e.target.id && e.target.id === d.id))
+                .map(e => {
+                    const sourceId = e.source.id || e.source;
+                    const targetId = e.target.id || e.target;
+                    return sourceId === d.id ? targetId : sourceId;
+                });
+            
+            const uniqueNeighbors = [...new Set(neighbors)];
+            document.getElementById('detailNeighbors').textContent = uniqueNeighbors.length;
+            
+            const neighborNodes = uniqueNeighbors
+                .map(id => graphData.nodes.find(n => n.id === id))
+                .filter(n => n)
+                .slice(0, 50);
+            
+            document.getElementById('neighborList').innerHTML = neighborNodes.map(n => `
+                <div class="neighbor-item" onclick="focusNode('${n.id}')">
+                    <div class="neighbor-color" style="background: ${n.color}"></div>
+                    <span class="neighbor-name">${n.name || n.id}</span>
+                    <span class="neighbor-type">${n.type}${n.isCore ? ' ⭐' : ''}</span>
+                </div>
+            `).join('');
+            
+            highlightNode(d);
+        }
+        
+        function highlightNode(d) {
+            const neighbors = new Set();
+            graphData.edges.forEach(e => {
+                const sourceId = e.source.id || e.source;
+                const targetId = e.target.id || e.target;
+                if (sourceId === d.id) neighbors.add(targetId);
+                if (targetId === d.id) neighbors.add(sourceId);
+            });
+            neighbors.add(d.id);
+            
+            g.selectAll('.node')
+                .classed('dimmed', n => !neighbors.has(n.id))
+                .classed('highlighted', n => n.id === d.id);
+            
+            g.selectAll('.link')
+                .classed('highlighted', l => {
+                    const sourceId = l.source.id || l.source;
+                    const targetId = l.target.id || l.target;
+                    return sourceId === d.id || targetId === d.id;
+                });
+        }
+        
+        function selectCommunity(communityId) {
+            selectedCommunity = communityId;
+            
+            document.querySelectorAll('.community-item').forEach(el => {
+                el.classList.toggle('active', parseInt(el.dataset.id) === communityId);
+            });
+            
+            const communityNodes = new Set(
+                graphData.nodes.filter(n => n.community === communityId).map(n => n.id)
+            );
+            
+            g.selectAll('.node')
+                .classed('dimmed', n => !communityNodes.has(n.id));
+            
+            g.selectAll('.link')
+                .classed('highlighted', l => {
+                    const sourceId = l.source.id || l.source;
+                    const targetId = l.target.id || l.target;
+                    return communityNodes.has(sourceId) && communityNodes.has(targetId);
+                });
+        }
+        
+        function focusNode(nodeId) {
+            const node = graphData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                selectNode(null, node);
+            }
+        }
+        
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        function zoomIn() {
+            svg.transition().call(zoom.scaleBy, 1.5);
+        }
+        
+        function zoomOut() {
+            svg.transition().call(zoom.scaleBy, 0.67);
+        }
+        
+        function resetZoom() {
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
+            g.selectAll('.node').classed('dimmed', false).classed('highlighted', false);
+            g.selectAll('.link').classed('highlighted', false);
+            selectedCommunity = null;
+            document.querySelectorAll('.community-item').forEach(el => el.classList.remove('active'));
+        }
+        
+        function toggleLabels() {
+            showLabels = !showLabels;
+            g.selectAll('.label').style('display', showLabels ? 'block' : 'none');
+        }
+        
+        // Filters
+        document.getElementById('degreeFilter').addEventListener('input', function(e) {
+            const minDegree = parseInt(e.target.value);
+            document.getElementById('degreeValue').textContent = minDegree;
+            
+            if (graphData) {
+                g.selectAll('.node')
+                    .style('display', d => d.degree >= minDegree ? 'block' : 'none');
+            }
+        });
+        
+        document.getElementById('weightFilter').addEventListener('input', function(e) {
+            const minWeight = parseInt(e.target.value) / 100;
+            document.getElementById('weightValue').textContent = minWeight.toFixed(2);
+            
+            if (graphData) {
+                g.selectAll('.link')
+                    .style('display', d => (d.weight || 0) >= minWeight ? 'block' : 'none');
+            }
+        });
+        
+        document.getElementById('showCoreOnly').addEventListener('change', function(e) {
+            if (graphData) {
+                g.selectAll('.node')
+                    .style('display', d => !e.target.checked || d.isCore ? 'block' : 'none');
+            }
+        });
+        
+        document.getElementById('showCrossEdges').addEventListener('change', function(e) {
+            if (graphData) {
+                g.selectAll('.link.cross-community')
+                    .style('display', e.target.checked ? 'block' : 'none');
+            }
+        });
+        
+        // ==================== 核心修改：视角切换逻辑 ====================
+        document.querySelectorAll('.perspective-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const perspective = this.dataset.perspective;
+                switchPerspective(perspective);
+            });
+        });
+        
+        // ==================== 核心修改：文件上传逻辑 ====================
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // 将数据存储到当前视角
+                        perspectiveDataStore[currentPerspective] = data;
+                        
+                        // 更新指示器
+                        updatePerspectiveIndicators();
+                        
+                        // 更新UI
+                        updateCurrentPerspectiveUI();
+                        
+                        // 加载数据到视图
+                        loadData(data);
+                        
+                        console.log(`已为 "${perspectiveNames[currentPerspective]}" 加载数据`);
+                        
+                    } catch (err) {
+                        alert('JSON文件解析错误: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+        
+        document.getElementById('jsonFileInput').addEventListener('change', handleFileSelect);
+        
+        // ==================== 演示数据生成函数 ====================
+        function generateDemoData(perspective) {
+            const numNodes = 80 + Math.floor(Math.random() * 40);
+            const numCommunities = 4 + Math.floor(Math.random() * 3);
+            const colors = [
+                'rgb(99,102,241)', 'rgb(236,72,153)', 'rgb(34,197,94)',
+                'rgb(251,146,60)', 'rgb(168,85,247)', 'rgb(6,182,212)', 'rgb(244,63,94)'
+            ];
+            
+            let types, coreTypes, perspectiveName;
+            
+            switch(perspective) {
+                case 'responsibility':
+                    types = ['PartyWithResponsibility', 'AdvantageHolder', 'Actor', 'Action', 'RegulatoryAuthority'];
+                    coreTypes = new Set(['PartyWithResponsibility', 'AdvantageHolder', 'Actor']);
+                    perspectiveName = '责任方社区（演示数据）';
+                    break;
+                case 'regulatory':
+                    types = ['RegulatoryAuthority', 'Policy', 'Regulation', 'Enforcement', 'Compliance'];
+                    coreTypes = new Set(['RegulatoryAuthority', 'Policy', 'Regulation']);
+                    perspectiveName = '监管机构社区（演示数据）';
+                    break;
+                case 'violation':
+                    types = ['Violation', 'Penalty', 'Offender', 'Evidence', 'Report'];
+                    coreTypes = new Set(['Violation', 'Penalty', 'Offender']);
+                    perspectiveName = '违规行为社区（演示数据）';
+                    break;
+            }
+            
+            const nodes = [];
+            const edges = [];
+            
+            for (let i = 0; i < numNodes; i++) {
+                const community = Math.floor(Math.random() * numCommunities);
+                const type = types[Math.floor(Math.random() * types.length)];
+                const degree = Math.floor(Math.random() * 20) + 1;
+                const weightedDegree = degree * (0.5 + Math.random() * 0.5);
+                
+                nodes.push({
+                    id: `${perspective}_node_${i}`,
+                    name: `${type.substring(0, 6)}${i}`,
+                    type: type,
+                    isCore: coreTypes.has(type),
+                    community: community,
+                    degree: degree,
+                    weightedDegree: weightedDegree,
+                    inDegree: Math.floor(degree / 2),
+                    outDegree: degree - Math.floor(degree / 2),
+                    clustering: Math.random() * 0.8,
+                    color: colors[community]
+                });
+            }
+            
+            for (let i = 0; i < numNodes; i++) {
+                const numEdges = Math.floor(Math.random() * 4) + 1;
+                for (let j = 0; j < numEdges; j++) {
+                    let targetIdx;
+                    if (Math.random() < 0.75) {
+                        const sameCommunity = nodes.filter((n, idx) => 
+                            n.community === nodes[i].community && idx !== i);
+                        if (sameCommunity.length > 0) {
+                            const target = sameCommunity[Math.floor(Math.random() * sameCommunity.length)];
+                            targetIdx = nodes.findIndex(n => n.id === target.id);
+                        }
+                    }
+                    if (!targetIdx) {
+                        targetIdx = Math.floor(Math.random() * numNodes);
+                    }
+                    if (targetIdx !== i) {
+                        edges.push({
+                            source: nodes[i].id,
+                            target: nodes[targetIdx].id,
+                            type: '关联',
+                            weight: 0.3 + Math.random() * 0.7,
+                            crossCommunity: nodes[i].community !== nodes[targetIdx].community
+                        });
+                    }
+                }
+            }
+            
+            const communities = [];
+            for (let i = 0; i < numCommunities; i++) {
+                const communityNodes = nodes.filter(n => n.community === i);
+                const coreCount = communityNodes.filter(n => n.isCore).length;
+                const communityEdges = edges.filter(e => {
+                    const s = nodes.find(n => n.id === e.source);
+                    const t = nodes.find(n => n.id === e.target);
+                    return s && t && s.community === i && t.community === i;
+                });
+                
+                communities.push({
+                    id: i,
+                    nodeCount: communityNodes.length,
+                    coreNodeCount: coreCount,
+                    edgeCount: communityEdges.length,
+                    totalWeight: communityEdges.reduce((a, e) => a + (e.weight || 0), 0),
+                    avgWeight: communityEdges.length > 0 ? 
+                        communityEdges.reduce((a, e) => a + (e.weight || 0), 0) / communityEdges.length : 0,
+                    density: Math.random() * 0.3 + 0.1,
+                    avgDegree: communityNodes.reduce((a, b) => a + b.degree, 0) / communityNodes.length,
+                    avgWeightedDegree: communityNodes.reduce((a, b) => a + b.weightedDegree, 0) / communityNodes.length,
+                    color: colors[i]
+                });
+            }
+            
+            return {
+                nodes,
+                edges,
+                communities,
+                stats: {
+                    totalNodes: nodes.length,
+                    totalEdges: edges.length,
+                    totalCommunities: numCommunities,
+                    modularity: 0.6 + Math.random() * 0.2,
+                    perspective: perspectiveName,
+                    coreTypes: Array.from(coreTypes)
+                },
+                weightConfig: {
+                    name: perspectiveNames[perspective],
+                    coreTypes: Array.from(coreTypes),
+                    highWeightRelations: {'监管': 1.0, '执行': 0.9, '做出': 0.9}
+                }
+            };
+        }
+        
+        // 加载演示数据（可选，用于测试）
+        function loadDemoDataForAllPerspectives() {
+            perspectiveDataStore.responsibility = generateDemoData('responsibility');
+            perspectiveDataStore.regulatory = generateDemoData('regulatory');
+            perspectiveDataStore.violation = generateDemoData('violation');
+            
+            updatePerspectiveIndicators();
+            switchPerspective('responsibility');
+        }
+        
+        // Initialize
+        initGraph();
+        
+        // 初始化UI
+        updateCurrentPerspectiveUI();
+        showNoDataMessage();
+        resetStats();
+        
+        // 如果需要加载演示数据，取消下面这行的注释
+        // loadDemoDataForAllPerspectives();
+    </script>
+</body>
+</html>

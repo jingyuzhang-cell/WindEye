@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from unittest.mock import patch
 
 import pytest
 
@@ -155,6 +156,43 @@ class TestScraperUtilities:
         assert "a.pdf" in names
         assert "b.pdf" in names
         assert "c.txt" not in names
+
+    def test_server_default_headless_linux(self):
+        from data_collection.scrapers.utils import _server_default_headless
+
+        with patch.dict(os.environ, {}, clear=False):
+            with patch("platform.system", return_value="Linux"):
+                assert _server_default_headless() is True
+
+    def test_server_default_headless_env_override(self):
+        from data_collection.scrapers.utils import _server_default_headless
+
+        with patch.dict(os.environ, {"SCRAPER_HEADLESS": "false"}, clear=False):
+            with patch("platform.system", return_value="Linux"):
+                assert _server_default_headless() is False
+
+
+class TestRiskEventDateFiltering:
+    def test_normalize_date_value(self):
+        from data_collection.scrapers.risk_event_scraper import _normalize_date_value
+
+        assert _normalize_date_value("2026/7/1") == "2026-07-01"
+        assert _normalize_date_value("2026年7月1日") == "2026-07-01"
+        assert _normalize_date_value("2026-07-01") == "2026-07-01"
+
+    def test_extract_date_from_text(self):
+        from data_collection.scrapers.risk_event_scraper import _extract_date_from_text
+
+        assert _extract_date_from_text("公告日期：2026年7月1日") == "2026-07-01"
+        assert _extract_date_from_text("披露时间 2026-07-02") == "2026-07-02"
+
+    def test_date_in_range(self):
+        from data_collection.scrapers.risk_event_scraper import _date_in_range
+
+        assert _date_in_range("公告日期：2026年7月1日", "2026-07-01", "2026-07-31")
+        assert not _date_in_range("公告日期：2026年6月30日", "2026-07-01", "2026-07-31")
+        assert not _date_in_range("公告日期：2026年8月1日", "2026-07-01", "2026-07-31")
+        assert _date_in_range("没有日期字段", "2026-07-01", "2026-07-31")
 
 
 # ── Sentiment parsing tests ────────────────────────────────────────────────

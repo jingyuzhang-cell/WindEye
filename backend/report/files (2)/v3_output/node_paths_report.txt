@@ -1,0 +1,27 @@
+=================================================================
+节点级穿透路径报告（v3）
+=================================================================
+
+事件：某上市公司董事长王某在公司重大资产重组信息公开前，
+利用职务便利获取的内幕信息，通过亲属账户买入公司股票，
+获利500万元。证监会对其立案调查。
+
+
+【合规路径（责任方→监管）】
+  路径#1（2跳）：
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 中国证监会（RegulatoryAuthority）
+  路径#2（2跳）：
+    上市公司（PartyWithResponsibility） -[监管(↔)]-> 本所（RegulatoryAuthority）
+  路径#3（3跳）：
+    上市公司（PartyWithResponsibility） -[包含责任方(↔)]-> 第二十八条（Section）
+    第二十八条（Section） -[包含监管机构]-> 本所（RegulatoryAuthority）
+  路径#4（3跳）：
+    上市公司（PartyWithResponsibility） -[包含责任方(↔)]-> 第九条（Section）
+    第九条（Section） -[包含监管机构]-> 本所（RegulatoryAuthority）
+  路径#5（3跳）：
+    上市公司（PartyWithResponsibility） -[包含责任方(↔)]-> 第十七条（Section）
+    第十七条（Section） -[包含监管机构]-> 本所（RegulatoryAuthority）
+
+【违规路径（责任方→违规→监管）】
+  路径#1（2跳）：
+    上市公司（PartyWithResponsibility） -[执行]-> 违反本办法（Action）
