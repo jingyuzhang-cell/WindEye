@@ -94,3 +94,5 @@ backend/.env.bak*
 backend/_tmp_import_check.py
 .mysql-data/
 .mysql-windeye.ini
+backend/report/
+backend/report_outputs/

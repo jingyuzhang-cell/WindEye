@@ -36,6 +36,8 @@ const DataCollectionPage: React.FC = () => {
   const sources = useCrawlStore((s) => s.sources);
   const keywords = useCrawlStore((s) => s.keywords);
   const maxPages = useCrawlStore((s) => s.maxPages);
+  const maxFiles = useCrawlStore((s) => s.maxFiles);
+  const dateRange = useCrawlStore((s) => s.dateRange);
   const nlQuery = useCrawlStore((s) => s.nlQuery);
   const parsedIntent = useCrawlStore((s) => s.parsedIntent);
   const storeTemplateId = useCrawlStore((s) => s.templateId);
@@ -47,6 +49,9 @@ const DataCollectionPage: React.FC = () => {
       sources: sources.length > 0 ? sources : undefined,
       keywords: keywords.length > 0 ? keywords : undefined,
       max_pages: maxPages,
+      max_files: maxFiles || 0,
+      date_start: dateRange?.[0] || undefined,
+      date_end: dateRange?.[1] || undefined,
     };
 
     if (mode === 'complex') {
@@ -126,20 +131,32 @@ const DataCollectionPage: React.FC = () => {
           </Card>
 
           {isRunning && (
-            <Card title="采集进度" style={{ marginBottom: 16 }}>
-              <CrawlProgress />
-            </Card>
+            <>
+              <Card title="采集进度" style={{ marginBottom: 16 }}>
+                <CrawlProgress />
+              </Card>
+              <Card title="已采集文件" style={{ marginBottom: 16 }}>
+                <CrawledFileList />
+              </Card>
+            </>
           )}
 
           {result && !isRunning && (
-            <Card title="采集结果" style={{ marginBottom: 16 }}>
-              <CrawlResult />
-            </Card>
+            <>
+              <Card title="采集结果" style={{ marginBottom: 16 }}>
+                <CrawlResult />
+              </Card>
+              <div style={{ marginBottom: 16 }}>
+                <CrawledFileList />
+              </div>
+            </>
           )}
 
-          <div style={{ marginBottom: 16 }}>
-            <CrawledFileList />
-          </div>
+          {!isRunning && !result && (
+            <div style={{ marginBottom: 16 }}>
+              <CrawledFileList />
+            </div>
+          )}
 
           <div style={{ marginBottom: 16 }}>
             <JsonArtifactList />

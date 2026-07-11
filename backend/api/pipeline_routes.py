@@ -650,6 +650,110 @@ async def list_crawl_templates():
         return {"templates": [], "error": str(e)}
 
 
+@router.post("/process-file")
+async def process_single_file(
+    filePath: str = Query(..., description="Absolute path of the file to process"),
+    source: str = Query(..., description="Data source key (e.g. risk_event_bse)"),
+    dry_run: bool = Query(default=False, description="If true, stop after generating Cypher"),
+):
+    """Process a single file through the ETL pipeline and delete it on success.
+
+    Flow: parse → extract (event + feature + regulation via Dify) → import to Neo4j.
+    On successful import, the source file is deleted.
+    """
+    import os as _os
+
+    if not _os.path.isfile(filePath):
+        raise HTTPException(status_code=404, detail=f"File not found: {filePath}")
+
+    from kg_construction.etl.pipeline_config import DATA_SOURCE_CONFIGS, get_pipeline_config
+
+    if source not in DATA_SOURCE_CONFIGS:
+        raise HTTPException(status_code=404, detail=f"Unknown source: {source}")
+
+    config = get_pipeline_config()
+    result = {
+        "filePath": filePath,
+        "source": source,
+        "status": "processed",
+        "stages": {},
+    }
+
+    try:
+        from data_collection.file_import.pdf_parser import parse_pdf_hybrid
+        from data_collection.dify.dify_client import DifyClient
+        from data_collection.dify.dify_pdf_bridge import dify_results_to_jsonl, _deduplicate_results
+        from kg_construction.etl.cypher_generator import generate_cypher_from_dify_jsonl
+
+        # Stage 1: Parse
+        text = parse_pdf_hybrid(filePath) or ""
+        if not text:
+            result["status"] = "failed"
+            result["error"] = "Parse returned empty text"
+            return {"success": False, "data": result}
+
+        result["stages"]["parse"] = {"status": "completed", "char_count": len(text)}
+
+        # Stage 2: Extract (event + feature + regulation via Dify)
+        dify = DifyClient()
+        all_results = []
+        for stage in ["event_extraction", "feature_extraction", "regulation_linking"]:
+            stage_results = dify.run_workflow_for_stage(text[:15000], stage, _os.path.basename(filePath))
+            all_results.extend(stage_results)
+            result["stages"][stage] = {
+                "status": "completed",
+                "item_count": len(stage_results),
+            }
+
+        deduped = _deduplicate_results(all_results)
+        jsonl = dify_results_to_jsonl(deduped)
+        result["stages"]["extract"] = {"status": "completed", "total_items": len(deduped)}
+
+        if dry_run:
+            statements = generate_cypher_from_dify_jsonl(jsonl, _os.path.basename(filePath), layer="all")
+            result["cypher_preview"] = statements[:10]
+            result["cypher_total"] = len(statements)
+            return {"success": True, "data": result}
+
+        # Stage 3: Import to Neo4j
+        statements = generate_cypher_from_dify_jsonl(jsonl, _os.path.basename(filePath), layer="all")
+        if statements:
+            from core.database import Neo4jClient
+            neo4j = Neo4jClient.from_env()
+            imported = 0
+            import_errors = 0
+            for stmt in statements:
+                if not stmt or not stmt.strip():
+                    continue
+                try:
+                    neo4j.execute_read(stmt, timeout_seconds=10.0)
+                    imported += 1
+                except Exception as e:
+                    import_errors += 1
+                    if import_errors <= 2:
+                        logger.warning("process-file import error: %s", e)
+            result["stages"]["import"] = {"status": "completed", "imported": imported, "errors": import_errors}
+
+        # Stage 4: Delete source file on success
+        if result["stages"].get("import", {}).get("errors", 0) == 0:
+            try:
+                _os.remove(filePath)
+                result["file_deleted"] = True
+            except OSError as e:
+                result["file_deleted"] = False
+                result["delete_error"] = str(e)
+        else:
+            result["file_deleted"] = False
+
+        result["status"] = "completed"
+        return {"success": True, "data": result}
+    except Exception as e:
+        logger.exception("process-file failed: %s", e)
+        result["status"] = "failed"
+        result["error"] = str(e)
+        return {"success": False, "data": result}
+
+
 @router.post("/crawl/run")
 async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
     """Trigger a crawl task with SSE streaming progress.
@@ -691,6 +795,9 @@ async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
         last_event = None
 
         try:
+            # Force development proxies and reverse proxies to flush the SSE
+            # response immediately instead of buffering until the first large chunk.
+            yield ": connected " + (" " * 2048) + "\n\n"
             while True:
                 # Check for client disconnect every 1s while waiting for events
                 try:
@@ -704,6 +811,7 @@ async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
                         except asyncio.CancelledError:
                             pass
                         return
+                    yield ": heartbeat\n\n"
                     continue
 
                 if kind == "done":
@@ -737,7 +845,8 @@ async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "Access-Control-Allow-Origin": "*",
         },

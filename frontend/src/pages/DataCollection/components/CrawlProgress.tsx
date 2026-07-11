@@ -1,62 +1,42 @@
-import { Alert, Progress, Statistic, Steps } from 'antd';
-import React, { useEffect, useRef } from 'react';
+import { Alert, Progress, Statistic } from 'antd';
+import React from 'react';
 import { useCrawlStore } from '../store/crawlStore';
-
-const STAGES = [
-  { key: 'parsing', title: '需求解析' },
-  { key: 'matching', title: '数据源匹配' },
-  { key: 'crawling', title: '数据采集' },
-  { key: 'assessing', title: '质量评估' },
-  { key: 'trigger_etl', title: 'ETL触发' },
-];
 
 const CrawlProgress: React.FC = () => {
   const progress = useCrawlStore((s) => s.progress);
   const stage = useCrawlStore((s) => s.stage);
   const stageMessage = useCrawlStore((s) => s.stageMessage);
-  const logs = useCrawlStore((s) => s.logs);
   const error = useCrawlStore((s) => s.error);
   const totalFilesDownloaded = useCrawlStore((s) => s.totalFilesDownloaded);
   const targetFiles = useCrawlStore((s) => s.targetFiles);
-  const logEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
-  const currentIndex = STAGES.findIndex((s) => s.key === stage);
-
-  const levelColor = (level: string) => {
-    if (level === 'error') return '#ff4d4f';
-    if (level === 'success') return '#52c41a';
-    if (level === 'warning') return '#faad14';
-    return 'var(--ant-color-text-secondary)';
-  };
+  const unlimitedMode = targetFiles === 0;
+  const fileProgress = targetFiles > 0
+    ? Math.min(100, Math.round((totalFilesDownloaded / targetFiles) * 100))
+    : Math.round(progress);
 
   return (
     <div>
-      <Steps
-        current={currentIndex >= 0 ? currentIndex : 0}
-        items={STAGES.map((item) => ({ title: item.title }))}
-        size="small"
-        style={{ marginBottom: 16 }}
-      />
-      <Progress percent={Math.round(progress)} size="small" style={{ marginBottom: 12 }} />
-      {stage === 'crawling' && (totalFilesDownloaded > 0 || targetFiles > 0) && (
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <Statistic
-            title={targetFiles > 0 ? '已采集 / 目标' : '已采集文件'}
-            value={targetFiles > 0 ? `${totalFilesDownloaded} / ${targetFiles}` : totalFilesDownloaded}
-            valueStyle={{ fontSize: 28, color: '#1890ff' }}
-          />
-          {targetFiles > 0 && (
-            <Progress
-              percent={Math.round((totalFilesDownloaded / Math.max(targetFiles, 1)) * 100)}
-              size="small"
-              style={{ marginTop: 12 }}
-            />
-          )}
-        </div>
+      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        <Statistic
+          title={targetFiles > 0 ? '已采集 / 目标' : '已采集文件'}
+          value={targetFiles > 0 ? `${totalFilesDownloaded} / ${targetFiles}` : totalFilesDownloaded}
+          valueStyle={{ fontSize: 28, color: '#1890ff' }}
+        />
+        <Progress
+          percent={fileProgress}
+          size="small"
+          status={error ? 'exception' : undefined}
+          style={{ marginTop: 12 }}
+        />
+      </div>
+      {stage === 'crawling' && unlimitedMode && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="当前为全量采集模式"
+          description="限制下载文件数为 0，本次会在所选时间范围内按最大页数继续抓取。"
+        />
       )}
       {stageMessage && (
         <Alert
@@ -66,27 +46,6 @@ const CrawlProgress: React.FC = () => {
           showIcon
         />
       )}
-      <div
-        style={{
-          background: '#1e1e1e',
-          color: '#d4d4d4',
-          fontFamily: 'Consolas, Monaco, monospace',
-          fontSize: 12,
-          padding: 12,
-          borderRadius: 6,
-          maxHeight: 240,
-          overflowY: 'auto',
-          lineHeight: 1.6,
-        }}
-      >
-        {logs.map((log, index) => (
-          <div key={index} style={{ color: levelColor(log.level) }}>
-            <span style={{ color: '#888', marginRight: 8 }}>[{log.time}]</span>
-            {log.message}
-          </div>
-        ))}
-        <div ref={logEndRef} />
-      </div>
     </div>
   );
 };

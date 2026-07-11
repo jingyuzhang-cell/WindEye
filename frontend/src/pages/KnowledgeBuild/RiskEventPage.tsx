@@ -248,6 +248,71 @@ const NODE_TYPE_COLORS: Record<string, string> = {
 };
 
 // ─── Component ───────────────────────────────────────────────────────
+const ProcessFileButton: React.FC<{ record: any }> = ({ record }) => {
+  const { message: msg } = App.useApp();
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+
+  if (done) return <Tag color="green">已完成</Tag>;
+  if (error) {
+    return (
+      <Tooltip title={error}>
+        <Button size="small" danger onClick={() => setError('')}>重试</Button>
+      </Tooltip>
+    );
+  }
+
+  const processFile = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ filePath: record.path, source: record.source });
+      const response = await apiFetch(`/api/v1/pipeline/process-file?${params}`, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.data?.error || data.message || '处理失败');
+      }
+      setDone(true);
+      msg.success(`${record.name} 处理完成${data.data?.file_deleted ? '并已清理' : ''}`);
+    } catch (err: any) {
+      setError(err.message || '网络错误');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button size="small" type="primary" icon={<PlayCircleOutlined />} loading={loading} onClick={processFile}>
+      执行下一步
+    </Button>
+  );
+};
+
+const formatCrawlTime = (value?: string) => {
+  if (!value || value === '-') return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.replace('T', ' ').split('.')[0];
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
+  return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}:${part('second')}`;
+};
+
+const formatFileSize = (size?: number) => {
+  const bytes = Number(size || 0);
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+};
+
 const RiskEventPage: React.FC = () => {
   const { message: msg } = App.useApp();
 
@@ -293,7 +358,7 @@ const RiskEventPage: React.FC = () => {
       sourceLabel: PIPELINE_SOURCE_LABELS[source] || source,
       name: file.name || file.fileName || file.originalName || '-',
       sizeDisplay: file.size_display || file.sizeDisplay || '-',
-      modifiedAt: file.modifiedAt || file.collectedAt || file.time || '-',
+      modifiedAt: file.collectedAt || file.collected_at || file.modifiedAt || file.modified_at || file.time || '-',
       path: file.path || file.filePath || '',
     }))
   ));
@@ -301,6 +366,7 @@ const RiskEventPage: React.FC = () => {
   const crawlRunning = useCrawlStore((s) => s.isRunning);
   const crawlResult = useCrawlStore((s) => s.result);
   const crawlCollectedFiles = useCrawlStore((s) => s.collectedFiles);
+  const crawlDateRange = useCrawlStore((s) => s.dateRange);
   const crawlMaxPages = useCrawlStore((s) => s.maxPages);
   const crawlMaxFiles = useCrawlStore((s) => s.maxFiles);
   const { startCrawl, cancelCrawl } = useCrawlSSE();
@@ -309,10 +375,12 @@ const RiskEventPage: React.FC = () => {
     : (((crawlResult as any)?.source_results || []).flatMap((item: any) => item.files || []))
   ).map((file: any, index: number) => ({
     key: `${file.source}-${file.filePath || file.savedName || file.fileName || index}`,
+    index: index + 1,
     source: file.source,
     sourceLabel: file.sourceLabel || CRAWL_SOURCE_LABELS[file.source] || file.source,
     name: file.fileName || file.savedName || '-',
-    sizeDisplay: file.sizeDisplay || file.size_display || `${file.sizeBytes || file.size || 0}B`,
+    sizeDisplay: file.sizeDisplay || file.size_display || formatFileSize(file.sizeBytes || file.size),
+    collectedAt: file.collectedAt || file.collected_at || file.modifiedAt || file.modified_at || '-',
   }));
 
   const handleStartCrawl = () => {
@@ -323,6 +391,8 @@ const RiskEventPage: React.FC = () => {
       sources,
       max_pages: crawlMaxPages,
       max_files: crawlMaxFiles,
+      date_start: crawlDateRange?.[0] || undefined,
+      date_end: crawlDateRange?.[1] || undefined,
     };
     const pipelineSources = sources
       .map((source) => CRAWL_SOURCE_TO_PIPELINE_SOURCE[source])
@@ -331,6 +401,7 @@ const RiskEventPage: React.FC = () => {
     setScannedFiles({});
     // Switch right panel to show crawl progress
     setActiveStage('data_import');
+    setImportTab('crawl');
     startCrawl(payload);
   };
 
@@ -1796,7 +1867,15 @@ const RiskEventPage: React.FC = () => {
                 size="small"
                 pagination={{ pageSize: 8, showSizeChanger: false }}
                 columns={[
+                  { title: '序号', dataIndex: 'index', key: 'index', width: 72 },
                   { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true, render: (name: string) => <Space><FilePdfOutlined style={{ color: '#f5222d' }} />{name}</Space> },
+                  {
+                    title: '爬取时间',
+                    dataIndex: 'collectedAt',
+                    key: 'collectedAt',
+                    width: 180,
+                    render: (value: string) => <span style={{ whiteSpace: 'nowrap' }}>{formatCrawlTime(value)}</span>,
+                  },
                   { title: '来源', dataIndex: 'sourceLabel', key: 'sourceLabel', width: 110, render: (source: string) => <Tag color="blue">{source}</Tag> },
                   { title: '大小', dataIndex: 'sizeDisplay', key: 'sizeDisplay', width: 100 },
                 ]}
@@ -1832,51 +1911,44 @@ const RiskEventPage: React.FC = () => {
                 </div>
               </Card>
             ) : scannedFileRows.length > 0 ? (
-              <>
-                <Table
-                  dataSource={scannedFileRows}
-                  rowKey="key"
-                  size="small"
-                  pagination={{ pageSize: 8, showSizeChanger: false }}
-                  columns={[
-                    { title: '序号', dataIndex: 'index', key: 'index', width: 72 },
-                    {
-                      title: '名称',
-                      dataIndex: 'name',
-                      key: 'name',
-                      ellipsis: true,
-                      render: (name: string, record: any) => (
-                        <Tooltip title={record.path || name}>
-                          <Space>
-                            <FilePdfOutlined style={{ color: '#f5222d' }} />
-                            <span>{name}</span>
-                          </Space>
-                        </Tooltip>
-                      ),
-                    },
-                    {
-                      title: '时间',
-                      dataIndex: 'modifiedAt',
-                      key: 'modifiedAt',
-                      width: 170,
-                      render: (value: string) => value ? value.replace('T', ' ') : '-',
-                    },
-                    { title: '来源', dataIndex: 'sourceLabel', key: 'sourceLabel', width: 120, render: (source: string) => <Tag color="blue">{source}</Tag> },
-                    { title: '大小', dataIndex: 'sizeDisplay', key: 'sizeDisplay', width: 100 },
-                  ]}
-                />
-                <div style={{ marginTop: 16, textAlign: 'center' }}>
-                  <Button
-                    type="primary"
-                    icon={<PlayCircleOutlined />}
-                    onClick={handleStartBuild}
-                    loading={pipelineRunning}
-                    disabled={selectedCrawlers.length === 0}
-                  >
-                    执行下一步
-                  </Button>
-                </div>
-              </>
+              <Table
+                dataSource={scannedFileRows}
+                rowKey="key"
+                size="small"
+                pagination={{ pageSize: 8, showSizeChanger: false }}
+                columns={[
+                  { title: '序号', dataIndex: 'index', key: 'index', width: 72 },
+                  {
+                    title: '名称',
+                    dataIndex: 'name',
+                    key: 'name',
+                    ellipsis: true,
+                    render: (name: string, record: any) => (
+                      <Tooltip title={record.path || name}>
+                        <Space>
+                          <FilePdfOutlined style={{ color: '#f5222d' }} />
+                          <span>{name}</span>
+                        </Space>
+                      </Tooltip>
+                    ),
+                  },
+                  {
+                    title: '爬取时间',
+                    dataIndex: 'modifiedAt',
+                    key: 'modifiedAt',
+                    width: 170,
+                    render: (value: string) => <span style={{ whiteSpace: 'nowrap' }}>{formatCrawlTime(value)}</span>,
+                  },
+                  { title: '来源', dataIndex: 'sourceLabel', key: 'sourceLabel', width: 120, render: (source: string) => <Tag color="blue">{source}</Tag> },
+                  { title: '大小', dataIndex: 'sizeDisplay', key: 'sizeDisplay', width: 100 },
+                  {
+                    title: '操作',
+                    key: 'action',
+                    width: 130,
+                    render: (_: any, record: any) => <ProcessFileButton record={record} />,
+                  },
+                ]}
+              />
             ) : (
               <Empty description={importTab === 'crawl' ? '请先在左侧“数据采集”标签页设置时间范围、页数和文件数，然后点击“开始采集”' : '尚未导入数据。请先上传PDF文件，或扫描本地北交所爬虫文件后点击【执行下一步】。'}>
                 <Space>

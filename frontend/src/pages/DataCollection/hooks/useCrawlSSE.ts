@@ -10,6 +10,13 @@ export function useCrawlSSE() {
       const controller = new AbortController();
       abortRef.current = controller;
       store.reset();
+      store.startTask('pending', payload.max_files ?? 0);
+      store.updateProgress({
+        stage: 'parsing',
+        progress: 0,
+        message: '正在连接采集任务...',
+      } as API.CrawlStageEvent);
+      store.addLog('info', '正在创建采集任务...');
 
       try {
         const response = await fetch('/api/v1/pipeline/crawl/run', {
@@ -55,7 +62,10 @@ export function useCrawlSSE() {
 
                 switch (currentEvent) {
                   case 'start':
-                    store.startTask(data.task_id, data.target_files || payload.max_files || 0);
+                    store.startTask(
+                      data.task_id,
+                      data.target_files ?? payload.max_files ?? 0,
+                    );
                     store.addLog('info', `Task started: ${data.task_id}`);
                     break;
                   case 'stage':

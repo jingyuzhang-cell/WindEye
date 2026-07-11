@@ -284,6 +284,7 @@ const KnowledgeBuild: React.FC = () => {
   const crawlDataType = useCrawlStore((s) => s.dataType);
   const crawlSources = useCrawlStore((s) => s.sources);
   const crawlKeywords = useCrawlStore((s) => s.keywords);
+  const crawlDateRange = useCrawlStore((s) => s.dateRange);
   const crawlMaxPages = useCrawlStore((s) => s.maxPages);
   const crawlMaxFiles = useCrawlStore((s) => s.maxFiles);
   const { startCrawl, cancelCrawl } = useCrawlSSE();
@@ -296,9 +297,12 @@ const KnowledgeBuild: React.FC = () => {
       keywords: crawlKeywords.length > 0 ? crawlKeywords : undefined,
       max_pages: crawlMaxPages,
       max_files: crawlMaxFiles,
+      date_start: crawlDateRange?.[0] || undefined,
+      date_end: crawlDateRange?.[1] || undefined,
     };
     // Switch right panel to show crawl progress
     setActiveStage('data_import');
+    setImportTab('crawl');
     startCrawl(payload);
   };
 

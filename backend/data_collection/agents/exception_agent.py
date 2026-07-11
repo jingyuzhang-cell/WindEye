@@ -57,6 +57,15 @@ class RetryHandler:
                     result["attempts"] = attempt
                     return result
 
+                if result is not None and not config.get("retry_empty_results", False):
+                    result["attempts"] = attempt
+                    result["empty_result"] = True
+                    logger.info(
+                        "[Attempt %d] Scraper returned no new files; treating the empty date range as completed",
+                        attempt,
+                    )
+                    return result
+
                 logger.warning("[Attempt %d] Scraper returned empty results, retrying...", attempt)
                 last_error = Exception("Empty results from scraper")
 

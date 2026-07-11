@@ -110,8 +110,8 @@ class CrawlOrchestrator:
                 data_type=DataType(template.get("data_type", "risk_event")),
                 sources=template.get("sources", []),
                 keywords=template.get("keywords", []),
-                date_start=template.get("date_start"),
-                date_end=template.get("date_end"),
+                date_start=req.date_start or template.get("date_start"),
+                date_end=req.date_end or template.get("date_end"),
                 max_pages=template.get("max_pages", 5),
                 max_files=req.max_files if hasattr(req, 'max_files') else 0,
             )

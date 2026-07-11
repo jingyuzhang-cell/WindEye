@@ -7,6 +7,7 @@ Files stay in place until a pipeline run successfully writes them to Neo4j.
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 # ── Pipeline stages in execution order ────────────────────────────────
@@ -122,11 +123,15 @@ def scan_source_files(source: str) -> list[dict[str, Any]]:
             continue
         if glob_ext != ".*" and not fname.lower().endswith(glob_ext):
             continue
+        mtime = os.path.getmtime(fpath)
+        collected_at = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
         files.append({
             "name": fname,
             "path": fpath,
             "size": os.path.getsize(fpath),
             "size_display": _format_size(os.path.getsize(fpath)),
+            "collected_at": collected_at,
+            "modified_at": collected_at,
         })
     return files
 

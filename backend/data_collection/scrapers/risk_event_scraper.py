@@ -183,12 +183,43 @@ def _count_downloaded_pdfs(save_dir: str) -> int:
     return len([f for f in os.listdir(save_dir) if f.lower().endswith(".pdf")]) if os.path.isdir(save_dir) else 0
 
 
+def _report_progress(cb, downloaded: int, target: int, save_dir: str, filename: str) -> None:
+    """Invoke progress callback if provided, for SSE streaming to frontend."""
+    if cb is None:
+        return
+    try:
+        file_path = os.path.join(save_dir, filename)
+        if not os.path.isfile(file_path):
+            file_path = os.path.join(save_dir, safe_pdf_name(filename))
+            filename = os.path.basename(file_path)
+        source = os.path.basename(os.path.normpath(save_dir))
+        size_bytes = os.path.getsize(file_path) if os.path.isfile(file_path) else 0
+        collected_at = (
+            datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
+            if os.path.isfile(file_path)
+            else datetime.now().isoformat()
+        )
+        cb({
+            "downloaded_count": downloaded,
+            "target_count": target or 0,
+            "file": {
+                "source": source,
+                "fileName": filename,
+                "filePath": file_path,
+                "sizeBytes": size_bytes,
+                "collectedAt": collected_at,
+            },
+        })
+    except Exception:
+        pass
+
+
 def _download_pdf_with_fallback(driver, pdf_url: str, save_dir: str, raw_title: str, referer: str = "") -> bool:
     target_name = safe_pdf_name(raw_title or pdf_url.split("/")[-1].split("?")[0])
     target_path = os.path.join(save_dir, target_name)
     if os.path.exists(target_path):
-        base, ext = os.path.splitext(target_name)
-        target_path = os.path.join(save_dir, f"{base}_{int(time.time() * 1000)}{ext}")
+        logger.info("Skip existing: %s", target_name)
+        return True  # Already collected — skip, not a new download
     cookies = {}
     try:
         cookies = {item["name"]: item["value"] for item in driver.get_cookies()}
@@ -212,17 +243,13 @@ def _scrape_sse(config: dict) -> dict:
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
 
-    if date_start or date_end:
-        logger.warning(
-            "SSE: date filtering requires website date picker interaction (not yet implemented). "
-            "All pages within max_pages=%s will be scraped.", max_pages,
-        )
-
     TYPE_MAP = {
         "股票交易异常波动和澄清": "13",
         "诉讼和仲裁": "26",
         "风险警示": "31",
     }
+
+    progress_cb = config.get("progress_callback")
 
     driver = create_driver(download_dir=save_dir)
     try:
@@ -231,6 +258,8 @@ def _scrape_sse(config: dict) -> dict:
         driver.get(url)
         main_window = driver.current_window_handle
         time.sleep(5)
+
+        _apply_date_filter(driver, "sse", date_start, date_end)
 
         logger.info("SSE: applying announcement category filters")
         for name, type_id in TYPE_MAP.items():
@@ -253,6 +282,7 @@ def _scrape_sse(config: dict) -> dict:
 
         time.sleep(3)
         rename_tasks: dict[str, str] = {}
+        downloaded_count = 0  # Only new files this session
 
         for page in range(1, max_pages + 1):
             logger.info("SSE: scraping page %d/%d", page, max_pages)
@@ -263,7 +293,7 @@ def _scrape_sse(config: dict) -> dict:
                 seen_urls: set[str] = set()
                 for a_elem in pdf_links:
                     if max_files > 0:
-                        if _count_downloaded_pdfs(save_dir) + len(rename_tasks) >= max_files:
+                        if downloaded_count + len(rename_tasks) >= max_files:
                             logger.info("SSE: reached max_files=%d, stopping", max_files)
                             break
                     pdf_url = a_elem.get_attribute("href")
@@ -272,8 +302,20 @@ def _scrape_sse(config: dict) -> dict:
                     raw_title = (a_elem.text or "").strip().replace("\n", "")
                     if not raw_title or "点击下载" in raw_title:
                         continue
+                    parent_text = ""
+                    try:
+                        parent_text = a_elem.find_element("xpath", "./ancestor::*[self::li or self::tr or self::dd][1]").text
+                    except Exception:
+                        parent_text = raw_title
+                    if not _date_in_range(parent_text, date_start, date_end):
+                        continue
                     seen_urls.add(pdf_url)
+                    # Skip if already collected
+                    if os.path.exists(os.path.join(save_dir, safe_pdf_name(raw_title))):
+                        continue
                     if _download_pdf_with_fallback(driver, pdf_url, save_dir, raw_title, referer=url):
+                        downloaded_count += 1
+                        _report_progress(progress_cb, downloaded_count, max_files, save_dir, raw_title + ".pdf")
                         continue
                     clean_title = safe_pdf_name(raw_title)
                     original_filename = pdf_url.split("/")[-1].split("?")[0]
@@ -304,9 +346,11 @@ def _scrape_sse(config: dict) -> dict:
                             os.rename(old_path, new_path)
                         except OSError:
                             pass
+                    downloaded_count += 1
+                    _report_progress(progress_cb, downloaded_count, max_files, save_dir, new_name)
                 rename_tasks.clear()
 
-                if max_files > 0 and _count_downloaded_pdfs(save_dir) >= max_files:
+                if max_files > 0 and downloaded_count >= max_files:
                     logger.info("SSE: reached max_files=%d, stopping pagination", max_files)
                     break
 
@@ -332,8 +376,7 @@ def _scrape_sse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    files = [f for f in os.listdir(save_dir) if f.endswith(".pdf")] if os.path.isdir(save_dir) else []
-    return {"source": source, "files_downloaded": len(files), "records": len(files), "save_dir": save_dir}
+    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
 
 
 def _scrape_szse(config: dict) -> dict:
@@ -345,6 +388,8 @@ def _scrape_szse(config: dict) -> dict:
     date_end = config.get("date_end", "")
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
+    progress_cb = config.get("progress_callback")
+    downloaded_count = 0  # Only new files this session
 
     driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", False)))
     try:
@@ -364,7 +409,7 @@ def _scrape_szse(config: dict) -> dict:
                 rows = driver.find_elements("xpath", "//tbody/tr")
                 for row in rows:
                     if max_files > 0:
-                        if _count_downloaded_pdfs(save_dir) >= max_files:
+                        if downloaded_count >= max_files:
                             logger.info("SZSE: reached max_files=%s, stopping on this page", max_files)
                             break
                     try:
@@ -376,7 +421,12 @@ def _scrape_szse(config: dict) -> dict:
                         clean_title = safe_pdf_name(raw_title)
                         encode_open = a_elem.get_attribute("encode-open")
                         href = a_elem.get_attribute("href")
+                        # Skip if already collected
+                        if os.path.exists(os.path.join(save_dir, safe_pdf_name(raw_title))):
+                            continue
                         if href and _download_pdf_with_fallback(driver, href, save_dir, raw_title, referer=url):
+                            downloaded_count += 1
+                            _report_progress(progress_cb, downloaded_count, max_files, save_dir, raw_title + ".pdf")
                             continue
                         if encode_open:
                             original_filename = encode_open.split("/")[-1]
@@ -413,9 +463,8 @@ def _scrape_szse(config: dict) -> dict:
 
                 # Per-page check: stop pagination if max_files already reached
                 if max_files > 0:
-                    current_count = _count_downloaded_pdfs(save_dir)
-                    if current_count >= max_files:
-                        logger.info("SZSE: reached max_files=%s (current=%s), stopping", max_files, current_count)
+                    if downloaded_count >= max_files:
+                        logger.info("SZSE: reached max_files=%s (current=%s), stopping", max_files, downloaded_count)
                         break
 
                 if page < max_pages:
@@ -440,8 +489,7 @@ def _scrape_szse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    files = [f for f in os.listdir(save_dir) if f.endswith(".pdf")] if os.path.isdir(save_dir) else []
-    return {"source": source, "files_downloaded": len(files), "records": len(files), "save_dir": save_dir}
+    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
 
 
 def _scrape_bse(config: dict) -> dict:
@@ -453,6 +501,8 @@ def _scrape_bse(config: dict) -> dict:
     date_end = config.get("date_end", "")
     save_dir = os.path.join(DATA_DIR, "risk_events", source)
     os.makedirs(save_dir, exist_ok=True)
+    progress_cb = config.get("progress_callback")
+    downloaded_count = 0  # Only new files this session
 
     driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", False)))
     try:
@@ -482,7 +532,7 @@ def _scrape_bse(config: dict) -> dict:
                 pdf_links = driver.find_elements("xpath", "//a[contains(@href, '.pdf')]")
                 for a_elem in pdf_links:
                     if max_files > 0:
-                        if _count_downloaded_pdfs(save_dir) >= max_files:
+                        if downloaded_count >= max_files:
                             logger.info("BSE: reached max_files=%s, stopping on this page", max_files)
                             break
                     try:
@@ -498,7 +548,12 @@ def _scrape_bse(config: dict) -> dict:
                             continue
                         clean_title = safe_pdf_name(raw_title.strip().replace("\n", ""))
                         href = a_elem.get_attribute("href")
+                        # Skip if already collected
+                        if os.path.exists(os.path.join(save_dir, safe_pdf_name(raw_title))):
+                            continue
                         if href and _download_pdf_with_fallback(driver, href, save_dir, raw_title, referer=url):
+                            downloaded_count += 1
+                            _report_progress(progress_cb, downloaded_count, max_files, save_dir, raw_title + ".pdf")
                             continue
                         if href:
                             original_filename = href.split("/")[-1].split("?")[0]
@@ -531,21 +586,23 @@ def _scrape_bse(config: dict) -> dict:
                             os.rename(old_path, new_path)
                         except OSError:
                             pass
+                    downloaded_count += 1
+                    _report_progress(progress_cb, downloaded_count, max_files, save_dir, new_name)
                 rename_tasks.clear()
 
                 # Per-page check: stop pagination if max_files already reached
                 if max_files > 0:
-                    current_count = _count_downloaded_pdfs(save_dir)
-                    if current_count >= max_files:
-                        logger.info("BSE: reached max_files=%s (current=%s), stopping", max_files, current_count)
+                    if downloaded_count >= max_files:
+                        logger.info("BSE: reached max_files=%s (current=%s), stopping", max_files, downloaded_count)
                         break
 
                 if page < max_pages:
                     try:
                         candidates = [
+                            ("a.next", "//a[@class='next']"),
+                            ("a.lastpage to go to last", "//a[@class='lastpage']"),
                             ("pagination next link", "//a[contains(text(), '下一页') or contains(text(), '下页')]"),
-                            ("pagination li.next a", "//li[contains(@class, 'next')]//a"),
-                            ("generic next button", "//div[contains(@class, 'pagination')]//a[last()]"),
+                            ("generic a.next class", "//a[contains(@class, 'next')]"),
                         ]
                         next_btn, _, _ = find_with_fallback(driver, candidates, timeout=3)
                         if next_btn is None:
@@ -562,8 +619,7 @@ def _scrape_bse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    files = [f for f in os.listdir(save_dir) if f.endswith(".pdf")] if os.path.isdir(save_dir) else []
-    return {"source": source, "files_downloaded": len(files), "records": len(files), "save_dir": save_dir}
+    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
 
 
 def run_risk_event_scraper(config: dict) -> dict:

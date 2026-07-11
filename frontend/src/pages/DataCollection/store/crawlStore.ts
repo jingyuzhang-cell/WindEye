@@ -113,19 +113,23 @@ export const useCrawlStore = create<CrawlState>((set) => ({
       ].slice(0, 100),
     })),
   recordCollectedFile: (data) =>
-    set((state) => ({
-      progress: data.progress ?? state.progress,
-      stage: data.stage ?? state.stage,
-      stageMessage: data.message ?? state.stageMessage,
-      totalFilesDownloaded: data.downloaded_count ?? state.totalFilesDownloaded,
-      sourceDownloadedCounts: {
+    set((state) => {
+      const collectedFile = data.file ? { ...data.file, source: data.file.source || data.source } : undefined;
+      const sourceDownloadedCounts = {
         ...state.sourceDownloadedCounts,
         [data.source]: data.downloaded_count ?? state.sourceDownloadedCounts[data.source] ?? 0,
-      },
-      collectedFiles: data.file && !state.collectedFiles.some((item) => item.filePath === data.file?.filePath)
-        ? [...state.collectedFiles, data.file]
-        : state.collectedFiles,
-    })),
+      };
+      return {
+        progress: data.progress ?? state.progress,
+        stage: data.stage ?? state.stage,
+        stageMessage: data.message ?? state.stageMessage,
+        totalFilesDownloaded: Object.values(sourceDownloadedCounts).reduce((sum, count) => sum + count, 0),
+        sourceDownloadedCounts,
+        collectedFiles: collectedFile && !state.collectedFiles.some((item) => item.filePath === collectedFile.filePath)
+          ? [...state.collectedFiles, collectedFile]
+          : state.collectedFiles,
+      };
+    }),
   addSourceResult: (result) =>
     set((state) => {
       const source = result.source || '';
