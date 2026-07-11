@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import re
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any
 
 from dra_ma.reporting.word_docx_skill import WordDocxSkillGuide
 
@@ -25,12 +25,7 @@ URGENCY_LABELS = {
 
 
 class DocxExporter:
-    """Generate a real .docx report using the local word-docx skill guide.
-
-    The skill at backend/dra_ma/skills/word-docx is an instruction guide rather
-    than executable code. This exporter is the concrete implementation of those
-    rules: named styles, explicit page geometry, real Word tables, no HTML-as-DOC.
-    """
+    """Generate a real .docx report with the WindEye governance template."""
 
     def __init__(self, skill: WordDocxSkillGuide | None = None) -> None:
         self.skill = skill or WordDocxSkillGuide.load()
@@ -137,10 +132,7 @@ class DocxExporter:
             ("WindEyeBody", 10.5, "334155", False, 0, 8),
             ("WindEyeCaption", 9, "64748b", False, 2, 6),
         ]:
-            if name in styles:
-                style = styles[name]
-            else:
-                style = styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+            style = styles[name] if name in styles else styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
             style.font.name = "Microsoft YaHei"
             style._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
             style.font.size = Pt(size)
@@ -169,8 +161,6 @@ class DocxExporter:
         self._format_table(table, [1600, 7200])
         for label, value in rows:
             cells = table.add_row().cells
-            cells[0].text = label
-            cells[1].text = value
             self._shade_cell(cells[0], "f1f5f9")
             self._set_cell_text(cells[0], label, bold=True)
             self._set_cell_text(cells[1], value)
@@ -179,9 +169,7 @@ class DocxExporter:
         doc.add_paragraph(title, style="WindEyeHeading1")
 
     def _add_paragraph(self, doc: Any, text: Any) -> None:
-        text = _clean_text(text)
-        if not text:
-            text = "暂无。"
+        text = _clean_text(text) or "暂无。"
         for part in _split_paragraphs(text):
             doc.add_paragraph(part, style="WindEyeBody")
 
@@ -190,10 +178,10 @@ class DocxExporter:
             ["基础分", _fmt_score(scores.get("base_overall"))],
             ["最终分", _fmt_score(scores.get("final_overall") or scores.get("overall"))],
             ["风险等级", RISK_LABELS.get(str(scores.get("level", "")), str(scores.get("level", "-")))],
-            ["LLM调整", _fmt_score(scores.get("llm_adjustment"))],
+            ["LLM 调整", _fmt_score(scores.get("llm_adjustment"))],
             ["调整原因", _clean_text(scores.get("llm_adjustment_reason") or "-")],
         ]
-        table = self._simple_table(doc, ["指标", "值"], rows, [1800, 7000])
+        self._simple_table(doc, ["指标", "值"], rows, [1800, 7000])
 
         details = scores.get("scores") or []
         if details:

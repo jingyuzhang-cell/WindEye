@@ -34,11 +34,15 @@ interface CrawlState {
   result: API.CrawlCompleteEvent | null;
   error: string | null;
   totalFilesDownloaded: number;
+  targetFiles: number;
+  collectedFiles: API.CrawlCollectedFile[];
+  sourceDownloadedCounts: Record<string, number>;
 
-  startTask: (taskId: string) => void;
+  startTask: (taskId: string, targetFiles?: number) => void;
   updateProgress: (data: API.CrawlStageEvent) => void;
   addLog: (level: string, message: string) => void;
-  addSourceResult: (filesDownloaded: number) => void;
+  recordCollectedFile: (data: API.CrawlFileCollectedEvent) => void;
+  addSourceResult: (result: { source?: string; files_downloaded?: number }) => void;
   completeTask: (result: API.CrawlCompleteEvent) => void;
   failTask: (error: string) => void;
   reset: () => void;
@@ -50,7 +54,7 @@ export const useCrawlStore = create<CrawlState>((set) => ({
 
   dataType: 'risk_event',
   setDataType: (dataType) => set({ dataType }),
-  sources: [],
+  sources: ['bse'],
   setSources: (sources) => set({ sources }),
   dateRange: [null, null],
   setDateRange: (dateRange) => set({ dateRange }),
@@ -78,9 +82,23 @@ export const useCrawlStore = create<CrawlState>((set) => ({
   result: null,
   error: null,
   totalFilesDownloaded: 0,
+  targetFiles: 0,
+  collectedFiles: [],
+  sourceDownloadedCounts: {},
 
-  startTask: (taskId) =>
-    set({ taskId, isRunning: true, progress: 0, logs: [], result: null, error: null, totalFilesDownloaded: 0 }),
+  startTask: (taskId, targetFiles = 0) =>
+    set({
+      taskId,
+      isRunning: true,
+      progress: 0,
+      logs: [],
+      result: null,
+      error: null,
+      totalFilesDownloaded: 0,
+      targetFiles,
+      collectedFiles: [],
+      sourceDownloadedCounts: {},
+    }),
   updateProgress: (data) =>
     set((state) => ({
       progress: data.progress ?? state.progress,
@@ -94,16 +112,42 @@ export const useCrawlStore = create<CrawlState>((set) => ({
         ...state.logs,
       ].slice(0, 100),
     })),
-  addSourceResult: (filesDownloaded) =>
+  recordCollectedFile: (data) =>
     set((state) => ({
-      totalFilesDownloaded: state.totalFilesDownloaded + filesDownloaded,
+      progress: data.progress ?? state.progress,
+      stage: data.stage ?? state.stage,
+      stageMessage: data.message ?? state.stageMessage,
+      totalFilesDownloaded: data.downloaded_count ?? state.totalFilesDownloaded,
+      sourceDownloadedCounts: {
+        ...state.sourceDownloadedCounts,
+        [data.source]: data.downloaded_count ?? state.sourceDownloadedCounts[data.source] ?? 0,
+      },
+      collectedFiles: data.file && !state.collectedFiles.some((item) => item.filePath === data.file?.filePath)
+        ? [...state.collectedFiles, data.file]
+        : state.collectedFiles,
     })),
+  addSourceResult: (result) =>
+    set((state) => {
+      const source = result.source || '';
+      const nextCounts = source
+        ? {
+            ...state.sourceDownloadedCounts,
+            [source]: Math.max(state.sourceDownloadedCounts[source] || 0, result.files_downloaded || 0),
+          }
+        : state.sourceDownloadedCounts;
+      const totalFilesDownloaded = Object.values(nextCounts).reduce((sum, count) => sum + count, 0);
+      return {
+        sourceDownloadedCounts: nextCounts,
+        totalFilesDownloaded,
+      };
+    }),
   completeTask: (result) =>
     set({ result, isRunning: false, progress: 100, stage: 'completed' }),
   failTask: (error) => set({ error, isRunning: false, stage: 'failed' }),
   reset: () =>
     set({
       taskId: null, isRunning: false, progress: 0, stage: '', stageMessage: '',
-      logs: [], result: null, error: null,
+      sources: ['bse'],
+      logs: [], result: null, error: null, totalFilesDownloaded: 0, targetFiles: 0, collectedFiles: [], sourceDownloadedCounts: {},
     }),
 }));

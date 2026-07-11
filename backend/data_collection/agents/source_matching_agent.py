@@ -8,8 +8,6 @@ class SourceMatcher:
 
     SOURCE_CAPABILITIES = {
         "risk_event": {
-            "sse": {"keywords": True, "date_range": True, "max_pages": 50, "label": "上交所风险事件"},
-            "szse": {"keywords": True, "date_range": True, "max_pages": 50, "label": "深交所自律监管措施"},
             "bse": {"keywords": True, "date_range": True, "max_pages": 50, "label": "北交所纪律处分"},
         },
         "risk_sentiment": {
@@ -36,6 +34,7 @@ class SourceMatcher:
                 scraper_configs[src] = {
                     "source": src,
                     "data_type": data_type,
+                    "headless": True,
                     "keywords": parsed_requirements.get("keywords", []),
                     "date_start": parsed_requirements.get("date_start"),
                     "date_end": parsed_requirements.get("date_end"),

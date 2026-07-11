@@ -88,3 +88,9 @@ frontend/.npm-cache/
 # local run artifacts
 frontend_run/
 backend/kg_outputs/
+backend/report_outputs/
+tests/output/
+backend/.env.bak*
+backend/_tmp_import_check.py
+.mysql-data/
+.mysql-windeye.ini

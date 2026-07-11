@@ -26,11 +26,14 @@ def test_auth_enforce_rejects_missing_token_before_database_access():
     from main import app
 
     previous = settings.AUTH_MODE
+    previous_enabled = settings.AUTH_ENABLED
+    settings.AUTH_ENABLED = True
     settings.AUTH_MODE = "enforce"
     try:
         response = TestClient(app).get("/api/v1/admin/users")
     finally:
         settings.AUTH_MODE = previous
+        settings.AUTH_ENABLED = previous_enabled
 
     assert response.status_code == 401
     assert response.json()["code"] == 401

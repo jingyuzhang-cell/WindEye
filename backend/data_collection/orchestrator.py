@@ -3,7 +3,6 @@
 Integrates 4 specialized modules for intelligent web crawling.
 Yields SSE events for real-time progress streaming.
 Supports 3 modes: QUICK (no LLM), COMPLEX (LLM parsing), TEMPLATE (predefined).
-Supports DEMO_MODE for testing without Selenium WebDrivers.
 """
 
 from __future__ import annotations
@@ -11,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator
@@ -21,7 +19,7 @@ from data_collection.agents.exception_agent import RetryHandler
 from data_collection.agents.quality_agent import QualityAssessor
 from data_collection.agents.requirement_agent import RequirementParser
 from data_collection.agents.source_matching_agent import SourceMatcher
-from data_collection.scrapers import DEMO_SCRAPER_REGISTRY, SCRAPER_REGISTRY
+from data_collection.scrapers import SCRAPER_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ CRAWL_TEMPLATES = {
         "label": "诉讼仲裁事件",
         "mode": "quick",
         "data_type": "risk_event",
-        "sources": ["sse", "szse", "bse"],
+        "sources": ["bse"],
         "keywords": ["诉讼", "仲裁", "纠纷"],
         "max_pages": 3,
     },
@@ -40,7 +38,7 @@ CRAWL_TEMPLATES = {
         "label": "违规处罚事件",
         "mode": "quick",
         "data_type": "risk_event",
-        "sources": ["sse", "szse", "bse"],
+        "sources": ["bse"],
         "keywords": ["违规", "处罚", "监管函", "警示函"],
         "max_pages": 5,
     },
@@ -49,7 +47,7 @@ CRAWL_TEMPLATES = {
         "label": "财务造假事件",
         "mode": "quick",
         "data_type": "risk_event",
-        "sources": ["sse", "szse", "bse"],
+        "sources": ["bse"],
         "keywords": ["财务造假", "信息披露违规", "虚增收入", "利润造假"],
         "max_pages": 5,
     },
@@ -58,7 +56,7 @@ CRAWL_TEMPLATES = {
         "label": "高管违规事件",
         "mode": "quick",
         "data_type": "risk_event",
-        "sources": ["sse", "szse", "bse"],
+        "sources": ["bse"],
         "keywords": ["高管", "违规", "减持", "内幕交易"],
         "max_pages": 5,
     },
@@ -76,16 +74,12 @@ CRAWL_TEMPLATES = {
 class CrawlOrchestrator:
     """Orchestration for intelligent web crawling with SSE streaming."""
 
-    def __init__(self, demo_mode: bool | None = None):
-        if demo_mode is None:
-            demo_mode = os.getenv("CRAWL_DEMO_MODE", "true").lower() == "true"
-        self.demo_mode = demo_mode
+    def __init__(self):
         self.req_parser = RequirementParser()
         self.source_matcher = SourceMatcher()
         self.quality_assessor = QualityAssessor()
         self.retry_handler = RetryHandler()
-        mode_label = "DEMO (mock data, no WebDriver)" if self.demo_mode else "REAL (Chrome/Edge WebDriver)"
-        logger.info("CrawlOrchestrator initialized in %s mode", mode_label)
+        logger.info("CrawlOrchestrator initialized in REAL (Chrome/Edge WebDriver) mode")
 
     @staticmethod
     def get_templates() -> list[dict]:
@@ -95,9 +89,9 @@ class CrawlOrchestrator:
         """Execute crawl pipeline, yielding SSE events."""
         task_id = f"crawl_{uuid.uuid4().hex[:12]}"
         started_at = datetime.now(timezone.utc).isoformat()
-        registry = DEMO_SCRAPER_REGISTRY if self.demo_mode else SCRAPER_REGISTRY
+        loop = asyncio.get_running_loop()
 
-        yield {"event": "start", "data": {"task_id": task_id, "mode": req.mode.value, "started_at": started_at, "demo_mode": self.demo_mode}}
+        yield {"event": "start", "data": {"task_id": task_id, "mode": req.mode.value, "started_at": started_at, "target_files": req.max_files}}
 
         # Stage 1: Requirement Parsing
         await asyncio.sleep(0.3)
@@ -144,7 +138,7 @@ class CrawlOrchestrator:
         yield {"event": "stage", "data": {"stage": "matching", "progress": 30, "message": f"匹配到 {matched['total_sources']} 个数据源"}}
 
         # Stage 3: Scraper Execution
-        scraper_fn = registry.get(matched["data_type"])
+        scraper_fn = SCRAPER_REGISTRY.get(matched["data_type"])
         if not scraper_fn:
             yield {"event": "error", "data": {"message": f"Unknown data type: {matched['data_type']}"}}
             return
@@ -155,12 +149,45 @@ class CrawlOrchestrator:
             progress = 30 + int(50 * (i + 1) / max(total_sources, 1))
             await asyncio.sleep(0.3)
             yield {"event": "stage", "data": {"stage": "crawling", "progress": progress, "message": f"爬取中 [{i+1}/{total_sources}]: {src_key}", "source": src_key}}
+            progress_queue: asyncio.Queue[dict] = asyncio.Queue()
+            run_config = dict(src_config)
+
+            def _progress_callback(payload: dict) -> None:
+                loop.call_soon_threadsafe(progress_queue.put_nowait, payload)
+
+            run_config["progress_callback"] = _progress_callback
             try:
-                if self.demo_mode:
-                    result = scraper_fn(src_config)
-                    await asyncio.sleep(0.5)
-                else:
-                    result = await self.retry_handler.execute_with_retry(scraper_fn, src_config)
+                task = asyncio.create_task(self.retry_handler.execute_with_retry(scraper_fn, run_config))
+                while True:
+                    if task.done() and progress_queue.empty():
+                        break
+                    try:
+                        file_event = await asyncio.wait_for(progress_queue.get(), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        continue
+
+                    downloaded = int(file_event.get("downloaded_count", 0) or 0)
+                    target = int(file_event.get("target_count", 0) or 0)
+                    if target > 0:
+                        progress_ratio = min(downloaded / max(target, 1), 1.0)
+                        file_progress = progress + int((80 - progress) * progress_ratio)
+                        message = f"已采集 {downloaded} / {target}"
+                    else:
+                        file_progress = progress
+                        message = f"已采集 {downloaded} 个文件"
+                    yield {
+                        "event": "file_collected",
+                        "data": {
+                            "stage": "crawling",
+                            "progress": file_progress,
+                            "message": message,
+                            "source": src_key,
+                            "downloaded_count": downloaded,
+                            "target_count": target,
+                            "file": file_event.get("file"),
+                        },
+                    }
+                result = await task
             except Exception as e:
                 result = {"source": src_key, "files_downloaded": 0, "records": 0, "save_dir": "", "error": str(e)}
             all_results.append(result)
@@ -190,7 +217,6 @@ class CrawlOrchestrator:
             "started_at": started_at,
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "mode": req.mode.value,
-            "demo_mode": self.demo_mode,
             "total_sources": total_sources,
             "total_files_downloaded": sum(r.get("files_downloaded", 0) for r in all_results),
             "total_records": sum(r.get("records", 0) for r in all_results),

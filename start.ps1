@@ -1,12 +1,21 @@
-# WindEye 一键启动脚本
+# WindEye one-click development launcher
 # Usage: .\start.ps1
-# 启动顺序：数据库服务（如已安装为 Windows 服务） -> 后端 -> 前端
-# 仅占用 8002 (backend) 和 8001 (frontend) 端口，不影响其他项目进程
+#
+# Start order:
+#   1. Check optional database services
+#   2. Release WindEye development ports
+#   3. Start backend on http://localhost:8002
+#   4. Start frontend on http://localhost:8001
 
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+$backendPort = 8002
+$frontendPort = 8001
+
 Write-Host "=== WindEye Dev Server ===" -ForegroundColor Cyan
+Write-Host "Project root: $root" -ForegroundColor DarkGray
+Write-Host ""
 
 function Test-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -14,29 +23,64 @@ function Test-Admin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# ── 辅助函数: 检查并释放指定端口 ──
-function Free-Port {
-    param([int]$Port, [string]$Label)
-    $conn = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($conn) {
-        $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
-        Write-Host "  Port $Port is in use by $($proc.ProcessName) (PID $($conn.OwningProcess)), stopping..." -ForegroundColor Yellow
-        $proc | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
-        Write-Host "  Port $Port released" -ForegroundColor Gray
+function Test-CommandExists {
+    param([Parameter(Mandatory = $true)][string]$Command)
+    return $null -ne (Get-Command $Command -ErrorAction SilentlyContinue)
+}
+
+function Stop-PortProcess {
+    param(
+        [Parameter(Mandatory = $true)][int]$Port,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    $connections = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
+        Where-Object { $_.OwningProcess -and $_.OwningProcess -ne 0 }
+
+    if (-not $connections) {
+        Write-Host "  $Label port $Port is free" -ForegroundColor Gray
+        return
+    }
+
+    $processIds = $connections |
+        Select-Object -ExpandProperty OwningProcess -Unique
+
+    foreach ($processId in $processIds) {
+        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+        if (-not $process) {
+            continue
+        }
+
+        Write-Host "  Port $Port is in use by $($process.ProcessName) (PID $processId); stopping it..." -ForegroundColor Yellow
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    }
+
+    Start-Sleep -Seconds 1
+
+    $stillListening = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+
+    if ($stillListening) {
+        Write-Host "  Port $Port is still busy. Please close PID $($stillListening.OwningProcess) manually." -ForegroundColor Red
     } else {
-        Write-Host "  Port $Port is free" -ForegroundColor Gray
+        Write-Host "  Port $Port released" -ForegroundColor Gray
     }
 }
 
 function Show-Dependency {
-    param([int]$Port, [string]$Label, [bool]$Required)
+    param(
+        [Parameter(Mandatory = $true)][int]$Port,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [Parameter(Mandatory = $true)][bool]$Required
+    )
+
     $connection = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
         Select-Object -First 1
+
     if ($connection) {
         Write-Host "  $Label is listening on port $Port" -ForegroundColor Green
     } elseif ($Required) {
-        Write-Host "  $Label is not listening on port $Port (required)" -ForegroundColor Red
+        Write-Host "  $Label is not listening on port $Port (required for graph features)" -ForegroundColor Red
     } else {
         Write-Host "  $Label is not listening on port $Port (optional)" -ForegroundColor DarkYellow
     }
@@ -44,10 +88,9 @@ function Show-Dependency {
 
 function Start-DependencyService {
     param(
-        [string]$Label,
-        [string[]]$NamePatterns,
-        [int]$Port,
-        [bool]$Required
+        [Parameter(Mandatory = $true)][string]$Label,
+        [Parameter(Mandatory = $true)][string[]]$NamePatterns,
+        [Parameter(Mandatory = $true)][bool]$Required
     )
 
     $services = Get-Service -ErrorAction SilentlyContinue | Where-Object {
@@ -59,8 +102,8 @@ function Start-DependencyService {
     $service = $services | Select-Object -First 1
 
     if (-not $service) {
-        $level = if ($Required) { "Red" } else { "DarkYellow" }
-        Write-Host "  $Label service not found; install it or start it manually if needed" -ForegroundColor $level
+        $color = if ($Required) { "Red" } else { "DarkYellow" }
+        Write-Host "  $Label service was not found. Start it manually if this project needs it." -ForegroundColor $color
         return
     }
 
@@ -70,7 +113,7 @@ function Start-DependencyService {
     }
 
     if (-not (Test-Admin)) {
-        Write-Host "  $Label service '$($service.Name)' is $($service.Status); run PowerShell as Administrator to auto-start it" -ForegroundColor Yellow
+        Write-Host "  $Label service '$($service.Name)' is $($service.Status). Run PowerShell as Administrator to auto-start it." -ForegroundColor Yellow
         return
     }
 
@@ -79,6 +122,7 @@ function Start-DependencyService {
         Start-Service -Name $service.Name -ErrorAction Stop
         Start-Sleep -Seconds 2
         $service.Refresh()
+
         if ($service.Status -eq "Running") {
             Write-Host "  $Label service started" -ForegroundColor Green
         } else {
@@ -89,47 +133,104 @@ function Start-DependencyService {
     }
 }
 
-# ── 1. 启动数据库服务（如已注册 Windows 服务） ──
-Write-Host "[1/5] Starting database services..." -ForegroundColor Yellow
-Start-DependencyService -Label "Neo4j" -NamePatterns @("neo4j*") -Port 7687 -Required $true
-Start-DependencyService -Label "MySQL" -NamePatterns @("mysql*") -Port 3306 -Required $false
-Start-DependencyService -Label "Redis" -NamePatterns @("redis*") -Port 6379 -Required $false
+function Assert-Directory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
 
-# ── 2. 仅释放目标端口，不影响其他进程 ──
-Write-Host "[2/5] Checking ports..." -ForegroundColor Yellow
-Free-Port -Port 8002 -Label "Backend"
-Free-Port -Port 8001 -Label "Frontend"
-Write-Host "  Dependency status:" -ForegroundColor Gray
-Show-Dependency -Port 7687 -Label "Neo4j" -Required $true
-Show-Dependency -Port 3306 -Label "MySQL" -Required $false
-Show-Dependency -Port 6379 -Label "Redis" -Required $false
-
-# ── 3. 启动后端 ──
-Write-Host "[3/5] Starting backend (port 8002)..." -ForegroundColor Green
-$backendDir = Join-Path $root "backend"
-$venvPython = Join-Path $backendDir "venv\Scripts\python.exe"
-$pythonCommand = if (Test-Path $venvPython) { "'$venvPython'" } else { "python" }
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$backendDir'; Write-Host 'Backend: http://localhost:8002' -ForegroundColor Green; & $pythonCommand -m uvicorn main:app --host 0.0.0.0 --port 8002 --reload"
-
-# ── 4. 启动前端 (使用 PORT 环境变量指定端口，避免默认 8000 冲突) ──
-Write-Host "[4/5] Starting frontend (port 8001)..." -ForegroundColor Green
-$frontendDir = Join-Path $root "frontend"
-$frontendRunDir = Join-Path $root "frontend_run"
-if ((Test-Path (Join-Path $frontendRunDir "node_modules")) -and -not (Test-Path (Join-Path $frontendDir "node_modules"))) {
-    $frontendDir = $frontendRunDir
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        throw "$Label directory not found: $Path"
+    }
 }
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$frontendDir'; `$env:PORT = '8001'; `$env:WINDEYE_API_TARGET = 'http://127.0.0.1:8002'; Write-Host 'Frontend: http://localhost:8001' -ForegroundColor Green; npm run dev"
 
-Write-Host "[5/5] Waiting for services..." -ForegroundColor Yellow
-Write-Host ""
-Write-Host "=== Done ===" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:8001" -ForegroundColor Cyan
-Write-Host "Backend:  http://localhost:8002" -ForegroundColor Cyan
-Write-Host "API Docs: http://localhost:8002/docs" -ForegroundColor Cyan
-Write-Host ""
+function Start-PowerShellWindow {
+    param(
+        [Parameter(Mandatory = $true)][string]$Title,
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)][string]$Command
+    )
 
-# 可选: 检查前端 proxy 配置
-$proxyConfig = Join-Path $root "frontend\config\proxy.ts"
-if (Test-Path $proxyConfig) {
-    Write-Host "Proxy config found — /api/* requests will be forwarded to backend" -ForegroundColor Gray
+    Start-Process powershell.exe -WorkingDirectory $WorkingDirectory -ArgumentList @(
+        "-NoExit",
+        "-ExecutionPolicy", "Bypass",
+        "-Command",
+        "`$Host.UI.RawUI.WindowTitle = '$Title'; $Command"
+    )
+}
+
+try {
+    $backendDir = Join-Path $root "backend"
+    $frontendDir = Join-Path $root "frontend"
+
+    Assert-Directory -Path $backendDir -Label "Backend"
+    Assert-Directory -Path $frontendDir -Label "Frontend"
+
+    Write-Host "[1/5] Checking database services..." -ForegroundColor Yellow
+    Start-DependencyService -Label "Neo4j" -NamePatterns @("neo4j*") -Required $true
+    Start-DependencyService -Label "MySQL" -NamePatterns @("mysql*") -Required $false
+    Start-DependencyService -Label "Redis" -NamePatterns @("redis*") -Required $false
+
+    Write-Host "[2/5] Checking ports..." -ForegroundColor Yellow
+    Stop-PortProcess -Port $backendPort -Label "Backend"
+    Stop-PortProcess -Port $frontendPort -Label "Frontend"
+
+    Write-Host "  Dependency status:" -ForegroundColor Gray
+    Show-Dependency -Port 7687 -Label "Neo4j" -Required $true
+    Show-Dependency -Port 3306 -Label "MySQL" -Required $false
+    Show-Dependency -Port 6379 -Label "Redis" -Required $false
+
+    Write-Host "[3/5] Starting backend (port $backendPort)..." -ForegroundColor Green
+    $venvPython = Join-Path $backendDir "venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+        $pythonCommand = "& '$venvPython'"
+    } elseif (Test-CommandExists "python") {
+        $pythonCommand = "python"
+    } elseif (Test-CommandExists "py") {
+        $pythonCommand = "py"
+    } else {
+        throw "Python was not found. Install Python or create backend\venv first."
+    }
+
+    $backendCommand = @"
+Write-Host 'Backend: http://localhost:$backendPort' -ForegroundColor Green;
+$pythonCommand -m uvicorn main:app --host 0.0.0.0 --port $backendPort --reload
+"@ -replace "`r?`n", " "
+    Start-PowerShellWindow -Title "WindEye Backend" -WorkingDirectory $backendDir -Command $backendCommand
+
+    Write-Host "[4/5] Starting frontend (port $frontendPort)..." -ForegroundColor Green
+    if (-not (Test-CommandExists "npm")) {
+        throw "npm was not found. Install Node.js 20+ and run npm install in the frontend directory."
+    }
+
+    if (-not (Test-Path -LiteralPath (Join-Path $frontendDir "node_modules") -PathType Container)) {
+        Write-Host "  frontend\node_modules was not found. Run 'npm install' in the frontend directory if startup fails." -ForegroundColor Yellow
+    }
+
+    $frontendCommand = @"
+`$env:PORT = '$frontendPort';
+`$env:WINDEYE_API_TARGET = 'http://127.0.0.1:$backendPort';
+Write-Host 'Frontend: http://localhost:$frontendPort' -ForegroundColor Green;
+npm run dev
+"@ -replace "`r?`n", " "
+    Start-PowerShellWindow -Title "WindEye Frontend" -WorkingDirectory $frontendDir -Command $frontendCommand
+
+    Write-Host "[5/5] Waiting for services..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+
+    Write-Host ""
+    Write-Host "=== Started ===" -ForegroundColor Cyan
+    Write-Host "Frontend: http://localhost:$frontendPort" -ForegroundColor Cyan
+    Write-Host "Backend:  http://localhost:$backendPort" -ForegroundColor Cyan
+    Write-Host "API Docs: http://localhost:$backendPort/docs" -ForegroundColor Cyan
+    Write-Host ""
+
+    $proxyConfig = Join-Path $root "frontend\config\proxy.ts"
+    if (Test-Path -LiteralPath $proxyConfig -PathType Leaf) {
+        Write-Host "Proxy config found. /api/* requests will be forwarded to the backend." -ForegroundColor Gray
+    }
+} catch {
+    Write-Host ""
+    Write-Host "Startup failed: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
 }

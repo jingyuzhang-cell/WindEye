@@ -7,6 +7,8 @@ Files stay in place until a pipeline run successfully writes them to Neo4j.
 from __future__ import annotations
 
 import os
+import re
+from datetime import datetime
 from typing import Any
 
 # ── Pipeline stages in execution order ────────────────────────────────
@@ -37,24 +39,6 @@ DATA_SOURCE_CONFIGS: dict[str, dict[str, Any]] = {
         "layer": "Event",
         "entity_types": ["COMPANY", "PERSON", "EVENT", "SECURITY"],
         "relation_types": ["MENTIONED_IN", "INVOLVED_IN", "REPORTS"],
-    },
-    "risk_event_sse": {
-        "name": "上交所风险事件",
-        "category": "风险事件",
-        "data_subdir": "risk_events/sse",
-        "input_glob": "*.pdf",
-        "layer": "Event",
-        "entity_types": ["COMPANY", "CASE_NUMBER", "INSTITUTION"],
-        "relation_types": ["RECEIVES", "INVOLVED_IN"],
-    },
-    "risk_event_szse": {
-        "name": "深交所风险事件",
-        "category": "风险事件",
-        "data_subdir": "risk_events/szse",
-        "input_glob": "*.pdf",
-        "layer": "Event",
-        "entity_types": ["COMPANY", "CASE_NUMBER"],
-        "relation_types": ["RECEIVES", "INVOLVED_IN"],
     },
     "risk_event_bse": {
         "name": "北交所风险事件",
@@ -120,15 +104,36 @@ def scan_source_files(source: str) -> list[dict[str, Any]]:
         fpath = os.path.join(src_dir, fname)
         if not os.path.isfile(fpath):
             continue
+        if fname.startswith("DEMO_"):
+            continue
         if glob_ext != ".*" and not fname.lower().endswith(glob_ext):
             continue
+        size = os.path.getsize(fpath)
+        modified_at = datetime.fromtimestamp(os.path.getmtime(fpath)).isoformat(timespec="seconds")
         files.append({
             "name": fname,
             "path": fpath,
-            "size": os.path.getsize(fpath),
-            "size_display": _format_size(os.path.getsize(fpath)),
+            "size": size,
+            "size_display": _format_size(size),
+            "modifiedAt": modified_at,
         })
+    if source == "risk_event_bse":
+        files = _dedupe_timestamped_pdfs(files)
     return files
+
+
+def _dedupe_timestamped_pdfs(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    latest_by_title: dict[str, dict[str, Any]] = {}
+    for item in sorted(files, key=lambda f: str(f.get("modifiedAt", "")), reverse=True):
+        name = str(item.get("name", ""))
+        stem, ext = os.path.splitext(name)
+        clean_stem = re.sub(r"_\d{10,17}$", "", stem).strip()
+        key = clean_stem.lower()
+        if key and key not in latest_by_title:
+            display_item = dict(item)
+            display_item["name"] = f"{clean_stem}{ext}"
+            latest_by_title[key] = display_item
+    return sorted(latest_by_title.values(), key=lambda f: str(f.get("modifiedAt", "")), reverse=True)
 
 
 def _format_size(size: int) -> str:

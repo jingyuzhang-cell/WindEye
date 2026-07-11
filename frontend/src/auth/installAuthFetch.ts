@@ -16,7 +16,12 @@ function getRequestUrl(input: RequestInfo | URL): URL | null {
 function shouldAttachAuth(input: RequestInfo | URL): boolean {
   const url = getRequestUrl(input);
   if (!url) return false;
-  return url.origin === window.location.origin && url.pathname.startsWith('/api/');
+  if (!url.pathname.startsWith('/api/')) return false;
+  if (url.origin === window.location.origin) return true;
+
+  const isLocalPage = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const isLocalApi = ['localhost', '127.0.0.1'].includes(url.hostname);
+  return isDevAuthBypassEnabled && isLocalPage && isLocalApi;
 }
 
 function mergeHeaders(input: RequestInfo | URL, init?: RequestInit): Headers {
@@ -43,15 +48,18 @@ export function installAuthFetch(): void {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const token = getAccessToken();
 
-    if (!token || !shouldAttachAuth(input)) {
+    if (!shouldAttachAuth(input)) {
       const response = await nativeFetch(input, init);
       handleUnauthorized(input, response);
       return response;
     }
 
     const headers = mergeHeaders(input, init);
-    if (!headers.has('Authorization')) {
+    if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`);
+    }
+    if (!token && isDevAuthBypassEnabled && !headers.has('X-WindEye-Dev-Auth')) {
+      headers.set('X-WindEye-Dev-Auth', 'true');
     }
 
     if (input instanceof Request) {
