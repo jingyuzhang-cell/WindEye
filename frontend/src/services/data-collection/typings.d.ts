@@ -48,13 +48,33 @@ declare namespace API {
     task_id: string;
     mode: string;
     started_at: string;
-    demo_mode?: boolean;
+    target_files?: number;
+  }
+
+  interface CrawlCollectedFile {
+    source: string;
+    sourceLabel?: string;
+    fileName: string;
+    savedName?: string;
+    filePath?: string;
+    sizeBytes?: number;
+    sizeDisplay?: string;
+    collectedAt?: string;
+  }
+
+  interface CrawlFileCollectedEvent {
+    stage: string;
+    progress: number;
+    message: string;
+    source: string;
+    downloaded_count: number;
+    target_count: number;
+    file?: CrawlCollectedFile;
   }
 
   interface CrawlCompleteEvent {
     task_id: string;
     status: string;
-    demo_mode?: boolean;
     total_sources: number;
     total_files_downloaded: number;
     total_records: number;
@@ -65,6 +85,7 @@ declare namespace API {
       files_downloaded: number;
       records: number;
       save_dir: string;
+      files?: CrawlCollectedFile[];
       error?: string;
     }>;
   }

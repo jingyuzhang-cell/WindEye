@@ -19,7 +19,7 @@ SYSTEM_PROMPT = """You are a financial risk data collection requirement parser.
 Parse the user's natural language query into structured crawl parameters.
 Output ONLY valid JSON with these keys:
 - data_type: "risk_event" | "risk_sentiment"
-- sources: list of source identifiers (sse, szse, bse for risk_event; stockstar for risk_sentiment)
+- sources: list of source identifiers (bse for risk_event; stockstar for risk_sentiment)
 - date_start: YYYY-MM-DD or null
 - date_end: YYYY-MM-DD or null
 - keywords: list of strings
@@ -83,14 +83,10 @@ class RequirementParser:
 
         sources: list[str] = []
         if data_type == "risk_event":
-            if any(kw in q for kw in ["上交所", "上", "sse", "沪"]):
-                sources.append("sse")
-            if any(kw in q for kw in ["深交所", "深", "szse"]):
-                sources.append("szse")
             if any(kw in q for kw in ["北交所", "北", "bse"]):
                 sources.append("bse")
             if not sources:
-                sources = ["sse", "szse", "bse"]
+                sources = ["bse"]
         elif data_type == "risk_sentiment":
             sources.append("stockstar")
 

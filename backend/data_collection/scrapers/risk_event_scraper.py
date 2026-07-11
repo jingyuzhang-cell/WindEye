@@ -1,9 +1,7 @@
-"""Risk Event Scraper — 风险事件爬取 (SZSE/BSE disciplinary actions).
+"""Risk Event Scraper — 风险事件爬取 (SSE/SZSE/BSE disciplinary actions & litigation).
 
-Sources: szse (深交所), bse (北交所)
+Sources: sse (上交所), szse (深交所), bse (北交所)
 Temp dir: data/risk_events/{source}/
-
-Note: SSE (上交所) removed — site unreachable from most networks.
 """
 
 from __future__ import annotations
@@ -202,6 +200,140 @@ def _download_pdf_with_fallback(driver, pdf_url: str, save_dir: str, raw_title: 
     return ok
 
 # ── Real scrapers ───────────────────────────────────────────────────────────
+
+
+def _scrape_sse(config: dict) -> dict:
+    """上交所 — 风险事件公告 (股票交易异常波动/诉讼和仲裁/风险警示)."""
+    source = config.get("source", "sse")
+    max_pages = min(config.get("max_pages", 5), 50)
+    max_files = config.get("max_files", 0) or 0
+    date_start = config.get("date_start", "")
+    date_end = config.get("date_end", "")
+    save_dir = os.path.join(DATA_DIR, "risk_events", source)
+    os.makedirs(save_dir, exist_ok=True)
+
+    if date_start or date_end:
+        logger.warning(
+            "SSE: date filtering requires website date picker interaction (not yet implemented). "
+            "All pages within max_pages=%s will be scraped.", max_pages,
+        )
+
+    TYPE_MAP = {
+        "股票交易异常波动和澄清": "13",
+        "诉讼和仲裁": "26",
+        "风险警示": "31",
+    }
+
+    driver = create_driver(download_dir=save_dir)
+    try:
+        url = "https://www.sse.com.cn/disclosure/listedinfo/announcement/"
+        logger.info("SSE: opening %s", url)
+        driver.get(url)
+        main_window = driver.current_window_handle
+        time.sleep(5)
+
+        logger.info("SSE: applying announcement category filters")
+        for name, type_id in TYPE_MAP.items():
+            candidates = [
+                ("span by name", f"//span[@name='{type_id}']"),
+                ("input checkbox by name", f"//input[@type='checkbox'][@name='{type_id}']"),
+                ("label by data-id", f"//label[@data-id='{type_id}']"),
+                ("div filter option", f"//div[contains(@class,'filter')]//*[@data-value='{type_id}']"),
+            ]
+            elem, matched_desc, matched_xpath = find_with_fallback(driver, candidates, timeout=3)
+            if elem is None:
+                log_element_failure(logger, "SSE-category", f"checkbox {name} (type_id={type_id})", page_url=url)
+                continue
+            try:
+                driver.execute_script("arguments[0].click();", elem)
+                logger.info("SSE: checked category '%s' via %s", name, matched_desc)
+                time.sleep(1.5)
+            except Exception as e:
+                log_element_failure(logger, "SSE-category", f"click {name}", matched_xpath, e, url)
+
+        time.sleep(3)
+        rename_tasks: dict[str, str] = {}
+
+        for page in range(1, max_pages + 1):
+            logger.info("SSE: scraping page %d/%d", page, max_pages)
+            try:
+                time.sleep(2)
+                files_before = set(os.listdir(save_dir))
+                pdf_links = driver.find_elements("xpath", "//a[contains(@href, '.pdf')]")
+                seen_urls: set[str] = set()
+                for a_elem in pdf_links:
+                    if max_files > 0:
+                        if _count_downloaded_pdfs(save_dir) + len(rename_tasks) >= max_files:
+                            logger.info("SSE: reached max_files=%d, stopping", max_files)
+                            break
+                    pdf_url = a_elem.get_attribute("href")
+                    if not pdf_url or pdf_url in seen_urls:
+                        continue
+                    raw_title = (a_elem.text or "").strip().replace("\n", "")
+                    if not raw_title or "点击下载" in raw_title:
+                        continue
+                    seen_urls.add(pdf_url)
+                    if _download_pdf_with_fallback(driver, pdf_url, save_dir, raw_title, referer=url):
+                        continue
+                    clean_title = safe_pdf_name(raw_title)
+                    original_filename = pdf_url.split("/")[-1].split("?")[0]
+                    rename_tasks[original_filename] = clean_title
+                    driver.execute_script(f"window.open('{pdf_url}', '_blank');")
+                    time.sleep(2.5)
+                    if len(driver.window_handles) > 1:
+                        for handle in driver.window_handles:
+                            if handle != main_window:
+                                driver.switch_to.window(handle)
+                                driver.close()
+                        driver.switch_to.window(main_window)
+
+                wait_for_downloads(save_dir)
+                time.sleep(1)
+                files_after = set(os.listdir(save_dir))
+                new_files = files_after - files_before
+                logger.info("SSE page %d: %d new files (%d -> %d)", page, len(new_files), len(files_before), len(files_after))
+
+                for old_name, new_name in rename_tasks.items():
+                    old_path = os.path.join(save_dir, old_name)
+                    new_path = os.path.join(save_dir, new_name)
+                    if os.path.exists(old_path):
+                        if os.path.exists(new_path):
+                            base, ext = os.path.splitext(new_name)
+                            new_path = os.path.join(save_dir, f"{base}_{int(time.time() * 1000)}{ext}")
+                        try:
+                            os.rename(old_path, new_path)
+                        except OSError:
+                            pass
+                rename_tasks.clear()
+
+                if max_files > 0 and _count_downloaded_pdfs(save_dir) >= max_files:
+                    logger.info("SSE: reached max_files=%d, stopping pagination", max_files)
+                    break
+
+                if page < max_pages:
+                    try:
+                        candidates = [
+                            ("pagination next", "//div[contains(@class,'pagination')]//a[contains(text(),'下一页')]"),
+                            ("pagination next li", "//li[contains(@class,'next')]//a"),
+                            ("generic next", "//a[contains(text(),'下一页') or contains(text(),'下页')]"),
+                        ]
+                        next_btn, _, _ = find_with_fallback(driver, candidates, timeout=3)
+                        if next_btn is None:
+                            logger.info("SSE: no next page button, stopping")
+                            break
+                        driver.execute_script("arguments[0].click();", next_btn)
+                        time.sleep(4)
+                    except Exception:
+                        logger.info("SSE: next page failed, stopping")
+                        break
+            except Exception as e:
+                logger.error("SSE: page %d error: %s", page, e)
+                break
+    finally:
+        driver.quit()
+
+    files = [f for f in os.listdir(save_dir) if f.endswith(".pdf")] if os.path.isdir(save_dir) else []
+    return {"source": source, "files_downloaded": len(files), "records": len(files), "save_dir": save_dir}
 
 
 def _scrape_szse(config: dict) -> dict:
@@ -442,8 +574,8 @@ def run_risk_event_scraper(config: dict) -> dict:
         save_dir = os.path.join(DATA_DIR, "risk_events", source)
         ensure_dir(save_dir)
         return {"source": source, "files_downloaded": 0, "records": 0, "save_dir": save_dir}
-    scraper_fns = {"szse": _scrape_szse, "bse": _scrape_bse}
-    fn = scraper_fns.get(source, _scrape_szse)
+    scraper_fns = {"sse": _scrape_sse, "szse": _scrape_szse, "bse": _scrape_bse}
+    fn = scraper_fns.get(source, _scrape_sse)
     logger.info(
         "RiskEvent scraper: source=%s headless=%s data_dir=%s",
         source,

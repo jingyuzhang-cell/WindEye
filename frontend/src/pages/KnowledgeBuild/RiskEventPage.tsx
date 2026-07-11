@@ -29,7 +29,6 @@ import {
   Progress,
   Radio,
   Row,
-  Select,
   Space,
   Statistic,
   Steps,
@@ -51,7 +50,6 @@ import { useCrawlStore } from '../DataCollection/store/crawlStore';
 import { useCrawlSSE } from '../DataCollection/hooks/useCrawlSSE';
 import QuickInputPanel from '../DataCollection/components/QuickInputPanel';
 import CrawlProgress from '../DataCollection/components/CrawlProgress';
-import CrawlResult from '../DataCollection/components/CrawlResult';
 
 const { Dragger } = Upload;
 
@@ -204,7 +202,6 @@ const STAGES: StageDef[] = [
 
 const MAIN_STAGE_KEYS: StageName[] = ['data_import', 'feature_extraction'];
 const UPLOADED_SOURCE_KEY = 'uploaded_docs';
-const API_DIRECT_BASE = 'http://127.0.0.1:8002';
 const KG_OUTPUT_PATHS = {
   event_extraction: 'backend/kg_outputs/risk_events',
   feature_extraction: 'backend/kg_outputs/risk_features',
@@ -212,12 +209,18 @@ const KG_OUTPUT_PATHS = {
 };
 
 const apiUrl = (path: string) => {
-  const isLocalDev = typeof window !== 'undefined'
-    && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-  return isLocalDev && path.startsWith('/api/') ? `${API_DIRECT_BASE}${path}` : path;
+  return path;
 };
 
-const apiFetch = (path: string, init?: RequestInit) => fetch(apiUrl(path), init);
+const apiFetch = (path: string, init?: RequestInit) => {
+  const headers = new Headers(init?.headers);
+  const isLocalDev = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocalDev && path.startsWith('/api/') && !headers.has('X-WindEye-Dev-Auth')) {
+    headers.set('X-WindEye-Dev-Auth', 'true');
+  }
+  return fetch(apiUrl(path), { ...init, headers });
+};
 
 const getStageDef = (key: StageName) => STAGES.find((stage) => stage.key === key);
 const getStageTitle = (key: StageName) => getStageDef(key)?.title || key;
@@ -225,12 +228,17 @@ const getMainStageKey = (key: StageName) => (
   key === 'data_import' ? 'data_import' : 'feature_extraction'
 );
 
-const CRAWLER_SOURCES = [
-  { value: 'risk_event_sse', label: '上交所风险事件', description: '上交所股票交易异常波动/诉讼仲裁/风险警示公告 PDF' },
-  { value: 'risk_event_szse', label: '深交所风险事件', description: '深交所自律监管措施公告 PDF' },
-  { value: 'risk_event_bse', label: '北交所风险事件', description: '北交所纪律处分公告 PDF' },
-  { value: 'risk_sentiment', label: '财经舆情', description: '证券之星财经新闻舆情 TXT 文件' },
-];
+const CRAWL_SOURCE_TO_PIPELINE_SOURCE: Record<string, string> = {
+  bse: 'risk_event_bse',
+};
+
+const CRAWL_SOURCE_LABELS: Record<string, string> = {
+  bse: '北交所',
+};
+
+const PIPELINE_SOURCE_LABELS: Record<string, string> = {
+  risk_event_bse: '北交所',
+};
 
 const NODE_TYPE_COLORS: Record<string, string> = {
   COMPANY: '#FFC101', PERSON: '#1890FF', PFCOMPANY: '#722ED1',
@@ -266,9 +274,9 @@ const RiskEventPage: React.FC = () => {
 
   // UI state
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
-  const [selectedCrawlers, setSelectedCrawlers] = useState<string[]>([]);
+  const [selectedCrawlers, setSelectedCrawlers] = useState<string[]>(['risk_event_bse']);
   const [scanLoading, setScanLoading] = useState(false);
-  const [scannedFiles, setScannedFiles] = useState<Record<string, { name: string; size: number; size_display: string }[]>>({});
+  const [scannedFiles, setScannedFiles] = useState<Record<string, any[]>>({});
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [running, setRunning] = useState(false);
   const [eventViewMode, setEventViewMode] = useState<'table' | 'timeline'>('table');
@@ -277,26 +285,50 @@ const RiskEventPage: React.FC = () => {
   const [importTab, setImportTab] = useState<'upload' | 'crawl'>('upload');
   const [regulationFiles, setRegulationFiles] = useState<any[]>([]);
   const [regulationProcessing, setRegulationProcessing] = useState(false);
-
+  const scannedFileRows = Object.entries(scannedFiles).flatMap(([source, files]) => (
+    files.map((file: any, index: number) => ({
+      key: `${source}-${file.path || file.filePath || file.name || file.fileName || index}`,
+      index: index + 1,
+      source,
+      sourceLabel: PIPELINE_SOURCE_LABELS[source] || source,
+      name: file.name || file.fileName || file.originalName || '-',
+      sizeDisplay: file.size_display || file.sizeDisplay || '-',
+      modifiedAt: file.modifiedAt || file.collectedAt || file.time || '-',
+      path: file.path || file.filePath || '',
+    }))
+  ));
   // ─── Crawl store / SSE (from DataCollection) ──────────────────────
   const crawlRunning = useCrawlStore((s) => s.isRunning);
   const crawlResult = useCrawlStore((s) => s.result);
-  const crawlDataType = useCrawlStore((s) => s.dataType);
-  const crawlSources = useCrawlStore((s) => s.sources);
-  const crawlKeywords = useCrawlStore((s) => s.keywords);
+  const crawlCollectedFiles = useCrawlStore((s) => s.collectedFiles);
   const crawlMaxPages = useCrawlStore((s) => s.maxPages);
   const crawlMaxFiles = useCrawlStore((s) => s.maxFiles);
   const { startCrawl, cancelCrawl } = useCrawlSSE();
+  const crawlCollectedFileRows = (crawlCollectedFiles.length > 0
+    ? crawlCollectedFiles
+    : (((crawlResult as any)?.source_results || []).flatMap((item: any) => item.files || []))
+  ).map((file: any, index: number) => ({
+    key: `${file.source}-${file.filePath || file.savedName || file.fileName || index}`,
+    source: file.source,
+    sourceLabel: file.sourceLabel || CRAWL_SOURCE_LABELS[file.source] || file.source,
+    name: file.fileName || file.savedName || '-',
+    sizeDisplay: file.sizeDisplay || file.size_display || `${file.sizeBytes || file.size || 0}B`,
+  }));
 
   const handleStartCrawl = () => {
+    const sources = ['bse'];
     const payload: any = {
       mode: 'quick',
-      data_type: crawlDataType,
-      sources: crawlSources.length > 0 ? crawlSources : undefined,
-      keywords: crawlKeywords.length > 0 ? crawlKeywords : undefined,
+      data_type: 'risk_event',
+      sources,
       max_pages: crawlMaxPages,
       max_files: crawlMaxFiles,
     };
+    const pipelineSources = sources
+      .map((source) => CRAWL_SOURCE_TO_PIPELINE_SOURCE[source])
+      .filter(Boolean);
+    setSelectedCrawlers(pipelineSources);
+    setScannedFiles({});
     // Switch right panel to show crawl progress
     setActiveStage('data_import');
     startCrawl(payload);
@@ -563,35 +595,52 @@ const RiskEventPage: React.FC = () => {
     addLog(stage, `记录 ${normalized.length} 条法规未命中信息，等待补充到法规知识库`, 'warning');
   };
 
-  const handleScanFiles = async () => {
-    if (selectedCrawlers.length === 0) {
-      msg.warning('请先选择数据源');
+  const handleScanFiles = async (sourceOverride?: string[]) => {
+    const sourcesToScan = sourceOverride?.length ? sourceOverride : (selectedCrawlers.length ? selectedCrawlers : ['risk_event_bse']);
+    if (sourcesToScan.length === 0) {
+      msg.warning('请先采集或扫描北交所文件');
       return;
     }
     setScanLoading(true);
     const results: Record<string, any[]> = {};
-    for (const source of selectedCrawlers) {
+    for (const source of sourcesToScan) {
       try {
         const res = await apiFetch(`/api/v1/pipeline/files/${source}`);
-        const data = await res.json();
-        if (data.files) {
-          results[source] = data.files;
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
         }
-      } catch {
+        const data = await res.json();
+        results[source] = Array.isArray(data.files) ? data.files : [];
+      } catch (error) {
         results[source] = [];
+        msg.error(`扫描${PIPELINE_SOURCE_LABELS[source] || source}失败: ${error instanceof Error ? error.message : '接口异常'}`);
       }
     }
+    setSelectedCrawlers(['risk_event_bse']);
     setScannedFiles(results);
+    setImportTab('upload');
     setScanLoading(false);
     const total = Object.values(results).reduce((a, b) => a + b.length, 0);
     if (total === 0) {
-      msg.info('所选数据源中没有待处理文件');
+      msg.info('本地北交所目录中没有待处理文件');
     } else {
       msg.success(`扫描完成: 共 ${total} 个文件`);
     }
   };
 
   // ─── Map real pipeline results to rendering state ────────────────────
+  useEffect(() => {
+    if (!crawlResult || crawlRunning) return;
+    const sourceResults = (crawlResult as any).source_results || [];
+    const pipelineSources = sourceResults
+      .map((item: any) => CRAWL_SOURCE_TO_PIPELINE_SOURCE[item.source])
+      .filter(Boolean);
+    if (pipelineSources.length === 0) return;
+
+    setSelectedCrawlers(pipelineSources);
+    handleScanFiles(pipelineSources);
+  }, [crawlResult, crawlRunning]);
+
   const populateStageResults = (stages: Record<string, any>) => {
     // Extract entities from the extract stage
     const extractStage = stages.extract || stages.parse || {};
@@ -1244,7 +1293,7 @@ const RiskEventPage: React.FC = () => {
     setRunning(false);
     setPipelineRunning(false);
     setUploadedFiles([]);
-    setSelectedCrawlers([]);
+    setSelectedCrawlers(['risk_event_bse']);
     setRegulationFiles([]);
     setScannedFiles({});
     setImportTab('upload');
@@ -1424,34 +1473,21 @@ const RiskEventPage: React.FC = () => {
                     </Dragger>
                   </div>
 
-                  <div style={{ display: 'none' }}>
+                  <div style={{ marginBottom: 12, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
                     <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
-                      已爬取数据源
-                      <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>选择后扫描文件并完成第一步</Tag>
+                      已爬取文件扫描
+                      <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>北交所风险事件</Tag>
                     </div>
-                    <Select
-                      mode="multiple"
-                      placeholder="选择数据源..."
-                      value={selectedCrawlers}
-                      onChange={(vals) => { setSelectedCrawlers(vals); setScannedFiles({}); }}
-                      disabled={running || pipelineRunning}
-                      style={{ width: '100%' }}
-                      options={CRAWLER_SOURCES.map((s) => ({
-                        value: s.value,
-                        label: (
-                          <Tooltip title={s.description}>
-                            {s.label}
-                          </Tooltip>
-                        ),
-                      }))}
-                    />
+                    <div style={{ fontSize: 12, color: '#64748b' }}>
+                      扫描本地北交所纪律处分公告 PDF。
+                    </div>
                     <div style={{ marginTop: 8 }}>
                       <Button
                         icon={<SearchOutlined />}
                         size="small"
                         loading={scanLoading}
-                        onClick={handleScanFiles}
-                        disabled={running || pipelineRunning || selectedCrawlers.length === 0}
+                        onClick={() => handleScanFiles(['risk_event_bse'])}
+                        disabled={running || pipelineRunning}
                       >
                         扫描已爬取文件
                       </Button>
@@ -1460,7 +1496,7 @@ const RiskEventPage: React.FC = () => {
                           {Object.entries(scannedFiles).map(([source, files]) => (
                             <div key={source} style={{ marginBottom: 4 }}>
                               <div style={{ fontSize: 12, fontWeight: 500, color: '#64748b', marginBottom: 4 }}>
-                                {CRAWLER_SOURCES.find((s) => s.value === source)?.label || source}
+                                {PIPELINE_SOURCE_LABELS[source] || source}
                                 <Tag color="blue" style={{ marginLeft: 6 }}>{files.length} 个文件</Tag>
                               </div>
                               {files.length > 0 && (
@@ -1539,6 +1575,41 @@ const RiskEventPage: React.FC = () => {
                       <div style={{ marginTop: 4, fontSize: 12, color: '#64748b' }}>
                         {crawlResult.total_files_downloaded} 文件 · {crawlResult.total_records} 记录 · 质量 {Math.round(crawlResult.quality_score * 100)}%
                       </div>
+                      <Table
+                        size="small"
+                        rowKey={(record: any) => `${record.source}-${record.savedName || record.fileName}`}
+                        pagination={false}
+                        scroll={{ y: 180 }}
+                        style={{ marginTop: 8 }}
+                        dataSource={((crawlResult as any).source_results || []).flatMap((item: any) => item.files || [])}
+                        columns={[
+                          {
+                            title: '来源',
+                            dataIndex: 'source',
+                            width: 72,
+                            render: (source: string, record: any) => record.sourceLabel || CRAWL_SOURCE_LABELS[source] || source,
+                          },
+                          { title: '文件名称', dataIndex: 'fileName', ellipsis: true },
+                          {
+                            title: '采集时间',
+                            dataIndex: 'collectedAt',
+                            width: 150,
+                            render: (value: string) => value ? value.replace('T', ' ') : '-',
+                          },
+                          {
+                            title: '大小',
+                            dataIndex: 'sizeDisplay',
+                            width: 80,
+                            render: (_: string, record: any) => record.sizeDisplay || record.size_display || `${record.sizeBytes || record.size || 0}B`,
+                          },
+                          {
+                            title: '保存名',
+                            dataIndex: 'savedName',
+                            ellipsis: true,
+                            render: (value: string, record: any) => value || record.name || record.fileName,
+                          },
+                        ]}
+                      />
                       <Button
                         size="small"
                         type="link"
@@ -1718,27 +1789,22 @@ const RiskEventPage: React.FC = () => {
             </Card>
           )}
           {crawlResult && !crawlRunning && (
-            <Card title="采集结果" size="small" style={{ marginBottom: 16 }}>
-              <CrawlResult />
+            <Card title="已采集文件" size="small" style={{ marginBottom: 16 }}>
+              <Table
+                dataSource={crawlCollectedFileRows}
+                rowKey="key"
+                size="small"
+                pagination={{ pageSize: 8, showSizeChanger: false }}
+                columns={[
+                  { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true, render: (name: string) => <Space><FilePdfOutlined style={{ color: '#f5222d' }} />{name}</Space> },
+                  { title: '来源', dataIndex: 'sourceLabel', key: 'sourceLabel', width: 110, render: (source: string) => <Tag color="blue">{source}</Tag> },
+                  { title: '大小', dataIndex: 'sizeDisplay', key: 'sizeDisplay', width: 100 },
+                ]}
+              />
               <div style={{ marginTop: 16, textAlign: 'center' }}>
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<SearchOutlined />}
-                    onClick={() => {
-                      handleScanFiles();
-                      setImportTab('upload');
-                    }}
-                  >
-                    扫描已爬取文件
-                  </Button>
-                  <Button
-                    icon={<CloudUploadOutlined />}
-                    onClick={() => setImportTab('upload')}
-                  >
-                    切换到文件上传
-                  </Button>
-                </Space>
+                <Button type="primary" icon={<PlayCircleOutlined />} onClick={handleStartBuild} loading={pipelineRunning} disabled={selectedCrawlers.length === 0}>
+                  执行下一步
+                </Button>
               </div>
             </Card>
           )}
@@ -1749,11 +1815,6 @@ const RiskEventPage: React.FC = () => {
             <span style={{ fontSize: 16, fontWeight: 600 }}>
               {importTab === 'crawl' ? '数据采集' : '数据导入结果'}
             </span>
-            <Space>
-              <Tag color="blue">文档数: {dataSources.length}</Tag>
-              <Tag color="green">总页数: {dataSources.reduce((a, b) => a + (b.pages || 0), 0)}</Tag>
-              <Tag color="purple">总字符: {dataSources.reduce((a, b) => a + (b.recordCount || 0), 0).toLocaleString()}</Tag>
-            </Space>
           </div>
 
           {dataSources.length === 0 ? (
@@ -1770,8 +1831,54 @@ const RiskEventPage: React.FC = () => {
                   </div>
                 </div>
               </Card>
+            ) : scannedFileRows.length > 0 ? (
+              <>
+                <Table
+                  dataSource={scannedFileRows}
+                  rowKey="key"
+                  size="small"
+                  pagination={{ pageSize: 8, showSizeChanger: false }}
+                  columns={[
+                    { title: '序号', dataIndex: 'index', key: 'index', width: 72 },
+                    {
+                      title: '名称',
+                      dataIndex: 'name',
+                      key: 'name',
+                      ellipsis: true,
+                      render: (name: string, record: any) => (
+                        <Tooltip title={record.path || name}>
+                          <Space>
+                            <FilePdfOutlined style={{ color: '#f5222d' }} />
+                            <span>{name}</span>
+                          </Space>
+                        </Tooltip>
+                      ),
+                    },
+                    {
+                      title: '时间',
+                      dataIndex: 'modifiedAt',
+                      key: 'modifiedAt',
+                      width: 170,
+                      render: (value: string) => value ? value.replace('T', ' ') : '-',
+                    },
+                    { title: '来源', dataIndex: 'sourceLabel', key: 'sourceLabel', width: 120, render: (source: string) => <Tag color="blue">{source}</Tag> },
+                    { title: '大小', dataIndex: 'sizeDisplay', key: 'sizeDisplay', width: 100 },
+                  ]}
+                />
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                  <Button
+                    type="primary"
+                    icon={<PlayCircleOutlined />}
+                    onClick={handleStartBuild}
+                    loading={pipelineRunning}
+                    disabled={selectedCrawlers.length === 0}
+                  >
+                    执行下一步
+                  </Button>
+                </div>
+              </>
             ) : (
-              <Empty description={importTab === 'crawl' ? '请先在左侧"数据采集"标签页中选择四个网站来源，然后点击"开始采集"' : '尚未导入数据。请先在左侧上传PDF文件或选择爬虫数据源，然后点击【执行第一步】或扫描文件后点击【运行爬虫抽取/导入】。'}>
+              <Empty description={importTab === 'crawl' ? '请先在左侧“数据采集”标签页设置时间范围、页数和文件数，然后点击“开始采集”' : '尚未导入数据。请先上传PDF文件，或扫描本地北交所爬虫文件后点击【执行下一步】。'}>
                 <Space>
                   {importTab === 'crawl' ? (
                     <Button type="primary" icon={<CloudDownloadOutlined />} onClick={() => setImportTab('crawl')}>

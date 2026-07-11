@@ -11,9 +11,7 @@ Endpoints:
     GET  /api/v1/pipeline/crawl/sources   — list crawl source capabilities
     GET  /api/v1/pipeline/crawl/tasks     — crawl task history
 
-Env vars:
-    CRAWL_DEMO_MODE=true   demo mode (default) — no Selenium/WebDriver needed
-    CRAWL_DEMO_MODE=false  real scraping with Chrome/Edge WebDriver
+The crawl endpoint always runs real scrapers with Chrome/Edge WebDriver.
 """
 
 from __future__ import annotations
@@ -516,7 +514,7 @@ async def get_pipeline_entities(source: str):
 
 @router.post("/run")
 async def trigger_pipeline_run(
-    source: str = Query(..., description="Data source key (e.g. 'sse_risk')"),
+    source: str = Query(..., description="Data source key (e.g. 'risk_event_bse')"),
     start_stage: str | None = Query(default=None, description="Stage to start from"),
     end_stage: str | None = Query(default=None, description="Stage to end at"),
     confirmed_import: bool = Query(default=False, description="Allow Neo4j import and source cleanup only after user confirmation"),
@@ -672,12 +670,10 @@ async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
     except ImportError as e:
         raise HTTPException(status_code=500, detail=f"Crawl module not available: {e}")
 
-    demo_mode = os.getenv("CRAWL_DEMO_MODE", "true").lower() == "true"
-    mode_label = "DEMO (mock)" if demo_mode else "REAL (WebDriver)"
-    logger.info("Crawl endpoint: CRAWL_DEMO_MODE=%s → %s mode", os.getenv("CRAWL_DEMO_MODE", "true"), mode_label)
+    logger.info("Crawl endpoint: REAL (WebDriver) mode")
 
     async def event_generator():
-        orchestrator = CrawlOrchestrator(demo_mode=demo_mode)
+        orchestrator = CrawlOrchestrator()
         execute_task: asyncio.Task | None = None
         event_queue: asyncio.Queue = asyncio.Queue()
 
@@ -1147,7 +1143,7 @@ _VALID_EXTRACT_STAGES = {
 @router.post("/extract/{stage}")
 async def extract_stage(
     stage: str,
-    source: str = Query(..., description="Data source key (e.g. 'risk_event_sse')"),
+    source: str = Query(..., description="Data source key (e.g. 'risk_event_bse')"),
 ):
     """Run Dify extraction for a single KG construction stage.
 
@@ -1315,20 +1311,42 @@ async def extract_stage(
     if not deduped:
         dify_reason = getattr(client, "last_error", "") if client else ""
         dify_reason = dify_reason or "Dify 未返回可解析的节点或关系"
-        return {
-            "success": True,
-            "stage": stage,
-            "source": source,
-            "message": f"Dify 无结果（普通文件）。原因：{dify_reason}",
-            "nodes": [],
-            "edges": [],
-            "node_count": 0,
-            "edge_count": 0,
-            "cypher_statements": 0,
-            "json_artifact": None,
-            "output_dir": str(KG_OUTPUT_DIR / KG_OUTPUT_STAGES.get(stage, stage)),
-            "dify_error": dify_reason,
-        }
+        if stage == "event_extraction":
+            fallback_results: list[dict[str, Any]] = []
+            for item in texts:
+                source_label = item.get("file") or source
+                fallback_results.extend(_build_event_fallback_results(item.get("text", ""), source_label))
+            deduped = _deduplicate_results(fallback_results)
+            fallback_used = True
+            logger.warning(
+                "Dify returned no event results; using local fallback for source=%s. reason=%s",
+                source,
+                dify_reason,
+            )
+        elif stage == "feature_extraction":
+            fallback_results = _build_feature_fallback_results(merged_text, source)
+            deduped = _deduplicate_results(fallback_results)
+            fallback_used = True
+            logger.warning(
+                "Dify returned no feature results; using local fallback for source=%s. reason=%s",
+                source,
+                dify_reason,
+            )
+        if not deduped:
+            return {
+                "success": True,
+                "stage": stage,
+                "source": source,
+                "message": f"Dify 无结果（普通文件）。原因：{dify_reason}",
+                "nodes": [],
+                "edges": [],
+                "node_count": 0,
+                "edge_count": 0,
+                "cypher_statements": 0,
+                "json_artifact": None,
+                "output_dir": str(KG_OUTPUT_DIR / KG_OUTPUT_STAGES.get(stage, stage)),
+                "dify_error": dify_reason,
+            }
     json_artifact = _write_kg_json_artifact(stage, source, deduped) if deduped else None
 
     # Convert Dify JSONL to frontend nodes/edges format

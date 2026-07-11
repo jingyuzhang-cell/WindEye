@@ -38,6 +38,15 @@ DATA_SOURCE_CONFIGS: dict[str, dict[str, Any]] = {
         "entity_types": ["COMPANY", "PERSON", "EVENT", "SECURITY"],
         "relation_types": ["MENTIONED_IN", "INVOLVED_IN", "REPORTS"],
     },
+    "risk_event_sse": {
+        "name": "上交所风险事件",
+        "category": "风险事件",
+        "data_subdir": "risk_events/sse",
+        "input_glob": "*.pdf",
+        "layer": "Event",
+        "entity_types": ["COMPANY", "CASE_NUMBER", "INSTITUTION"],
+        "relation_types": ["RECEIVES", "INVOLVED_IN"],
+    },
     "risk_event_szse": {
         "name": "深交所风险事件",
         "category": "风险事件",

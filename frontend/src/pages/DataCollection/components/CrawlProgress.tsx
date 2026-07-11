@@ -5,7 +5,7 @@ import { useCrawlStore } from '../store/crawlStore';
 const STAGES = [
   { key: 'parsing', title: '需求解析' },
   { key: 'matching', title: '数据源匹配' },
-  { key: 'crawling', title: '数据爬取' },
+  { key: 'crawling', title: '数据采集' },
   { key: 'assessing', title: '质量评估' },
   { key: 'trigger_etl', title: 'ETL触发' },
 ];
@@ -17,6 +17,7 @@ const CrawlProgress: React.FC = () => {
   const logs = useCrawlStore((s) => s.logs);
   const error = useCrawlStore((s) => s.error);
   const totalFilesDownloaded = useCrawlStore((s) => s.totalFilesDownloaded);
+  const targetFiles = useCrawlStore((s) => s.targetFiles);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,19 +37,25 @@ const CrawlProgress: React.FC = () => {
     <div>
       <Steps
         current={currentIndex >= 0 ? currentIndex : 0}
-        items={STAGES.map((s) => ({ title: s.title }))}
+        items={STAGES.map((item) => ({ title: item.title }))}
         size="small"
         style={{ marginBottom: 16 }}
       />
       <Progress percent={Math.round(progress)} size="small" style={{ marginBottom: 12 }} />
-      {stage === 'crawling' && totalFilesDownloaded > 0 && (
+      {stage === 'crawling' && (totalFilesDownloaded > 0 || targetFiles > 0) && (
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <Statistic
-            title="已下载文件"
-            value={totalFilesDownloaded}
+            title={targetFiles > 0 ? '已采集 / 目标' : '已采集文件'}
+            value={targetFiles > 0 ? `${totalFilesDownloaded} / ${targetFiles}` : totalFilesDownloaded}
             valueStyle={{ fontSize: 28, color: '#1890ff' }}
-            suffix="个"
           />
+          {targetFiles > 0 && (
+            <Progress
+              percent={Math.round((totalFilesDownloaded / Math.max(targetFiles, 1)) * 100)}
+              size="small"
+              style={{ marginTop: 12 }}
+            />
+          )}
         </div>
       )}
       {stageMessage && (
@@ -72,8 +79,8 @@ const CrawlProgress: React.FC = () => {
           lineHeight: 1.6,
         }}
       >
-        {logs.map((log, i) => (
-          <div key={i} style={{ color: levelColor(log.level) }}>
+        {logs.map((log, index) => (
+          <div key={index} style={{ color: levelColor(log.level) }}>
             <span style={{ color: '#888', marginRight: 8 }}>[{log.time}]</span>
             {log.message}
           </div>

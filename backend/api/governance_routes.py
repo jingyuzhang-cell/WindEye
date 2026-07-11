@@ -4,6 +4,7 @@ All endpoints use the unified Neo4jClient for database access and
 GraphAnalytics for community detection.
 """
 
+import base64
 import json
 import logging
 import time
@@ -11,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from core.database import Neo4jClient
@@ -20,6 +22,7 @@ from kg_query.analytics import risk_path_enumeration as rpe
 logger = logging.getLogger("api.governance")
 
 router = APIRouter(prefix="/api/v1/governance", tags=["governance"])
+REPORT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "report_outputs"
 
 # Lazy-init on first use
 _db: Neo4jClient | None = None
@@ -460,14 +463,13 @@ def _build_docx_export_payload(response: dict[str, Any], report_req: ComplianceR
         "subgraph_summary": {"node_count": node_count, "edge_count": edge_count},
     }
 
-
 def _export_compliance_report_docx(
     response: dict[str, Any],
     report_req: ComplianceReportRequest,
 ) -> dict[str, Any]:
     from dra_ma.reporting import DocxExporter
 
-    output_dir = Path(__file__).resolve().parents[1] / "report_outputs"
+    output_dir = REPORT_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     report_id = str(response.get("reportId") or f"WIND-COMP-{int(time.time() * 1000)}")
     filename = f"{report_id}.docx"
@@ -490,7 +492,40 @@ def _export_compliance_report_docx(
         "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "sizeBytes": stat.st_size,
         "generatedAt": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+        "downloadUrl": f"/api/v1/governance/compliance-report/files/{filename}",
     }
+
+
+def _apply_export_delivery_options(
+    export_file: dict[str, Any],
+    report_req: ComplianceReportRequest,
+) -> dict[str, Any]:
+    """Shape exported file metadata for API consumers.
+
+    The server still writes the DOCX under REPORT_OUTPUT_DIR, but callers can
+    request a download URL or base64 payload and save the file on their side.
+    """
+    result = dict(export_file)
+    options = report_req.reportOptions if isinstance(report_req.reportOptions, dict) else {}
+    delivery = options.get("delivery", "metadata")
+    delivery_modes = {str(delivery).lower()} if isinstance(delivery, str) else {
+        str(item).lower() for item in delivery if item is not None
+    } if isinstance(delivery, list) else {"metadata"}
+
+    include_download_url = options.get("includeDownloadUrl", True)
+    if not include_download_url:
+        result.pop("downloadUrl", None)
+
+    include_server_path = options.get("includeServerPath", True)
+    if not include_server_path:
+        result.pop("filePath", None)
+
+    if options.get("includeBase64") or "base64" in delivery_modes:
+        path = Path(str(export_file.get("filePath", "")))
+        result["base64"] = base64.b64encode(path.read_bytes()).decode("ascii")
+        result["encoding"] = "base64"
+
+    return result
 
 
 def _build_compliance_report(req: ComplianceReportRequest) -> dict[str, Any]:
@@ -991,6 +1026,22 @@ def risk_paths(req: RiskPathsRequest):
     return response_data
 
 
+@router.get("/compliance-report/files/{filename}")
+def download_compliance_report_file(filename: str):
+    """Download a generated compliance report from the server output folder."""
+    if Path(filename).name != filename or not filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Invalid report filename")
+    path = (REPORT_OUTPUT_DIR / filename).resolve()
+    output_root = REPORT_OUTPUT_DIR.resolve()
+    if output_root not in path.parents or not path.exists():
+        raise HTTPException(status_code=404, detail="Report file not found")
+    return FileResponse(
+        str(path),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=filename,
+    )
+
+
 @router.post("/compliance-report")
 def compliance_report(req: ComplianceReportRequest):
     """Generate a collaborative governance community report for a seed node.
@@ -1073,19 +1124,23 @@ def compliance_report(req: ComplianceReportRequest):
     response = _build_compliance_report(report_req)
     try:
         docx_file = _export_compliance_report_docx(response, report_req)
+        public_docx_file = _apply_export_delivery_options(docx_file, report_req)
         report_meta = response.get("report") if isinstance(response.get("report"), dict) else {}
         report_meta.update({
             "format": "docx",
-            "fileName": docx_file["fileName"],
-            "filePath": docx_file["filePath"],
-            "mimeType": docx_file["mimeType"],
-            "sizeBytes": docx_file["sizeBytes"],
+            "fileName": public_docx_file["fileName"],
+            "filePath": public_docx_file.get("filePath"),
+            "downloadUrl": public_docx_file.get("downloadUrl"),
+            "mimeType": public_docx_file["mimeType"],
+            "sizeBytes": public_docx_file["sizeBytes"],
         })
+        if "base64" in public_docx_file:
+            report_meta["encoding"] = public_docx_file["encoding"]
         response["report"] = report_meta
         response["defaultFormat"] = "docx"
         response["exportFiles"] = {
             "default": "docx",
-            "docx": docx_file,
+            "docx": public_docx_file,
         }
     except Exception as exc:
         logger.exception("[ComplianceReportAPI] docx export failed")
@@ -1119,3 +1174,4 @@ def compliance_report(req: ComplianceReportRequest):
         response["elapsedMs"],
     )
     return response
+

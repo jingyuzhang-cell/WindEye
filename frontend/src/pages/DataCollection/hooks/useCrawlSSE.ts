@@ -14,10 +14,19 @@ export function useCrawlSSE() {
       try {
         const response = await fetch('/api/v1/pipeline/crawl/run', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WindEye-Dev-Auth': 'true',
+          },
           body: JSON.stringify(payload),
           signal: controller.signal,
         });
+
+        if (!response.ok) {
+          store.failTask(`HTTP ${response.status}`);
+          store.addLog('error', `采集接口请求失败: HTTP ${response.status}`);
+          return;
+        }
 
         const reader = response.body?.getReader();
         if (!reader) {
@@ -46,15 +55,21 @@ export function useCrawlSSE() {
 
                 switch (currentEvent) {
                   case 'start':
-                    store.startTask(data.task_id);
+                    store.startTask(data.task_id, data.target_files || payload.max_files || 0);
                     store.addLog('info', `Task started: ${data.task_id}`);
                     break;
                   case 'stage':
                     store.updateProgress(data);
                     store.addLog('info', `[${data.stage}] ${data.message}`);
                     break;
+                  case 'file_collected':
+                    store.recordCollectedFile(data);
+                    if (data.file?.fileName) {
+                      store.addLog('info', `[${data.source}] 已采集 ${data.file.fileName}`);
+                    }
+                    break;
                   case 'source_result':
-                    store.addSourceResult(data.files_downloaded || 0);
+                    store.addSourceResult(data);
                     store.addLog(
                       data.error ? 'error' : 'success',
                       `${data.source}: ${data.files_downloaded || 0} files, ${data.records || 0} records${data.error ? ' (error: ' + data.error + ')' : ''}`,

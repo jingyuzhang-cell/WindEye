@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import urllib.parse
+import urllib.request
+import zipfile
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
 from api_test_common import (
+    OUTPUT_DIR,
     REPORT_OUTPUT_DIR,
     call_json,
     parse_args,
@@ -37,7 +44,15 @@ def inspect_docx(path: str, company: str) -> dict:
             readable = True
             contains_company = company in text
         except Exception as exc:
-            error = str(exc)
+            try:
+                text = extract_docx_text(docx_path)
+                readable = True
+                contains_company = company in text
+                paragraph_count = max(1, text.count("\n") + 1) if text else 0
+                title = "WindEye 协同治理报告" if "WindEye 协同治理报告" in text else ""
+                error = f"python-docx unavailable, zip fallback used: {exc}"
+            except Exception as fallback_exc:
+                error = f"{exc}; zip fallback failed: {fallback_exc}"
     return {
         "path": str(docx_path),
         "exists": exists,
@@ -49,6 +64,45 @@ def inspect_docx(path: str, company: str) -> dict:
         "title": title,
         "error": error,
     }
+
+
+def extract_docx_text(path: Path) -> str:
+    with zipfile.ZipFile(path) as archive:
+        xml = archive.read("word/document.xml")
+    root = ET.fromstring(xml)
+    ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    return "\n".join(t.text for t in root.iter(ns + "t") if t.text)
+
+
+def download_report_file(base_url: str, download_url: str, filename: str) -> dict:
+    if not download_url or not filename:
+        return {
+            "downloaded": False,
+            "path": "",
+            "sizeBytes": 0,
+            "error": "missing downloadUrl or fileName",
+        }
+    url = urllib.parse.urljoin(base_url.rstrip("/") + "/", download_url.lstrip("/"))
+    output_path = OUTPUT_DIR / filename
+    try:
+        with urllib.request.urlopen(url, timeout=120) as resp:
+            data = resp.read()
+        output_path.write_bytes(data)
+        return {
+            "downloaded": True,
+            "url": url,
+            "path": str(output_path),
+            "sizeBytes": output_path.stat().st_size,
+            "error": "",
+        }
+    except Exception as exc:
+        return {
+            "downloaded": False,
+            "url": url,
+            "path": str(output_path),
+            "sizeBytes": 0,
+            "error": str(exc),
+        }
 
 
 def main() -> int:
@@ -77,6 +131,12 @@ def main() -> int:
         "includeCommunityPath": True,
         "includeNodePath": True,
         "exportFormats": ["docx"],
+        "reportOptions": {
+            "delivery": "metadata",
+            "includeDownloadUrl": True,
+            "includeServerPath": False,
+            "includeBase64": False,
+        },
         "sessionId": "xugong-api-test",
         "roundId": 1,
     }
@@ -95,7 +155,12 @@ def main() -> int:
     pipeline_trace = report_payload.get("pipelineTrace", {}) if isinstance(report_payload.get("pipelineTrace"), dict) else {}
     export_files = report_payload.get("exportFiles", {}) if isinstance(report_payload.get("exportFiles"), dict) else {}
     docx_meta = export_files.get("docx", {}) if isinstance(export_files.get("docx"), dict) else {}
-    docx_inspection = inspect_docx(str(docx_meta.get("filePath") or ""), seed_name)
+    download_result = download_report_file(
+        base_url,
+        str(docx_meta.get("downloadUrl") or ""),
+        str(docx_meta.get("fileName") or ""),
+    )
+    docx_inspection = inspect_docx(download_result.get("path") or str(docx_meta.get("filePath") or ""), seed_name)
     report_word_complete = bool(
         result.get("statusCode") == 200
         and result.get("isJson")
@@ -107,6 +172,10 @@ def main() -> int:
         and isinstance(report.get("markdownReport", ""), str)
         and report.get("format") == "docx"
         and str(report.get("fileName", "")).endswith(".docx")
+        and isinstance(docx_meta.get("downloadUrl"), str)
+        and docx_meta.get("downloadUrl")
+        and not docx_meta.get("filePath")
+        and download_result.get("downloaded")
         and docx_inspection["exists"]
         and docx_inspection["sizeBytes"] > 0
         and docx_inspection["readable"]
@@ -127,6 +196,7 @@ def main() -> int:
             "reportWordComplete": report_word_complete,
             "defaultFormat": report_payload.get("defaultFormat"),
             "exportFiles": export_files,
+            "downloadResult": download_result,
             "docxInspection": docx_inspection,
             "subject": report_payload.get("subject"),
             "riskLevel": compliance.get("riskLevel"),
