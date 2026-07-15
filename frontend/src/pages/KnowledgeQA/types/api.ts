@@ -435,6 +435,14 @@ export interface RiskReport {
   evidence_chains?: EvidenceChains
   risk_scores?: RiskScores
   governance_plan?: GovernancePlan
+  report_sections?: ReportSection[]
+  export_files?: {
+    default?: string
+    docx?: ExportedReportFile | null
+  }
+  report_download_url?: string
+  pipeline_trace?: Record<string, any>
+  compliance_indicator_details?: ComplianceIndicator[]
 }
 
 export interface PenaltyCase {
@@ -510,6 +518,24 @@ export interface GovernancePlan {
   actions: GovernanceAction[]
   escalation_rules: EscalationRule[]
   monitoring_checklist: string[]
+}
+
+export interface ReportSection {
+  id: string
+  slug?: string
+  title: string
+  summary: string
+  bullets?: string[]
+}
+
+export interface ExportedReportFile {
+  format?: string
+  fileName: string
+  filePath?: string
+  downloadUrl?: string
+  mimeType?: string
+  sizeBytes?: number
+  generatedAt?: string
 }
 
 // ── Unified SSE Envelope ──

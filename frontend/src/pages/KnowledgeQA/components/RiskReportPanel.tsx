@@ -363,6 +363,22 @@ const RiskReportPanel: React.FC<RiskReportPanelProps> = ({
     if (!report) return;
     const hide = message.loading('正在生成 Word 文档...', 0);
     try {
+      const directDownloadUrl = report.export_files?.docx?.downloadUrl || report.report_download_url;
+      if (directDownloadUrl) {
+        const resp = await fetch(directDownloadUrl);
+        if (!resp.ok) {
+          throw new Error(`下载失败: ${resp.status}`);
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = report.export_files?.docx?.fileName || `${reportId}.docx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        message.success('Word 文档已下载');
+        return;
+      }
       const resp = await fetch('/api/v1/risk/reports/export-docx', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -858,6 +874,7 @@ const RiskReportPanel: React.FC<RiskReportPanelProps> = ({
   const visibleCommunities = communities;
 
   const hasFinalReportText = Boolean(report?.executive_summary || report?.markdown_report || report?.integrated_report);
+  const structuredReportSections = report?.report_sections || [];
   const hasRiskPathResult = sortedPaths.length > 0;
   const hasCommunityResult = communities.length > 0 || subgraphCounts.nodes > 0 || riskSubjects.length > 0;
   const isInsufficientEvidence = String(report?.overall_risk_level || '') === 'insufficient_evidence'
@@ -1727,7 +1744,38 @@ const RiskReportPanel: React.FC<RiskReportPanelProps> = ({
                   </div>
                 </div>
 
-                {report.integrated_report || report.markdown_report ? (
+                {structuredReportSections.length > 0 ? (
+                  <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+                    {structuredReportSections.map((section) => (
+                      <div
+                        key={section.id}
+                        style={{
+                          padding: '14px 16px',
+                          background: '#f8fafc',
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <Text strong style={{ display: 'block', fontSize: 13, color: '#1e293b', marginBottom: 6 }}>
+                          {section.title}
+                        </Text>
+                        <Paragraph style={{ color: '#475569', fontSize: 13, marginBottom: section.bullets?.length ? 8 : 0 }}>
+                          {section.summary}
+                        </Paragraph>
+                        {section.bullets && section.bullets.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {section.bullets.map((bullet, idx) => (
+                              <div key={`${section.id}-${idx}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                <span style={{ color: '#2855D1', fontWeight: 700, lineHeight: '20px' }}>•</span>
+                                <Text style={{ color: '#334155', fontSize: 12, lineHeight: 1.7 }}>{bullet}</Text>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : report.integrated_report || report.markdown_report ? (
                   <div className="markdown-report" style={{ fontSize: 13, lineHeight: 1.75, color: '#334155', marginTop: 12, padding: '14px 16px', background: '#f8fafc', borderRadius: 8 }}>
                     <ReactMarkdown>{report.integrated_report || report.markdown_report}</ReactMarkdown>
                   </div>

@@ -185,10 +185,13 @@ interface UnresolvedEntity {
 
 | API | 方法 | 输入 | 输出 | 用途 |
 |-----|------|------|------|------|
+| `/api/v1/public/governance/community-discovery` | POST | JSON：`subjectName`、`subjectId`、`depth`、`responseMode` | `data.subject`、`data.targetCommunity`、`data.keyMembers`、`summary` | **对外简化版群体发现接口**，隐藏算法参数 |
 | `/api/v1/graph/communities` | GET | Query：`layer`、`method`（`louvain`/`wcc`）、`max_nodes`、`min_community_size` | `communities[]`（含成员列表、规模、密度、模块度） | 全局/按层社区发现 |
 | `/api/v1/graph/communities/seed-subgraph` | POST | JSON：`seedNames`、`seedIds`、`maxHop`、`method`、`minCommunitySize`、`pathLimit` | `seed_nodes`、`subgraph`、`connected_subgraph`、`communities`、`entity_community_map`、`visualization.flow` | 从指定风险主体出发抽取 N 跳网络并群体发现 |
 | `/api/v1/chat/unified-stream` → `community` 事件 | SSE | 输入来自统一流的证据子图 | `communities[]`、`algorithm`、`modularity` | 协同治理流程中的群体发现 |
 | `/api/v1/chat/unified-stream` → `entity_community_map` 事件 | SSE | 输入同上 | 实体→群体归属映射 + 角色标注（`bridge`/`hub`/`member`） | 驱动前端社区着色和桥接节点高亮 |
+
+> 说明：`/api/v1/public/governance/community-discovery` 复用内部 `/api/v1/governance/community-discovery`，但不再对外暴露 `method`、`communityMode`、`pathLimit` 等工程参数。
 
 ### 5.4.2 核心数据结构
 
@@ -241,6 +244,7 @@ interface CommunityResult {
 
 | API | 方法 | 输入 | 输出 | 用途 |
 |-----|------|------|------|------|
+| `/api/v1/public/governance/risk-paths` | POST | JSON：`subjectName`、`subjectId`、`depth`、`maxPaths`、`minRiskLevel`、`responseMode` | `data.subject`、`data.paths[]`、`summary` | **对外简化版风险传导路径接口**，隐藏关系白名单和路径枚举细节 |
 | `/api/v1/chat/unified-stream` → `candidate_risk_paths` 事件 | SSE | 证据子图 + 已对齐实体 | 候选风险路径列表（含 `path_id`、`risk_level`、`affected_entities`、`confidence`） | 风险路径初筛 |
 | `/api/v1/chat/unified-stream` → `risk_paths` 事件 | SSE | 候选路径 + LLM 分析 | `path_id`、`risk_level`（`high`/`medium`/`low`/`insufficient_evidence`）、`affected_entities[]`、`node_ids[]`、`edge_ids[]`、`path_description`、`confidence` | 经 LLM 确认的风险传导路径（前端据此高亮图谱路径） |
 | `/api/v1/chat/unified-stream` → `anomaly_findings` 事件 | SSE | 风险路径 + 子图 | 异常发现列表（含异常类型、描述、置信度） | 异常模式标记 |
@@ -249,6 +253,8 @@ interface CommunityResult {
 | `/api/v1/graph/risk-distribution` | GET | 无 | 各层 `high/medium/low/total` | 各层风险等级分布概览 |
 | `/api/v1/graph/high-risk-entities` | GET | Query：`limit` | `data` 高风险实体列表、`total` | 重点风险主体清单 |
 | `/api/v1/risk/analyze-stream` | GET | Query：`query`、`sessionId`、`roundId`、`maxHop`、可选 `communityId`、`focusEntities`、`fileContent` | SSE 事件流 | 流式风险分析（兼容独立调用） |
+
+> 说明：`/api/v1/public/governance/risk-paths` 默认由后端自动决定图扩展与路径枚举策略，外部只关心主体、深度、风险等级和返回数量。
 
 ### 5.5.2 核心数据结构
 
@@ -389,6 +395,7 @@ interface ComplianceScores {
 
 | API | 方法 | 输入 | 输出 | 用途 |
 |-----|------|------|------|------|
+| `/api/v1/public/governance/compliance-report` | POST | JSON：`subjectName`、`subjectId`、`depth`、`maxPaths`、`includeDocx`、`responseMode` | `data.subject`、`riskAssessment`、`complianceAssessment`、`keyFindings`、`governanceActions`、`report.download` | **对外简化版协同治理社区报告接口** |
 | `/api/v1/chat/unified-stream` → `scoring` 事件 | SSE | 风险路径 + 异常发现 + 合规数据 | 6 维评分（`relation_complexity`/`risky_relation`/`community_density`/`transmission`/`compliance`/`evidence`）+ 权重 + LLM 调整幅度 + 调整原因 | 多维风险评分，驱动"风险评分详情"面板 |
 | `/api/v1/chat/unified-stream` → `governance` 事件 | SSE | 评分 + 风险路径 + 合规结果 | `actions[]`（含 `target`、`risk_issue`、`measure`、`priority`、`department`）、`escalation_rules[]`（含 `condition`、`action`、`timeline`）、`monitoring_checklist[]` | 治理动作、升级规则和监控清单 |
 | `/api/v1/chat/unified-stream` → `report` 事件 | SSE | 全部上游结果 | `executive_summary`、`risk_paths[]`、`anomaly_findings[]`、`compliance_matches[]`、`governance_plan`、`markdown_report`、`recommendations[]` | 最终协同治理社区报告 |
@@ -396,6 +403,8 @@ interface ComplianceScores {
 | `/api/v1/risk/reports/{report_id}` | GET | Path：`report_id` | 报告详情（含完整字段和 Markdown 内容） | 查看单份报告详情 |
 | `/api/v1/risk/reports/export-docx` | POST | JSON：`report`、`reportId`、`queryText` | `.docx` 文件二进制流 | 将当前报告导出为 Word 文档 |
 | `/api/v1/risk/analyze` | POST | JSON：风险分析请求体 | 完整风险分析报告 JSON | 非流式风险分析（兼容接口） |
+
+> 说明：`/api/v1/public/governance/compliance-report` 继续复用内部链路 `community-discovery -> risk-paths -> compliance-report`，只是把请求和输出整理成更稳定的开放契约。
 
 ### 5.7.2 核心数据结构
 

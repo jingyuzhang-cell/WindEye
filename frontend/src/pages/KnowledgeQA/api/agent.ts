@@ -9,6 +9,7 @@ import type {
   CommunityResult,
   EntityCommunityMap,
   EntityCandidate,
+  RiskReport,
 } from '../types/api'
 
 const client = axios.create({
@@ -51,6 +52,27 @@ export const saveEntityAlias = async (
     entityType: candidate.entity_type,
     source: 'user_confirmed',
   })
+}
+
+export interface ComplianceCommunityReportRequest {
+  query: string
+  seedNames?: string[]
+  seedIds?: string[]
+  subjectName?: string
+  subjectId?: string
+  maxHop?: number
+  maxPathLength?: number
+  exportFormats?: string[]
+  exportWord?: boolean
+  responseMode?: 'summary' | 'full'
+  reportOptions?: Record<string, any>
+}
+
+export const generateComplianceCommunityReport = async (
+  req: ComplianceCommunityReportRequest,
+): Promise<RiskReport & Record<string, any>> => {
+  const resp = await client.post('/governance/compliance-report', req)
+  return resp.data
 }
 
 export const sendChatStream = (

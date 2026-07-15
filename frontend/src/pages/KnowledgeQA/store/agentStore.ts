@@ -17,7 +17,7 @@ import type {
   EntityCandidate,
   ExpandedCommunityResult,
 } from '../types/api'
-import { saveEntityAlias, searchEntityCandidates, sendUnifiedStream } from '../api/agent'
+import { generateComplianceCommunityReport, saveEntityAlias, searchEntityCandidates, sendUnifiedStream } from '../api/agent'
 import { getNodeDisplayName } from '../components/graphStyles'
 
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -181,6 +181,12 @@ function mergeRiskReport(prev: RiskReport | null, patch: Partial<RiskReport>): R
     generated_at: patch.generated_at ?? prev?.generated_at,
     executive_summary: patch.executive_summary ?? prev?.executive_summary,
     markdown_report: patch.markdown_report ?? prev?.markdown_report,
+    integrated_report: patch.integrated_report ?? prev?.integrated_report,
+    report_sections: patch.report_sections ?? prev?.report_sections,
+    export_files: patch.export_files ?? prev?.export_files,
+    report_download_url: patch.report_download_url ?? prev?.report_download_url,
+    pipeline_trace: patch.pipeline_trace ?? prev?.pipeline_trace,
+    compliance_indicator_details: patch.compliance_indicator_details ?? prev?.compliance_indicator_details,
     echarts_config: patch.echarts_config ?? prev?.echarts_config,
     // 中间阶段数据：渐进写入，新数据覆盖旧数据
     entity_stats: patch.entity_stats ?? prev?.entity_stats,
@@ -232,10 +238,10 @@ function buildGraphQaAnswer(
 
   if (resolvedEntities.length > 0) {
     for (const re of resolvedEntities) {
-      const candidateId = String(re.kg_node_id || re.id || '')
+      const candidateId = String(re.kg_node_id || '')
       if (nodeById.has(candidateId)) {
         centerId = candidateId
-        centerName = re.canonical_name || re.name || getSubgraphNodeName(nodeById.get(candidateId))
+        centerName = re.canonical_name || re.raw || getSubgraphNodeName(nodeById.get(candidateId))
         matchType = re.match_type || ''
         break
       }
@@ -500,6 +506,9 @@ function buildReportAnswer(report: RiskReport): string {
 
   const lines: string[] = []
   lines.push(report.executive_summary || '协同治理分析已完成。')
+  if (report.report_sections?.length) {
+    lines.push(`已生成 ${report.report_sections.length} 个结构化报告章节。`)
+  }
   lines.push('')
   lines.push(`总体研判：${scoreLevel || '待评估'}${scoreValue !== undefined && scoreValue !== null ? `，综合评分 ${scoreValue}` : ''}`)
   lines.push(`图谱证据：${report.subgraph_summary?.node_count ?? '-'} 个节点、${report.subgraph_summary?.edge_count ?? '-'} 条关系；识别 ${paths.length} 条风险路径、${anomalies.length} 个异常发现、${compliance.length} 条合规匹配。`)
@@ -539,6 +548,24 @@ function buildReportAnswer(report: RiskReport): string {
   }
 
   return lines.join('\n').slice(0, 1800)
+}
+
+function pickCommunityReportSeedNames(
+  query: string,
+  resolvedEntities: ResolvedEntity[] = [],
+  subgraph: Subgraph | null = null,
+): string[] {
+  const resolved = resolvedEntities
+    .map((item) => item.canonical_name || item.raw)
+    .filter((name): name is string => Boolean(name))
+  if (resolved.length > 0) return resolved.slice(0, 3)
+
+  const nodeNames = (subgraph?.nodes || [])
+    .map((node: any) => getNodeDisplayName(node))
+    .filter((name) => Boolean(name) && /公司|集团|股份|有限|银行|证券|基金|控股/.test(name))
+  if (nodeNames.length > 0) return nodeNames.slice(0, 3)
+
+  return query ? [query] : []
 }
 
 type RouteDecision = 'graph' | 'clarify' | 'risk'
@@ -1089,17 +1116,18 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         },
 
         onReport: (report) => {
+          const structuredBaseReport = report as RiskReport
           set((state) => ({
-            riskReport: mergeRiskReport(state.riskReport, report as RiskReport),
+            riskReport: mergeRiskReport(state.riskReport, structuredBaseReport),
             riskStages: appendRiskProgress(state.riskStages, 'reporting', '协同治理社区报告生成完成'),
             messages: state.messages.map((m) =>
               m.id === tempId
                 ? {
                     ...m,
-                    content: buildReportAnswer(report as RiskReport),
+                    content: buildReportAnswer(structuredBaseReport),
                     isLoading: false,
                     thinkingStatus: undefined,
-                    data: { echartsConfig: report.echarts_config },
+                    data: { echartsConfig: structuredBaseReport.echarts_config },
                   }
                 : m
             ),
@@ -1107,6 +1135,52 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             currentRoute: 'risk',
             activeRightPanel: 'risk',
           }))
+
+          const snapshot = get()
+          const seedNames = pickCommunityReportSeedNames(
+            query,
+            snapshot.resolvedEntities,
+            snapshot.currentSubgraph,
+          )
+          if (seedNames.length > 0) {
+            set((state) => ({
+              riskStages: appendRiskProgress(state.riskStages, 'reporting', '正在生成在线社区报告...'),
+            }))
+            void generateComplianceCommunityReport({
+              query,
+              seedNames,
+              maxHop: 2,
+              maxPathLength: 4,
+              exportFormats: ['docx'],
+              responseMode: 'full',
+              reportOptions: {
+                includeDownloadUrl: true,
+                includeServerPath: false,
+              },
+            }).then((communityReport) => {
+              set((state) => ({
+                riskReport: mergeRiskReport(state.riskReport, communityReport as RiskReport),
+                governancePlan: (communityReport as any).governance_plan ?? state.governancePlan,
+                complianceIndicators: Array.isArray((communityReport as any).compliance_indicator_details)
+                  ? (communityReport as any).compliance_indicator_details
+                  : state.complianceIndicators,
+                riskStages: appendRiskProgress(state.riskStages, 'reporting', '在线社区报告替换完成'),
+                messages: state.messages.map((m) =>
+                  m.id === tempId
+                    ? {
+                        ...m,
+                        content: buildReportAnswer(mergeRiskReport(state.riskReport, communityReport as RiskReport)),
+                      }
+                    : m
+                ),
+              }))
+            }).catch((err) => {
+              console.warn('[agentStore] generateComplianceCommunityReport failed:', err)
+              set((state) => ({
+                riskStages: appendRiskProgress(state.riskStages, 'reporting', '在线社区报告生成失败，已保留原报告'),
+              }))
+            })
+          }
         },
 
         onDone: (data) => {

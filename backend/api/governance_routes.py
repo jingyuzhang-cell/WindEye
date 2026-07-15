@@ -4,6 +4,7 @@ All endpoints use the unified Neo4jClient for database access and
 GraphAnalytics for community detection.
 """
 
+import asyncio
 import base64
 import json
 import logging
@@ -18,10 +19,14 @@ from pydantic import BaseModel, Field
 
 from core.database import Neo4jClient
 from kg_query.analytics import risk_path_enumeration as rpe
+from new_report.code.online_community_report_engine import OnlineCommunityReportEngine
+from new_report.code.online_perspective_builder import OnlinePerspectiveBuilder
+from new_report.code.online_report_context_builder import OnlineReportContextBuilder
 
 logger = logging.getLogger("api.governance")
 
 router = APIRouter(prefix="/api/v1/governance", tags=["governance"])
+public_router = APIRouter(prefix="/api/v1/public/governance", tags=["public-governance"])
 REPORT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "report_outputs"
 
 # Lazy-init on first use
@@ -84,6 +89,8 @@ class RiskPathsRequest(BaseModel):
 
 
 class ComplianceReportRequest(BaseModel):
+    subjectName: str = Field(default="")
+    subjectId: str = Field(default="")
     query: str = Field(default="")
     seedNames: list[str] = Field(default_factory=list)
     seedIds: list[str] = Field(default_factory=list)
@@ -113,8 +120,33 @@ class ComplianceReportRequest(BaseModel):
     includeCommunityPath: bool = Field(default=True)
     includeNodePath: bool = Field(default=True)
     exportFormats: list[str] = Field(default_factory=list)
+    exportWord: bool | None = Field(default=None)
+    depth: int | None = Field(default=None, ge=1, le=5)
+    responseMode: str = Field(default="summary")
     sessionId: str = Field(default="")
     roundId: int = Field(default=1)
+
+
+class PublicGovernanceBaseRequest(BaseModel):
+    subjectName: str = Field(default="")
+    subjectId: str = Field(default="")
+    depth: int = Field(default=3, ge=1, le=5)
+    responseMode: str = Field(default="summary")
+
+
+class PublicCommunityDiscoveryRequest(PublicGovernanceBaseRequest):
+    pass
+
+
+class PublicRiskPathsRequest(PublicGovernanceBaseRequest):
+    maxPaths: int = Field(default=10, ge=1, le=50)
+    minRiskLevel: str = Field(default="medium")
+
+
+class PublicComplianceReportRequest(PublicGovernanceBaseRequest):
+    query: str = Field(default="")
+    maxPaths: int = Field(default=10, ge=1, le=50)
+    includeDocx: bool = Field(default=True)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────
@@ -208,6 +240,478 @@ def _as_list(value: Any) -> list[Any]:
     return []
 
 
+def _run_async(coro: Any) -> Any:
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+
+def _new_trace_id(prefix: str) -> str:
+    return f"trc-{prefix}-{int(time.time() * 1000)}"
+
+
+def _public_error(message: str, *, code: str = "INVALID_REQUEST") -> dict[str, Any]:
+    return {
+        "success": False,
+        "traceId": _new_trace_id("public"),
+        "errorCode": code,
+        "message": message,
+    }
+
+
+def _normalize_public_response_mode(value: str) -> str:
+    normalized = str(value or "summary").strip().lower()
+    return "full" if normalized == "full" else "summary"
+
+
+def _normalize_public_risk_level(value: str) -> str:
+    normalized = str(value or "medium").strip().lower()
+    return normalized if normalized in {"low", "medium", "high"} else "medium"
+
+
+def _public_subject_inputs(req: PublicGovernanceBaseRequest) -> tuple[list[str], list[str]]:
+    subject_name = str(req.subjectName or "").strip()
+    subject_id = str(req.subjectId or "").strip()
+    seed_names = [subject_name] if subject_name else []
+    seed_ids = [subject_id] if subject_id else []
+    return seed_names, seed_ids
+
+
+def _pick_subject(payload: dict[str, Any], fallback_name: str = "", fallback_id: str = "") -> dict[str, Any]:
+    seed_nodes = payload.get("seedNodes", []) if isinstance(payload.get("seedNodes"), list) else []
+    if seed_nodes:
+        first = seed_nodes[0] if isinstance(seed_nodes[0], dict) else {}
+        labels = first.get("labels") if isinstance(first.get("labels"), list) else []
+        props = first.get("properties") if isinstance(first.get("properties"), dict) else {}
+        return {
+            "id": str(first.get("id") or fallback_id or ""),
+            "name": str(
+                first.get("name")
+                or props.get("name")
+                or props.get("COMPANY_NM")
+                or props.get("PERSON_NM")
+                or props.get("title")
+                or fallback_name
+                or ""
+            ),
+            "type": str(labels[0] if labels else props.get("type") or "UNKNOWN"),
+        }
+
+    resolution = payload.get("entityResolution") if isinstance(payload.get("entityResolution"), dict) else {}
+    resolved_entities = resolution.get("resolvedEntities", []) if isinstance(resolution.get("resolvedEntities"), list) else []
+    if resolved_entities:
+        first = resolved_entities[0] if isinstance(resolved_entities[0], dict) else {}
+        return {
+            "id": str(first.get("kgNodeId") or fallback_id or ""),
+            "name": str(first.get("canonicalName") or first.get("raw") or fallback_name or ""),
+            "type": str(first.get("entityType") or "UNKNOWN"),
+        }
+
+    return {
+        "id": fallback_id,
+        "name": fallback_name,
+        "type": "UNKNOWN",
+    }
+
+
+def _risk_level_rank(level: str) -> int:
+    return {"low": 1, "medium": 2, "high": 3}.get(str(level or "").lower(), 0)
+
+
+def _coerce_risk_level(score: float | int | None) -> str:
+    value = float(score or 0)
+    if value >= 80:
+        return "high"
+    if value >= 60:
+        return "medium"
+    return "low"
+
+
+def _find_community(communities: list[dict[str, Any]], community_id: Any) -> dict[str, Any] | None:
+    for item in communities:
+        if not isinstance(item, dict):
+            continue
+        if item.get("communityId") == community_id or item.get("community_id") == community_id or item.get("id") == community_id:
+            return item
+    return None
+
+
+def _community_member_count(community: dict[str, Any]) -> int:
+    for key in ("memberCount", "member_count", "size"):
+        value = community.get(key)
+        if isinstance(value, int):
+            return value
+    member_ids = community.get("memberNodeIds") or community.get("member_node_ids") or []
+    if isinstance(member_ids, list):
+        return len(member_ids)
+    members = community.get("members")
+    return len(members) if isinstance(members, list) else 0
+
+
+def _community_risk_score(community: dict[str, Any], summary: dict[str, Any]) -> float:
+    for key in ("riskScore", "risk_score", "score"):
+        value = community.get(key)
+        if isinstance(value, (int, float)):
+            return round(float(value), 2)
+    high_count = int(summary.get("highRiskCount") or 0)
+    medium_count = int(summary.get("mediumRiskCount") or 0)
+    derived = min(100.0, 55.0 + high_count * 12 + medium_count * 6)
+    return round(derived, 2)
+
+
+def _community_risk_level(community: dict[str, Any], summary: dict[str, Any]) -> str:
+    for key in ("riskLevel", "risk_level"):
+        value = str(community.get(key) or "").lower()
+        if value in {"low", "medium", "high"}:
+            return value
+    return _coerce_risk_level(_community_risk_score(community, summary))
+
+
+def _collect_key_members(entity_map: dict[str, Any], community_id: Any, limit: int = 8) -> list[dict[str, Any]]:
+    if not isinstance(entity_map, dict):
+        return []
+    role_order = {"core": 0, "bridge": 1, "member": 2}
+    members: list[dict[str, Any]] = []
+    for value in entity_map.values():
+        if not isinstance(value, dict):
+            continue
+        if value.get("communityId") != community_id:
+            continue
+        role = str(value.get("role") or "member")
+        members.append({
+            "id": str(value.get("id") or ""),
+            "name": str(value.get("name") or ""),
+            "type": str(value.get("type") or "UNKNOWN"),
+            "role": role,
+        })
+    members.sort(key=lambda item: (role_order.get(item["role"], 99), item["name"]))
+    return members[:limit]
+
+
+def _extract_path_nodes(path: dict[str, Any]) -> list[dict[str, Any]]:
+    nodes = path.get("nodes")
+    if isinstance(nodes, list):
+        result: list[dict[str, Any]] = []
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            result.append({
+                "id": str(node.get("id") or ""),
+                "name": str(node.get("name") or node.get("label") or ""),
+                "type": str(node.get("type") or "UNKNOWN"),
+            })
+        return result
+    node_ids = path.get("nodeIds") if isinstance(path.get("nodeIds"), list) else []
+    return [{"id": str(node_id), "name": str(node_id), "type": "UNKNOWN"} for node_id in node_ids]
+
+
+def _extract_path_relations(path: dict[str, Any]) -> list[str]:
+    relations = path.get("relations")
+    if isinstance(relations, list):
+        return [str(item) for item in relations]
+    edges = path.get("edges")
+    if isinstance(edges, list):
+        return [str(edge.get("type") or "") for edge in edges if isinstance(edge, dict)]
+    edge_ids = path.get("edgeIds")
+    return [str(item) for item in edge_ids] if isinstance(edge_ids, list) else []
+
+
+def _simplify_risk_path(path: dict[str, Any]) -> dict[str, Any]:
+    score = float(path.get("riskScore") or path.get("score") or 0)
+    risk_level = str(path.get("riskLevel") or path.get("risk_level") or _coerce_risk_level(score)).lower()
+    return {
+        "pathId": str(path.get("pathId") or path.get("id") or ""),
+        "riskLevel": risk_level,
+        "riskScore": round(score, 2),
+        "description": str(
+            path.get("description")
+            or path.get("pathDescription")
+            or path.get("path_description")
+            or ""
+        ),
+        "nodes": _extract_path_nodes(path),
+        "relations": _extract_path_relations(path),
+        "evidence": path.get("evidence") if isinstance(path.get("evidence"), list) else [],
+    }
+
+
+def _serialize_resolved_entity(item: Any) -> dict[str, Any]:
+    return {
+        "raw": getattr(item, "raw", ""),
+        "canonicalName": getattr(item, "canonical_name", None),
+        "kgNodeId": getattr(item, "kg_node_id", None),
+        "matchType": getattr(item, "match_type", "unresolved"),
+        "matchScore": getattr(item, "match_score", 0.0),
+        "confidence": getattr(item, "confidence", 0.0),
+    }
+
+
+def _serialize_candidate_entity(item: Any) -> dict[str, Any]:
+    return {
+        "raw": getattr(item, "raw", ""),
+        "canonicalName": getattr(item, "canonical_name", ""),
+        "kgNodeId": getattr(item, "kg_node_id", ""),
+        "entityType": getattr(item, "entity_type", "UNKNOWN"),
+        "labels": getattr(item, "labels", []),
+        "matchType": getattr(item, "match_type", "candidate"),
+        "matchScore": getattr(item, "match_score", 0.0),
+        "confidence": getattr(item, "confidence", 0.0),
+        "reason": getattr(item, "reason", ""),
+        "properties": getattr(item, "properties", {}) or {},
+    }
+
+
+def _seed_normalize_company_name(name: str) -> str:
+    text = str(name or "").strip()
+    text = text.replace("（", "(").replace("）", ")")
+    for suffix in (
+        "股份有限公司", "集团有限公司", "有限责任公司", "控股集团有限公司",
+        "投资管理有限公司", "投资有限公司", "有限公司", "股份公司",
+    ):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)]
+            break
+    for suffix in ("公司", "集团", "股份", "有限"):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)]
+            break
+    return text
+
+
+def _seed_candidate_keywords(raw: str) -> list[str]:
+    core = _seed_normalize_company_name(raw)
+    keywords: list[str] = []
+    if len(core) >= 4:
+        keywords.append(core[:4])
+    if len(core) >= 3:
+        keywords.append(core[:3])
+    for piece in core.replace("(", " ").replace(")", " ").split():
+        if len(piece) >= 2:
+            keywords.append(piece)
+    return list(dict.fromkeys([kw for kw in keywords if kw]))
+
+
+def _local_search_seed_candidates(
+    raw: str,
+    *,
+    preferred_type: str = "COMPANY",
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    keywords = _seed_candidate_keywords(raw)
+    query = """
+    MATCH (n)
+    WITH n,
+         labels(n) AS node_labels,
+         coalesce(n.name, n.COMPANY_NM, n.PERSON_NM, n.SECURITY_NM, n.title, '') AS display_name,
+         coalesce(n.alias, '') AS alias_name,
+         coalesce(n.ALIAS, '') AS alias_value
+    WHERE display_name <> ''
+      AND (
+           toLower(display_name) = toLower($raw)
+        OR toLower(display_name) CONTAINS toLower($raw)
+        OR toLower($raw) CONTAINS toLower(display_name)
+        OR toLower(alias_name) CONTAINS toLower($raw)
+        OR toLower(alias_value) CONTAINS toLower($raw)
+        OR any(keyword IN $keywords WHERE keyword <> '' AND (
+               toLower(display_name) CONTAINS toLower(keyword)
+            OR toLower(alias_name) CONTAINS toLower(keyword)
+            OR toLower(alias_value) CONTAINS toLower(keyword)
+        ))
+      )
+    RETURN n, node_labels AS labels, elementId(n) AS elem_id
+    LIMIT $limit
+    """
+    try:
+        rows, _ = _client().execute_read_with_summary(
+            query,
+            {"raw": raw, "keywords": keywords, "limit": int(limit)},
+            timeout_seconds=10.0,
+        )
+    except Exception as exc:
+        logger.warning("[SeedResolver] local fallback query failed for %s: %s", raw, exc)
+        return []
+
+    scored: list[dict[str, Any]] = []
+    raw_core = _seed_normalize_company_name(raw)
+    raw_chars = set(raw_core or raw)
+    for row in rows:
+        node = row.get("n")
+        props = dict(node) if node is not None and hasattr(node, "items") else {}
+        name = str(
+            props.get("name")
+            or props.get("COMPANY_NM")
+            or props.get("PERSON_NM")
+            or props.get("SECURITY_NM")
+            or props.get("title")
+            or ""
+        ).strip()
+        node_id = str(row.get("elem_id") or "")
+        labels = [str(label) for label in (row.get("labels") or [])]
+        if not name or not node_id:
+            continue
+        name_core = _seed_normalize_company_name(name)
+        name_chars = set(name_core or name)
+        overlap = len(raw_chars & name_chars)
+        union = len(raw_chars | name_chars) or 1
+        score = overlap / union
+        if raw in name or name in raw:
+            score = max(score, min(len(raw), len(name)) / max(len(raw), len(name), 1))
+        if raw_core and name_core and (raw_core in name_core or name_core in raw_core):
+            score = max(score, min(len(raw_core), len(name_core)) / max(len(raw_core), len(name_core), 1))
+        entity_type = next((label for label in labels if label.upper() in {"COMPANY", "PERSON", "SECURITY", "PFUND", "PFCOMPANY"}), labels[0] if labels else "UNKNOWN")
+        if preferred_type and entity_type.upper() == preferred_type.upper():
+            score += 0.08
+        if preferred_type == "COMPANY" and any(token in name for token in ("公司", "集团", "股份", "机械", "工程")):
+            score += 0.08
+        score = round(max(0.0, min(1.0, score)), 4)
+        scored.append({
+            "raw": raw,
+            "canonicalName": name,
+            "kgNodeId": node_id,
+            "entityType": entity_type,
+            "labels": labels,
+            "matchType": "local_fallback",
+            "matchScore": score,
+            "confidence": round(score * 0.9, 4),
+            "reason": "local_neo4j_candidate",
+            "properties": {k: v for k, v in props.items() if k in {"name", "COMPANY_NM", "PERSON_NM", "SECURITY_NM", "title", "ORGNUM", "STATUS"}},
+        })
+    scored.sort(key=lambda item: (item["matchScore"], item["confidence"]), reverse=True)
+    return scored[: max(1, limit)]
+
+
+def _resolve_seed_entities(
+    seed_names: list[str],
+    seed_ids: list[str],
+    *,
+    preferred_type: str = "COMPANY",
+) -> dict[str, Any]:
+    normalized_names = [str(s).strip() for s in seed_names if str(s or "").strip()]
+    normalized_ids = [str(s).strip() for s in seed_ids if str(s or "").strip()]
+    resolution = {
+        "requestedSeedNames": normalized_names,
+        "requestedSeedIds": normalized_ids,
+        "resolvedSeedNames": list(normalized_names),
+        "resolvedSeedIds": list(normalized_ids),
+        "resolvedEntities": [],
+        "candidateEntities": [],
+        "unresolvedSeedNames": [],
+        "usedResolver": False,
+    }
+    if not normalized_names:
+        return resolution
+
+    try:
+        from dra_ma.tools.entity_resolver import EntityResolver
+
+        resolver = EntityResolver(enable_llm_fallback=False)
+        resolved_items = _run_async(resolver.resolve(normalized_names)) or []
+        resolution["usedResolver"] = True
+        resolution["resolvedEntities"] = [_serialize_resolved_entity(item) for item in resolved_items]
+
+        final_names: list[str] = []
+        final_ids = list(normalized_ids)
+        candidate_entities: list[dict[str, Any]] = []
+        unresolved_names: list[str] = []
+
+        for raw_name, item in zip(normalized_names, resolved_items):
+            canonical_name = str(getattr(item, "canonical_name", "") or "").strip()
+            kg_node_id = str(getattr(item, "kg_node_id", "") or "").strip()
+            match_type = str(getattr(item, "match_type", "") or "")
+
+            if canonical_name:
+                final_names.append(canonical_name)
+            else:
+                final_names.append(raw_name)
+
+            if kg_node_id:
+                final_ids.append(kg_node_id)
+                continue
+
+            unresolved_names.append(raw_name)
+            candidates = _run_async(
+                resolver.search_candidates(raw_name, limit=5, preferred_type=preferred_type)
+            ) or []
+            serialized_candidates = [_serialize_candidate_entity(candidate) for candidate in candidates]
+            if not serialized_candidates:
+                serialized_candidates = _local_search_seed_candidates(
+                    raw_name,
+                    preferred_type=preferred_type,
+                    limit=5,
+                )
+            candidate_entities.extend(serialized_candidates)
+
+            if serialized_candidates:
+                best = serialized_candidates[0]
+                best_score = float(best.get("matchScore") or 0.0)
+                if best_score >= 0.72:
+                    final_names[-1] = str(best.get("canonicalName") or raw_name)
+                    best_id = str(best.get("kgNodeId") or "")
+                    if best_id:
+                        final_ids.append(best_id)
+                    unresolved_names.pop()
+                    logger.info(
+                        "[SeedResolver] fallback candidate matched raw=%s canonical=%s score=%.3f",
+                        raw_name,
+                        best.get("canonicalName"),
+                        best_score,
+                    )
+                else:
+                    logger.info(
+                        "[SeedResolver] candidate below threshold raw=%s best=%s score=%.3f",
+                        raw_name,
+                        best.get("canonicalName"),
+                        best_score,
+                    )
+            elif match_type != "unresolved":
+                logger.info(
+                    "[SeedResolver] resolver returned non-terminal match without kg id raw=%s type=%s",
+                    raw_name,
+                    match_type,
+                )
+
+        dedup_names = list(dict.fromkeys([name for name in final_names if name]))
+        dedup_ids = list(dict.fromkeys([node_id for node_id in final_ids if node_id]))
+
+        resolution["resolvedSeedNames"] = dedup_names
+        resolution["resolvedSeedIds"] = dedup_ids
+        resolution["candidateEntities"] = candidate_entities
+        resolution["unresolvedSeedNames"] = unresolved_names
+        return resolution
+    except Exception as exc:
+        logger.exception("[SeedResolver] failed, switching to local fallback: %s", exc)
+        fallback_candidates: list[dict[str, Any]] = []
+        fallback_names: list[str] = []
+        fallback_ids = list(normalized_ids)
+        unresolved_names: list[str] = []
+        for raw_name in normalized_names:
+            candidates = _local_search_seed_candidates(
+                raw_name,
+                preferred_type=preferred_type,
+                limit=5,
+            )
+            fallback_candidates.extend(candidates)
+            if candidates and float(candidates[0].get("matchScore") or 0.0) >= 0.72:
+                fallback_names.append(str(candidates[0].get("canonicalName") or raw_name))
+                best_id = str(candidates[0].get("kgNodeId") or "")
+                if best_id:
+                    fallback_ids.append(best_id)
+            else:
+                fallback_names.append(raw_name)
+                unresolved_names.append(raw_name)
+        resolution["resolvedSeedNames"] = list(dict.fromkeys([name for name in fallback_names if name]))
+        resolution["resolvedSeedIds"] = list(dict.fromkeys([node_id for node_id in fallback_ids if node_id]))
+        resolution["candidateEntities"] = fallback_candidates
+        resolution["unresolvedSeedNames"] = unresolved_names
+        resolution["warnings"] = [f"seed resolver failed: {exc}"]
+        return resolution
+
+
 def _extract_report_inputs(req: ComplianceReportRequest) -> dict[str, Any]:
     community = req.communityDiscovery or {}
     if not community and isinstance(req.communities, dict):
@@ -249,7 +753,7 @@ def _extract_report_inputs(req: ComplianceReportRequest) -> dict[str, Any]:
 
 
 def _load_offline_community_reports(limit: int = 6) -> list[dict[str, Any]]:
-    report_dir = Path(__file__).resolve().parents[1] / "report" / "community_reports"
+    report_dir = Path(__file__).resolve().parents[1] / "report_outputs" / "community_reports"
     if not report_dir.exists():
         return []
     try:
@@ -530,161 +1034,38 @@ def _apply_export_delivery_options(
 
 def _build_compliance_report(req: ComplianceReportRequest) -> dict[str, Any]:
     inputs = _extract_report_inputs(req)
-    seed_nodes = inputs["seedNodes"]
-    risk_paths = inputs["riskPaths"]
-    communities = inputs["communities"]
-    community = inputs["communityDiscovery"]
-    subgraph = inputs["subgraph"]
-
-    subject = _node_name(seed_nodes[0]) if seed_nodes else (req.focusEntities[0] if req.focusEntities else "未指定主体")
-    community_count = 0
-    if isinstance(community, dict):
-        summary = community.get("summary") if isinstance(community.get("summary"), dict) else {}
-        community_count = int(summary.get("communityCount") or community.get("communityCount") or 0)
-    if not community_count:
-        community_count = len(communities)
-
-    indicators = _build_compliance_indicators(risk_paths, community_count)
-    risk_level = indicators["riskLevel"]
-    high_paths = [p for p in risk_paths if str(p.get("riskLevel", "")).lower() == "high"]
-    top_paths = sorted(risk_paths, key=lambda p: int(p.get("score") or 0), reverse=True)[:5]
-    offline_reports = _load_offline_community_reports()
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    report_id = f"WIND-COMP-{int(time.time() * 1000)}"
-
-    matched_rules = [
-        {"code": "GRAPH-RISK-PATH", "name": "风险传导路径监测", "matched": bool(risk_paths)},
-        {"code": "COMMUNITY-GOV", "name": "风险主体群体治理", "matched": community_count > 0},
-        {"code": "REPORT-EVIDENCE", "name": "证据子图与社区报告留痕", "matched": bool(subgraph or offline_reports)},
-    ]
-    actions = [
-        {
-            "actionId": "GOV-001",
-            "title": "核验高分风险路径",
-            "priority": "high" if high_paths else "medium",
-            "owner": "风险管理部门",
-            "description": f"重点复核 {len(high_paths)} 条高风险路径及相关主体、事件、法规节点。",
-        },
-        {
-            "actionId": "GOV-002",
-            "title": "按社区拆分治理责任",
-            "priority": "medium",
-            "owner": "协同治理专班",
-            "description": f"围绕 {community_count} 个社区建立责任台账，优先处理种子主体所在社区和跨社区路径。",
-        },
-        {
-            "actionId": "GOV-003",
-            "title": "沉淀社区报告证据",
-            "priority": "medium",
-            "owner": "合规管理部门",
-            "description": "将离线社区报告、路径证据和处置记录归档，支持后续审计和复盘。",
-        },
-    ]
-
-    path_lines = []
-    for idx, path in enumerate(top_paths, start=1):
-        relations = " -> ".join(str(rel) for rel in path.get("relations", [])[:5])
-        node_count = len(path.get("nodeIds", []) or [])
-        path_lines.append(
-            f"{idx}. {path.get('pathId', 'path')}：{path.get('riskLevel', '')}，"
-            f"score={path.get('score', 0)}，节点数={node_count}，关系={relations or 'N/A'}"
-        )
-    offline_lines = [
-        f"- [{item.get('perspective')}] {item.get('title')}（rank={item.get('rank')}）"
-        for item in offline_reports[:3]
-    ]
-    markdown = "\n".join([
-        f"# {subject}协同治理社区报告",
-        "",
-        f"生成时间：{generated_at}",
-        "",
-        "## 一、摘要",
-        f"本报告基于群体发现结果和风险传导路径生成。当前识别社区 {community_count} 个，"
-        f"风险路径 {len(risk_paths)} 条，综合合规评分 {indicators['totalScore']}，风险等级为 {risk_level}。",
-        "",
-        "## 二、重点风险路径",
-        "\n".join(path_lines) if path_lines else "未提供风险路径。",
-        "",
-        "## 三、社区报告来源",
-        "\n".join(offline_lines) if offline_lines else "未加载到离线社区报告，已基于实时 JSON 生成基础报告。",
-        "",
-        "## 四、治理建议",
-        "\n".join(f"- {action['title']}：{action['description']}" for action in actions),
-    ])
-
-    highlight_nodes = sorted({
-        str(node_id)
-        for path in top_paths
-        for node_id in (path.get("nodeIds") or [])
-    })
-    highlight_edges = sorted({
-        str(edge_id)
-        for path in top_paths
-        for edge_id in (path.get("edgeIds") or [])
-    })
-    highlight_communities = sorted({
-        int(cid)
-        for path in top_paths
-        for cid in (path.get("communityPath") or [])
-        if isinstance(cid, int)
-    })
-
-    return {
-        "success": True,
-        "apiVersion": "v1",
-        "traceId": f"trc-{int(time.time() * 1000)}",
-        "reportId": report_id,
-        "generatedAt": generated_at,
-        "subject": subject,
-        "compliance": {
-            "status": "warning" if risk_level in ("high", "medium") else "pass",
-            "riskLevel": risk_level,
-            "score": indicators["totalScore"],
-            "summary": f"识别到 {len(risk_paths)} 条风险路径、{community_count} 个社区，建议进行协同治理闭环。",
-            "matchedRules": matched_rules,
-            "violations": [
-                {
-                    "pathId": path.get("pathId"),
-                    "riskLevel": path.get("riskLevel"),
-                    "score": path.get("score"),
-                    "description": path.get("pathDescription", ""),
-                }
-                for path in high_paths[:10]
-            ],
-        },
-        "complianceIndicators": indicators,
-        "governance": {
-            "priority": "high" if risk_level == "high" else "medium",
-            "actions": actions,
-            "timeline": [
-                {"stage": "T+1", "task": "确认高风险路径和责任主体"},
-                {"stage": "T+3", "task": "形成社区治理分工与处置台账"},
-                {"stage": "T+7", "task": "完成复核、报告归档和后续监测配置"},
-            ],
-        },
-        "report": {
-            "reportId": report_id,
-            "title": f"{subject}协同治理社区报告",
-            "executiveSummary": f"{subject}存在 {len(risk_paths)} 条可解释风险路径，涉及 {community_count} 个风险社区。",
-            "markdownReport": markdown,
-            "recommendations": [action["description"] for action in actions],
-        },
-        "communityReportSources": offline_reports,
-        "viewModel": {
-            "reportPanel": "compliance-report",
-            "compliancePanel": True,
-            "ticketEnabled": True,
-            "exportEnabled": True,
-            "highlightNodeIds": highlight_nodes,
-            "highlightEdgeIds": highlight_edges,
-            "highlightCommunityIds": highlight_communities,
-            "defaultSelectedPathId": top_paths[0].get("pathId") if top_paths else None,
-        },
-        "warnings": [],
-    }
+    community = inputs["communityDiscovery"] if isinstance(inputs["communityDiscovery"], dict) else {}
+    risk_paths_payload: dict[str, Any] | list[dict[str, Any]]
+    if isinstance(req.riskPaths, dict):
+        risk_paths_payload = req.riskPaths
+    else:
+        risk_paths_payload = {
+            "riskPaths": inputs["riskPaths"],
+            "communityRiskPaths": inputs["communityRiskPaths"],
+            "summary": {
+                "riskPathCount": len(inputs["riskPaths"]),
+                "highRiskCount": sum(
+                    1 for path in inputs["riskPaths"]
+                    if str(path.get("riskLevel") or path.get("risk_level") or "").lower() == "high"
+                ),
+            },
+        }
+    context = OnlineReportContextBuilder().build(
+        seed_nodes=inputs["seedNodes"],
+        community_payload=community,
+        risk_payload=risk_paths_payload if isinstance(risk_paths_payload, dict) else {"riskPaths": risk_paths_payload},
+        report_req=req,
+    )
+    bundle = OnlinePerspectiveBuilder().build(context)
+    return OnlineCommunityReportEngine().generate(context, bundle, req)
 
 
-def _build_response(result: dict, req: CommunityDiscoveryRequest, elapsed_ms: int) -> dict:
+def _build_response(
+    result: dict,
+    req: CommunityDiscoveryRequest,
+    elapsed_ms: int,
+    entity_resolution: dict[str, Any] | None = None,
+) -> dict:
     """Transform discover_seeded_communities() output to the API response format."""
     resolved_seed_ids = [
         str(n.get("id", "")) for n in result.get("seed_nodes", []) if n.get("id")
@@ -715,6 +1096,7 @@ def _build_response(result: dict, req: CommunityDiscoveryRequest, elapsed_ms: in
             "seedCommunityId": result.get("seed_community_id"),
         },
         "warnings": warnings,
+        "entityResolution": entity_resolution or {},
     }
 
     # If full mode, populate detailed fields
@@ -759,6 +1141,264 @@ def _build_response(result: dict, req: CommunityDiscoveryRequest, elapsed_ms: in
     return _to_camel(response)
 
 
+def _simplify_public_community_response(
+    payload: dict[str, Any],
+    req: PublicCommunityDiscoveryRequest,
+) -> dict[str, Any]:
+    if not payload.get("success"):
+        return {
+            "success": False,
+            "traceId": str(payload.get("traceId") or _new_trace_id("community")),
+            "errorCode": "COMMUNITY_DISCOVERY_FAILED",
+            "message": str(payload.get("error") or "群体发现失败"),
+        }
+
+    response_mode = _normalize_public_response_mode(req.responseMode)
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    communities = payload.get("communities") if isinstance(payload.get("communities"), list) else []
+    entity_map = payload.get("entityCommunityMap") if isinstance(payload.get("entityCommunityMap"), dict) else {}
+    subject = _pick_subject(payload, req.subjectName, req.subjectId)
+    target_community_id = summary.get("seedCommunityId")
+    target_community = _find_community(communities, target_community_id) or {}
+    risk_score = _community_risk_score(target_community, summary)
+    risk_level = _community_risk_level(target_community, summary)
+    community_name = str(
+        target_community.get("name")
+        or target_community.get("title")
+        or (f"{subject['name']}关联群体" if subject.get("name") else f"社区 {target_community_id}")
+    )
+    key_members = _collect_key_members(entity_map, target_community_id)
+
+    data: dict[str, Any] = {
+        "subject": subject,
+        "targetCommunity": {
+            "communityId": target_community_id,
+            "name": community_name,
+            "size": _community_member_count(target_community),
+            "riskScore": risk_score,
+            "riskLevel": risk_level,
+        },
+        "keyMembers": key_members,
+    }
+    if response_mode == "full":
+        data["graph"] = payload.get("subgraph") or {}
+        data["communities"] = communities
+
+    bridge_count = sum(1 for item in key_members if item.get("role") == "bridge")
+    core_count = sum(1 for item in key_members if item.get("role") == "core")
+    return {
+        "success": True,
+        "traceId": str(payload.get("traceId") or _new_trace_id("community")),
+        "data": data,
+        "summary": {
+            "communityCount": int(summary.get("communityCount") or 0),
+            "memberCount": int(summary.get("nodeCount") or _community_member_count(target_community)),
+            "coreNodeCount": core_count,
+            "bridgeNodeCount": bridge_count,
+        },
+        "warnings": payload.get("warnings") if isinstance(payload.get("warnings"), list) else [],
+    }
+
+
+def _simplify_public_risk_paths_response(
+    payload: dict[str, Any],
+    req: PublicRiskPathsRequest,
+) -> dict[str, Any]:
+    if not payload.get("success"):
+        return {
+            "success": False,
+            "traceId": str(payload.get("traceId") or _new_trace_id("risk")),
+            "errorCode": "RISK_PATHS_FAILED",
+            "message": str(payload.get("error") or "风险传导路径分析失败"),
+        }
+
+    response_mode = _normalize_public_response_mode(req.responseMode)
+    min_level = _normalize_public_risk_level(req.minRiskLevel)
+    subject = _pick_subject(payload, req.subjectName, req.subjectId)
+    raw_paths = payload.get("riskPaths") if isinstance(payload.get("riskPaths"), list) else []
+    simplified_paths = [_simplify_risk_path(path) for path in raw_paths if isinstance(path, dict)]
+    simplified_paths = [
+        path for path in simplified_paths
+        if _risk_level_rank(path.get("riskLevel", "")) >= _risk_level_rank(min_level)
+    ][: req.maxPaths]
+
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    data: dict[str, Any] = {
+        "subject": subject,
+        "paths": simplified_paths,
+    }
+    if response_mode == "full":
+        data["communityDiscovery"] = payload.get("communityDiscovery") or {}
+        data["communityPaths"] = payload.get("communityRiskPaths") or []
+        data["viewModel"] = payload.get("viewModel") or {}
+
+    high_count = sum(1 for item in simplified_paths if item.get("riskLevel") == "high")
+    medium_count = sum(1 for item in simplified_paths if item.get("riskLevel") == "medium")
+    low_count = sum(1 for item in simplified_paths if item.get("riskLevel") == "low")
+    return {
+        "success": True,
+        "traceId": str(payload.get("traceId") or _new_trace_id("risk")),
+        "data": data,
+        "summary": {
+            "pathCount": len(simplified_paths),
+            "highRiskCount": high_count,
+            "mediumRiskCount": medium_count,
+            "lowRiskCount": low_count,
+            "communityCount": int(summary.get("communityCount") or 0),
+        },
+        "warnings": payload.get("warnings") if isinstance(payload.get("warnings"), list) else [],
+    }
+
+
+def _extract_report_download(export_files: dict[str, Any]) -> dict[str, Any]:
+    docx_meta = export_files.get("docx") if isinstance(export_files.get("docx"), dict) else {}
+    return {
+        "fileName": docx_meta.get("fileName"),
+        "downloadUrl": docx_meta.get("downloadUrl"),
+        "mimeType": docx_meta.get("mimeType"),
+    }
+
+
+def _simplify_main_compliance_response(
+    payload: dict[str, Any],
+    req: ComplianceReportRequest,
+    entity_resolution: dict[str, Any],
+) -> dict[str, Any]:
+    if not payload.get("success"):
+        return {
+            "success": False,
+            "traceId": str(payload.get("traceId") or _new_trace_id("report")),
+            "errorCode": "COMPLIANCE_REPORT_FAILED",
+            "message": str(payload.get("message") or payload.get("error") or "社区报告生成失败"),
+        }
+
+    requested_name = str(req.subjectName or "").strip()
+    if not requested_name and req.seedNames:
+        requested_name = str(req.seedNames[0] or "").strip()
+    requested_id = str(req.subjectId or "").strip()
+    if not requested_id and req.seedIds:
+        requested_id = str(req.seedIds[0] or "").strip()
+
+    subject = _pick_subject(payload, requested_name, requested_id)
+    report = payload.get("report") if isinstance(payload.get("report"), dict) else {}
+    compliance = payload.get("compliance") if isinstance(payload.get("compliance"), dict) else {}
+    indicators = payload.get("complianceIndicators") if isinstance(payload.get("complianceIndicators"), dict) else {}
+    governance = payload.get("governance") if isinstance(payload.get("governance"), dict) else {}
+    export_files = payload.get("exportFiles") if isinstance(payload.get("exportFiles"), dict) else {}
+    pipeline_trace = payload.get("pipelineTrace") if isinstance(payload.get("pipelineTrace"), dict) else {}
+
+    key_findings = report.get("keyFindings") if isinstance(report.get("keyFindings"), list) else []
+    if not key_findings and isinstance(report.get("reportSections"), list):
+        key_findings = [
+            item.get("summary")
+            for item in report.get("reportSections", [])
+            if isinstance(item, dict) and item.get("summary")
+        ][:5]
+
+    risk_paths = payload.get("riskPaths") if isinstance(payload.get("riskPaths"), list) else []
+    matched_rules = compliance.get("matchedRules") if isinstance(compliance.get("matchedRules"), list) else []
+    violations = compliance.get("violations") if isinstance(compliance.get("violations"), list) else []
+
+    return {
+        "success": True,
+        "traceId": str(payload.get("traceId") or _new_trace_id("report")),
+        "subject": subject,
+        "riskLevel": str(compliance.get("riskLevel") or indicators.get("riskLevel") or "unknown"),
+        "totalScore": indicators.get("totalScore") or compliance.get("score"),
+        "report": {
+            "reportId": payload.get("reportId"),
+            "title": report.get("title"),
+            "generatedAt": payload.get("generatedAt"),
+            "executiveSummary": report.get("executiveSummary"),
+            "keyFindings": key_findings,
+            "governanceActions": governance.get("actions", []) if isinstance(governance.get("actions"), list) else [],
+            "responsibleEntities": governance.get("responsibleEntities", []) if isinstance(governance.get("responsibleEntities"), list) else [],
+            "download": _extract_report_download(export_files),
+        },
+        "stats": {
+            "communityCount": pipeline_trace.get("communityCount"),
+            "pathCount": len(risk_paths),
+            "matchedRuleCount": len(matched_rules),
+            "violationCount": len(violations),
+        },
+        "entityResolution": entity_resolution,
+        "warnings": payload.get("warnings") if isinstance(payload.get("warnings"), list) else [],
+    }
+
+
+def _simplify_public_compliance_response(
+    payload: dict[str, Any],
+    req: PublicComplianceReportRequest,
+) -> dict[str, Any]:
+    if not payload.get("success"):
+        return {
+            "success": False,
+            "traceId": str(payload.get("traceId") or _new_trace_id("report")),
+            "errorCode": "COMPLIANCE_REPORT_FAILED",
+            "message": str(payload.get("message") or payload.get("error") or "社区报告生成失败"),
+        }
+
+    response_mode = _normalize_public_response_mode(req.responseMode)
+    subject_name = str(payload.get("subject") or req.subjectName or "")
+    subject = {
+        "id": str(payload.get("primaryEntityId") or req.subjectId or ""),
+        "name": subject_name,
+        "type": "COMPANY",
+    }
+    report = payload.get("report") if isinstance(payload.get("report"), dict) else {}
+    compliance = payload.get("compliance") if isinstance(payload.get("compliance"), dict) else {}
+    indicators = payload.get("complianceIndicators") if isinstance(payload.get("complianceIndicators"), dict) else {}
+    governance = payload.get("governance") if isinstance(payload.get("governance"), dict) else {}
+    export_files = payload.get("exportFiles") if isinstance(payload.get("exportFiles"), dict) else {}
+    key_findings = report.get("keyFindings") if isinstance(report.get("keyFindings"), list) else []
+    if not key_findings:
+        key_findings = [
+            item.get("summary")
+            for item in report.get("reportSections", [])
+            if isinstance(item, dict) and item.get("summary")
+        ][:6] if isinstance(report.get("reportSections"), list) else []
+
+    data: dict[str, Any] = {
+        "subject": subject,
+        "riskAssessment": {
+            "riskLevel": str(compliance.get("riskLevel") or indicators.get("riskLevel") or "unknown"),
+            "totalScore": indicators.get("totalScore") or compliance.get("score"),
+            "summary": report.get("executiveSummary"),
+        },
+        "complianceAssessment": {
+            "matchedRuleCount": len(compliance.get("matchedRules", [])) if isinstance(compliance.get("matchedRules"), list) else 0,
+            "violationCount": len(compliance.get("violations", [])) if isinstance(compliance.get("violations"), list) else 0,
+        },
+        "keyFindings": key_findings,
+        "responsibleEntities": governance.get("responsibleEntities", []) if isinstance(governance.get("responsibleEntities"), list) else [],
+        "governanceActions": governance.get("actions", []) if isinstance(governance.get("actions"), list) else [],
+        "report": {
+            "reportId": payload.get("reportId"),
+            "title": report.get("title"),
+            "generatedAt": payload.get("generatedAt"),
+            "download": _extract_report_download(export_files),
+        },
+    }
+    if response_mode == "full":
+        data["pipelineTrace"] = payload.get("pipelineTrace") or {}
+        data["reportSections"] = report.get("reportSections") or []
+        data["riskPaths"] = payload.get("riskPaths") or []
+        data["communityRiskPaths"] = payload.get("communityRiskPaths") or []
+
+    return {
+        "success": True,
+        "traceId": str(payload.get("traceId") or _new_trace_id("report")),
+        "data": data,
+        "summary": {
+            "riskLevel": data["riskAssessment"]["riskLevel"],
+            "totalScore": data["riskAssessment"]["totalScore"],
+            "pathCount": len(payload.get("riskPaths", [])) if isinstance(payload.get("riskPaths"), list) else 0,
+            "exported": bool(export_files.get("docx")),
+        },
+        "warnings": payload.get("warnings") if isinstance(payload.get("warnings"), list) else [],
+    }
+
+
 # ── Route handlers ───────────────────────────────────────────────────
 
 
@@ -777,10 +1417,18 @@ def community_discovery(req: CommunityDiscoveryRequest):
 
     seed_names = [s.strip() for s in req.seedNames if s and s.strip()]
     seed_ids = [s.strip() for s in req.seedIds if s and s.strip()]
+    entity_resolution = _resolve_seed_entities(seed_names, seed_ids, preferred_type="COMPANY")
+    seed_names = entity_resolution["resolvedSeedNames"]
+    seed_ids = entity_resolution["resolvedSeedIds"]
 
     logger.info(
-        "[CommunityAPI] seedNames=%s seedIds=%s method=%s maxHop=%s mode=%s",
-        seed_names, seed_ids, req.method, req.maxHop, req.communityMode,
+        "[CommunityAPI] requestedSeedNames=%s resolvedSeedNames=%s seedIds=%s method=%s maxHop=%s mode=%s",
+        entity_resolution.get("requestedSeedNames", []),
+        seed_names,
+        seed_ids,
+        req.method,
+        req.maxHop,
+        req.communityMode,
     )
 
     analytics = GraphAnalytics(db_client=_client())
@@ -790,7 +1438,7 @@ def community_discovery(req: CommunityDiscoveryRequest):
         auto_select_seeds=req.autoSelectSeeds,
         top_k_seeds=req.topKSeeds,
         seed_selection_mode=req.seedSelectionMode,
-        risk_constraints=req.riskConstraints.dict() if req.riskConstraints else None,
+        risk_constraints=req.riskConstraints.model_dump() if req.riskConstraints else None,
         max_hop=req.maxHop,
         method=req.method,
         min_community_size=req.minCommunitySize,
@@ -829,7 +1477,7 @@ def community_discovery(req: CommunityDiscoveryRequest):
     )
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
-    return _build_response(result, req, elapsed_ms)
+    return _build_response(result, req, elapsed_ms, entity_resolution=entity_resolution)
 
 
 @router.post("/risk-paths")
@@ -847,18 +1495,26 @@ def risk_paths(req: RiskPathsRequest):
 
     seed_names = [s.strip() for s in req.seedNames if s and s.strip()]
     seed_ids = [s.strip() for s in req.seedIds if s and s.strip()]
+    entity_resolution = _resolve_seed_entities(seed_names, seed_ids, preferred_type="COMPANY")
+    seed_names = entity_resolution["resolvedSeedNames"]
+    seed_ids = entity_resolution["resolvedSeedIds"]
 
     if not seed_names and not seed_ids:
         return {
             "success": False,
             "traceId": f"trc-{int(time.time() * 1000)}",
             "error": "seedNames or seedIds is required",
+            "entityResolution": entity_resolution,
         }
 
     logger.info(
-        "[RiskPathAPI] seedNames=%s seedIds=%s maxHop=%s maxPathLength=%s "
+        "[RiskPathAPI] requestedSeedNames=%s resolvedSeedNames=%s seedIds=%s maxHop=%s maxPathLength=%s "
         "includeCommDisc=%s method=%s",
-        seed_names, seed_ids, req.maxHop, req.maxPathLength,
+        entity_resolution.get("requestedSeedNames", []),
+        seed_names,
+        seed_ids,
+        req.maxHop,
+        req.maxPathLength,
         req.includeCommunityDiscovery, req.method,
     )
 
@@ -882,6 +1538,7 @@ def risk_paths(req: RiskPathsRequest):
             "success": False,
             "traceId": f"trc-{int(time.time() * 1000)}",
             "error": comm_result.get("error", "Subgraph extraction failed"),
+            "entityResolution": entity_resolution,
         }
 
     connected = comm_result.get("connected_subgraph", {})
@@ -912,6 +1569,7 @@ def risk_paths(req: RiskPathsRequest):
             "communityRiskPaths": [],
             "viewModel": {},
             "warnings": ["No connected subgraph found for seed nodes"],
+            "entityResolution": entity_resolution,
         }
 
     # ── 2. Resolve seed IDs ──
@@ -1016,6 +1674,7 @@ def risk_paths(req: RiskPathsRequest):
         "communityRiskPaths": _to_camel(community_risk_paths),
         "viewModel": _to_camel(view_model),
         "warnings": warnings,
+        "entityResolution": entity_resolution,
     }
 
     logger.info(
@@ -1051,12 +1710,26 @@ def compliance_report(req: ComplianceReportRequest):
     community/risk JSON can still be supplied and will be reused.
     """
     t0 = time.perf_counter()
+    response_mode = _normalize_public_response_mode(req.responseMode)
+    effective_max_hop = req.depth or req.maxHop
     seed_names = [s.strip() for s in req.seedNames if s and s.strip()]
     seed_ids = [s.strip() for s in req.seedIds if s and s.strip()]
+    if not seed_names and req.subjectName.strip():
+        seed_names = [req.subjectName.strip()]
+    if not seed_ids and req.subjectId.strip():
+        seed_ids = [req.subjectId.strip()]
     if not seed_names and req.focusEntities:
         seed_names = [s.strip() for s in req.focusEntities if s and s.strip()]
     if not seed_ids and req.seedNodes:
         seed_ids = [str(n.get("id", "")).strip() for n in req.seedNodes if n.get("id")]
+    if not seed_names and not seed_ids:
+        return _public_error("subjectName、subjectId、seedNames、seedIds 至少填写一个", code="SUBJECT_REQUIRED")
+    entity_resolution = _resolve_seed_entities(seed_names, seed_ids, preferred_type="COMPANY")
+    seed_names = entity_resolution["resolvedSeedNames"]
+    seed_ids = entity_resolution["resolvedSeedIds"]
+    if not req.query.strip():
+        subject_name = seed_names[0] if seed_names else (seed_ids[0] if seed_ids else "目标主体")
+        req = req.model_copy(update={"query": f"请分析{subject_name}的协同治理社区报告"})
 
     community_payload = req.communityDiscovery or {}
     if not community_payload:
@@ -1064,7 +1737,7 @@ def compliance_report(req: ComplianceReportRequest):
             CommunityDiscoveryRequest(
                 seedNames=seed_names,
                 seedIds=seed_ids,
-                maxHop=req.maxHop,
+                maxHop=effective_max_hop,
                 method=req.method,
                 communityMode=req.communityMode,
                 minCommunitySize=req.minCommunitySize,
@@ -1083,7 +1756,7 @@ def compliance_report(req: ComplianceReportRequest):
             RiskPathsRequest(
                 seedNames=seed_names,
                 seedIds=seed_ids,
-                maxHop=req.maxHop,
+                maxHop=effective_max_hop,
                 maxPathLength=req.maxPathLength,
                 method=req.method,
                 communityMode=req.communityMode,
@@ -1099,7 +1772,7 @@ def compliance_report(req: ComplianceReportRequest):
             )
         )
 
-    report_req = req.copy(update={
+    report_req = req.model_copy(update={
         "seedNodes": req.seedNodes or (
             community_payload.get("seedNodes", [])
             if isinstance(community_payload, dict)
@@ -1122,37 +1795,56 @@ def compliance_report(req: ComplianceReportRequest):
     })
 
     response = _build_compliance_report(report_req)
-    try:
-        docx_file = _export_compliance_report_docx(response, report_req)
-        public_docx_file = _apply_export_delivery_options(docx_file, report_req)
-        report_meta = response.get("report") if isinstance(response.get("report"), dict) else {}
-        report_meta.update({
-            "format": "docx",
-            "fileName": public_docx_file["fileName"],
-            "filePath": public_docx_file.get("filePath"),
-            "downloadUrl": public_docx_file.get("downloadUrl"),
-            "mimeType": public_docx_file["mimeType"],
-            "sizeBytes": public_docx_file["sizeBytes"],
-        })
-        if "base64" in public_docx_file:
-            report_meta["encoding"] = public_docx_file["encoding"]
-        response["report"] = report_meta
-        response["defaultFormat"] = "docx"
-        response["exportFiles"] = {
-            "default": "docx",
-            "docx": public_docx_file,
-        }
-    except Exception as exc:
-        logger.exception("[ComplianceReportAPI] docx export failed")
-        response.setdefault("warnings", []).append(f"DOCX报告生成失败：{exc}")
-        response["defaultFormat"] = "docx"
-        response["exportFiles"] = {"default": "docx", "docx": None}
+    should_export_docx = (
+        req.exportWord
+        if req.exportWord is not None
+        else ("docx" in req.exportFormats if req.exportFormats else True)
+    )
+    if should_export_docx:
+        try:
+            docx_file = _export_compliance_report_docx(response, report_req)
+            public_docx_file = _apply_export_delivery_options(docx_file, report_req)
+            report_meta = response.get("report") if isinstance(response.get("report"), dict) else {}
+            report_meta.update({
+                "format": "docx",
+                "fileName": public_docx_file["fileName"],
+                "filePath": public_docx_file.get("filePath"),
+                "downloadUrl": public_docx_file.get("downloadUrl"),
+                "mimeType": public_docx_file["mimeType"],
+                "sizeBytes": public_docx_file["sizeBytes"],
+            })
+            if "base64" in public_docx_file:
+                report_meta["encoding"] = public_docx_file["encoding"]
+            response["report"] = report_meta
+            response["defaultFormat"] = "docx"
+            response["exportFiles"] = {
+                "default": "docx",
+                "docx": public_docx_file,
+            }
+            response["export_files"] = response["exportFiles"]
+            response["report_download_url"] = public_docx_file.get("downloadUrl")
+        except Exception as exc:
+            logger.exception("[ComplianceReportAPI] docx export failed")
+            response.setdefault("warnings", []).append(f"DOCX报告生成失败：{exc}")
+            response["defaultFormat"] = "docx"
+            response["exportFiles"] = {"default": "docx", "docx": None}
+            response["export_files"] = response["exportFiles"]
+    else:
+        response["defaultFormat"] = None
+        response["exportFiles"] = {"default": None, "docx": None}
+        response["export_files"] = response["exportFiles"]
+        response["report_download_url"] = None
     response["pipelineTrace"] = {
         "mode": "internal_orchestration",
+        "engineMode": "online_new_report",
         "seedNames": seed_names,
         "seedIds": seed_ids,
+        "requestedSeedNames": entity_resolution.get("requestedSeedNames", []),
+        "resolvedSeedNames": entity_resolution.get("resolvedSeedNames", []),
         "communityDiscoveryGenerated": not bool(req.communityDiscovery),
         "riskPathsGenerated": not bool(req.riskPaths),
+        "contextBuilt": True,
+        "perspectivesBuilt": ["responsibility", "violation", "regulatory"],
         "communitySuccess": bool(community_payload.get("success")) if isinstance(community_payload, dict) else False,
         "riskSuccess": bool(risk_payload.get("success")) if isinstance(risk_payload, dict) else False,
         "communityCount": (
@@ -1165,7 +1857,13 @@ def compliance_report(req: ComplianceReportRequest):
             if isinstance(risk_payload, dict) and isinstance(risk_payload.get("summary"), dict)
             else len(_as_list(risk_payload))
         ),
+        "reportSections": len(
+            ((response.get("report") or {}).get("reportSections") or [])
+            if isinstance(response.get("report"), dict)
+            else []
+        ),
     }
+    response["entityResolution"] = entity_resolution
     response["elapsedMs"] = int((time.perf_counter() - t0) * 1000)
     logger.info(
         "[ComplianceReportAPI] subject=%s risk_paths=%d elapsed_ms=%d",
@@ -1173,5 +1871,73 @@ def compliance_report(req: ComplianceReportRequest):
         len(_as_list(report_req.riskPaths)),
         response["elapsedMs"],
     )
+    if response_mode == "summary":
+        return _simplify_main_compliance_response(response, req, entity_resolution)
     return response
+
+
+@public_router.post("/community-discovery")
+def public_community_discovery(req: PublicCommunityDiscoveryRequest):
+    seed_names, seed_ids = _public_subject_inputs(req)
+    if not seed_names and not seed_ids:
+        return _public_error("subjectName 和 subjectId 至少填写一个", code="SUBJECT_REQUIRED")
+
+    internal = community_discovery(
+        CommunityDiscoveryRequest(
+            seedNames=seed_names,
+            seedIds=seed_ids,
+            maxHop=req.depth,
+            responseMode="full",
+            includeRawSubgraph=_normalize_public_response_mode(req.responseMode) == "full",
+            includeCommunityGraph=True,
+        )
+    )
+    return _simplify_public_community_response(internal, req)
+
+
+@public_router.post("/risk-paths")
+def public_risk_paths(req: PublicRiskPathsRequest):
+    seed_names, seed_ids = _public_subject_inputs(req)
+    if not seed_names and not seed_ids:
+        return _public_error("subjectName 和 subjectId 至少填写一个", code="SUBJECT_REQUIRED")
+
+    internal = risk_paths(
+        RiskPathsRequest(
+            seedNames=seed_names,
+            seedIds=seed_ids,
+            maxHop=req.depth,
+            maxPathLength=min(6, max(3, req.depth + 1)),
+            riskPathLimit=max(req.maxPaths * 3, req.maxPaths),
+            responseMode="full",
+        )
+    )
+    return _simplify_public_risk_paths_response(internal, req)
+
+
+@public_router.post("/compliance-report")
+def public_compliance_report(req: PublicComplianceReportRequest):
+    seed_names, seed_ids = _public_subject_inputs(req)
+    if not seed_names and not seed_ids:
+        return _public_error("subjectName 和 subjectId 至少填写一个", code="SUBJECT_REQUIRED")
+
+    subject_name = seed_names[0] if seed_names else seed_ids[0]
+    query = str(req.query or "").strip() or f"请分析{subject_name}的协同治理社区报告"
+    internal = compliance_report(
+        ComplianceReportRequest(
+            query=query,
+            seedNames=seed_names,
+            seedIds=seed_ids,
+            maxHop=req.depth,
+            maxPathLength=min(6, max(3, req.depth + 1)),
+            riskPathLimit=req.maxPaths,
+            exportFormats=["docx"] if req.includeDocx else [],
+            exportWord=req.includeDocx,
+            responseMode="full",
+            reportOptions={
+                "includeDownloadUrl": True,
+                "includeServerPath": False,
+            },
+        )
+    )
+    return _simplify_public_compliance_response(internal, req)
 

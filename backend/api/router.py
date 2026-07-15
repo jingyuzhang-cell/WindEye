@@ -216,8 +216,10 @@ def create_routes(app, kg_system, risk_engine=None):
     # Module C: 风险问答 — Chat / Risk analysis / Ticket routes
     # ═══════════════════════════════════════════════════════════════
     # Governance routes (community discovery, risk paths)
+    from api.governance_routes import public_router as public_governance_router
     from api.governance_routes import router as governance_router
     app.include_router(governance_router)
+    app.include_router(public_governance_router)
 
     # ═══════════════════════════════════════════════════════════════
     # [ALL] Authentication & Admin — real auth replacing mock endpoints
