@@ -44,6 +44,7 @@ class SourceMatcher:
                         caps.get("max_pages", 10),
                     ),
                     "max_files": parsed_requirements.get("max_files", 0),
+                    "headless": True,
                 }
 
         return {

@@ -671,6 +671,12 @@ async def process_single_file(
     if source not in DATA_SOURCE_CONFIGS:
         raise HTTPException(status_code=404, detail=f"Unknown source: {source}")
 
+    if filePath.lower().endswith(".pdf"):
+        from kg_construction.etl.pipeline_config import is_valid_pdf_file
+
+        if not is_valid_pdf_file(filePath):
+            raise HTTPException(status_code=422, detail="Invalid PDF payload")
+
     config = get_pipeline_config()
     result = {
         "filePath": filePath,
@@ -815,7 +821,6 @@ async def trigger_crawl(payload: CrawlTaskRequest, request: Request):
                     continue
 
                 if kind == "done":
-                    last_event = data
                     # Store completed task
                     _crawl_tasks.insert(0, {
                         "type": "crawl",

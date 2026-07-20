@@ -346,7 +346,19 @@ def download_pdf(
                 for chunk in resp.iter_content(chunk_size=65536):
                     if chunk:
                         f.write(chunk)
-        return is_valid_pdf(output_path, min_size=256)
+        if is_valid_pdf(output_path, min_size=1024):
+            return True
+        logger.warning(
+            "download_pdf: invalid PDF payload for %s content-type=%s size=%s",
+            url,
+            content_type,
+            os.path.getsize(output_path) if os.path.exists(output_path) else 0,
+        )
+        try:
+            os.remove(output_path)
+        except OSError:
+            pass
+        return False
     except Exception as exc:
         logger.warning("download_pdf failed for %s: %s", url, exc)
         try:

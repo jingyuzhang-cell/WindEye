@@ -10,7 +10,9 @@ const CrawlProgress: React.FC = () => {
   const totalFilesDownloaded = useCrawlStore((s) => s.totalFilesDownloaded);
   const targetFiles = useCrawlStore((s) => s.targetFiles);
   const unlimitedMode = targetFiles === 0;
-  const fileProgress = targetFiles > 0
+  const fileProgress = stage === 'completed'
+    ? 100
+    : targetFiles > 0
     ? Math.min(100, Math.round((totalFilesDownloaded / targetFiles) * 100))
     : Math.round(progress);
 

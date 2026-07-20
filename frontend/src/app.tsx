@@ -24,6 +24,29 @@ const loginPath = '/user/login';
 
 installAuthFetch();
 
+const chunkReloadKey = 'windeye:chunk-reload';
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = String(reason?.message || reason || '');
+    const isChunkLoadError = reason?.name === 'ChunkLoadError'
+      || /Loading chunk .* failed|ChunkLoadError/i.test(message);
+
+    if (!isChunkLoadError || sessionStorage.getItem(chunkReloadKey) === window.location.pathname) {
+      return;
+    }
+
+    event.preventDefault();
+    sessionStorage.setItem(chunkReloadKey, window.location.pathname);
+    window.location.reload();
+  });
+
+  window.addEventListener('load', () => {
+    window.setTimeout(() => sessionStorage.removeItem(chunkReloadKey), 5000);
+  });
+}
+
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
  * */

@@ -229,16 +229,24 @@ const getMainStageKey = (key: StageName) => (
 );
 
 const CRAWL_SOURCE_TO_PIPELINE_SOURCE: Record<string, string> = {
+  sse: 'risk_event_sse',
+  szse: 'risk_event_szse',
   bse: 'risk_event_bse',
 };
 
 const CRAWL_SOURCE_LABELS: Record<string, string> = {
+  sse: '上交所',
+  szse: '深交所',
   bse: '北交所',
 };
 
 const PIPELINE_SOURCE_LABELS: Record<string, string> = {
+  risk_event_sse: '上交所',
+  risk_event_szse: '深交所',
   risk_event_bse: '北交所',
 };
+
+const ALL_RISK_PIPELINE_SOURCES = ['risk_event_sse', 'risk_event_szse', 'risk_event_bse'];
 
 const NODE_TYPE_COLORS: Record<string, string> = {
   COMPANY: '#FFC101', PERSON: '#1890FF', PFCOMPANY: '#722ED1',
@@ -369,6 +377,7 @@ const RiskEventPage: React.FC = () => {
   const crawlDateRange = useCrawlStore((s) => s.dateRange);
   const crawlMaxPages = useCrawlStore((s) => s.maxPages);
   const crawlMaxFiles = useCrawlStore((s) => s.maxFiles);
+  const crawlSources = useCrawlStore((s) => s.sources);
   const { startCrawl, cancelCrawl } = useCrawlSSE();
   const crawlCollectedFileRows = (crawlCollectedFiles.length > 0
     ? crawlCollectedFiles
@@ -384,7 +393,7 @@ const RiskEventPage: React.FC = () => {
   }));
 
   const handleStartCrawl = () => {
-    const sources = ['bse'];
+    const sources = crawlSources.length > 0 ? crawlSources : ['sse', 'szse', 'bse'];
     const payload: any = {
       mode: 'quick',
       data_type: 'risk_event',
@@ -667,7 +676,7 @@ const RiskEventPage: React.FC = () => {
   };
 
   const handleScanFiles = async (sourceOverride?: string[]) => {
-    const sourcesToScan = sourceOverride?.length ? sourceOverride : (selectedCrawlers.length ? selectedCrawlers : ['risk_event_bse']);
+    const sourcesToScan = sourceOverride?.length ? sourceOverride : ALL_RISK_PIPELINE_SOURCES;
     if (sourcesToScan.length === 0) {
       msg.warning('请先采集或扫描北交所文件');
       return;
@@ -687,7 +696,7 @@ const RiskEventPage: React.FC = () => {
         msg.error(`扫描${PIPELINE_SOURCE_LABELS[source] || source}失败: ${error instanceof Error ? error.message : '接口异常'}`);
       }
     }
-    setSelectedCrawlers(['risk_event_bse']);
+    setSelectedCrawlers(sourcesToScan);
     setScannedFiles(results);
     setImportTab('upload');
     setScanLoading(false);
@@ -1547,17 +1556,21 @@ const RiskEventPage: React.FC = () => {
                   <div style={{ marginBottom: 12, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
                     <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
                       已爬取文件扫描
-                      <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>北交所风险事件</Tag>
+                      {ALL_RISK_PIPELINE_SOURCES.map((source) => (
+                        <Tag key={source} color="blue" style={{ marginLeft: 6, fontSize: 11 }}>
+                          {PIPELINE_SOURCE_LABELS[source]}
+                        </Tag>
+                      ))}
                     </div>
                     <div style={{ fontSize: 12, color: '#64748b' }}>
-                      扫描本地北交所纪律处分公告 PDF。
+                      扫描本地三大交易所公告 PDF，并仅展示通过真实性校验的文件。
                     </div>
                     <div style={{ marginTop: 8 }}>
                       <Button
                         icon={<SearchOutlined />}
                         size="small"
                         loading={scanLoading}
-                        onClick={() => handleScanFiles(['risk_event_bse'])}
+                        onClick={() => handleScanFiles(ALL_RISK_PIPELINE_SOURCES)}
                         disabled={running || pipelineRunning}
                       >
                         扫描已爬取文件

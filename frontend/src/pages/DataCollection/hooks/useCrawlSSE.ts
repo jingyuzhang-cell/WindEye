@@ -10,6 +10,9 @@ export function useCrawlSSE() {
       const controller = new AbortController();
       abortRef.current = controller;
       store.reset();
+      if (Array.isArray(payload.sources)) {
+        store.setSources(payload.sources);
+      }
       store.startTask('pending', payload.max_files ?? 0);
       store.updateProgress({
         stage: 'parsing',
@@ -80,12 +83,32 @@ export function useCrawlSSE() {
                     break;
                   case 'source_result':
                     store.addSourceResult(data);
+                    if (data.message) {
+                      store.updateProgress({
+                        stage: 'crawling',
+                        progress: data.files_downloaded > 0 ? 80 : 75,
+                        message: data.message,
+                      } as API.CrawlStageEvent);
+                    }
                     store.addLog(
                       data.error ? 'error' : 'success',
                       `${data.source}: ${data.files_downloaded || 0} files, ${data.records || 0} records${data.error ? ' (error: ' + data.error + ')' : ''}`,
                     );
                     break;
                   case 'complete':
+                    if ((data.total_files_downloaded || 0) === 0) {
+                      const skipped = (data.source_results || []).reduce(
+                        (sum: number, item: any) => sum + (item.existing_files_skipped || 0),
+                        0,
+                      );
+                      store.updateProgress({
+                        stage: 'completed',
+                        progress: 100,
+                        message: skipped > 0
+                          ? `采集完成：命中 ${skipped} 份官方文件，均已存在，本次未重复下载。`
+                          : '采集完成：所选日期范围内没有发现新的官方 PDF。',
+                      } as API.CrawlStageEvent);
+                    }
                     store.completeTask(data);
                     store.addLog('success', 'Crawl completed');
                     break;

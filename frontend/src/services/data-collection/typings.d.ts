@@ -60,6 +60,7 @@ declare namespace API {
     sizeBytes?: number;
     sizeDisplay?: string;
     collectedAt?: string;
+    validPdf?: boolean;
   }
 
   interface CrawlFileCollectedEvent {

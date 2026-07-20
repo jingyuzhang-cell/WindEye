@@ -123,6 +123,8 @@ def scan_source_files(source: str) -> list[dict[str, Any]]:
             continue
         if glob_ext != ".*" and not fname.lower().endswith(glob_ext):
             continue
+        if fname.lower().endswith(".pdf") and not is_valid_pdf_file(fpath):
+            continue
         mtime = os.path.getmtime(fpath)
         collected_at = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
         files.append({
@@ -134,6 +136,17 @@ def scan_source_files(source: str) -> list[dict[str, Any]]:
             "modified_at": collected_at,
         })
     return files
+
+
+def is_valid_pdf_file(path: str, min_size: int = 1024) -> bool:
+    """Return whether a local file contains a plausible PDF payload."""
+    try:
+        if not os.path.isfile(path) or os.path.getsize(path) < min_size:
+            return False
+        with open(path, "rb") as stream:
+            return stream.read(4) == b"%PDF"
+    except OSError:
+        return False
 
 
 def _format_size(size: int) -> str:

@@ -12,12 +12,14 @@ import random
 import re
 import time
 from datetime import date, datetime
+from urllib.parse import urljoin
 
 from data_collection.scrapers.utils import (
     create_driver,
     download_pdf,
     ensure_dir,
     find_with_fallback,
+    is_valid_pdf,
     log_element_failure,
     safe_pdf_name,
     wait_for_downloads,
@@ -183,6 +185,53 @@ def _count_downloaded_pdfs(save_dir: str) -> int:
     return len([f for f in os.listdir(save_dir) if f.lower().endswith(".pdf")]) if os.path.isdir(save_dir) else 0
 
 
+SOURCE_LABELS = {"sse": "上交所", "szse": "深交所", "bse": "北交所"}
+
+
+def _pdf_files(save_dir: str, source: str) -> list[dict]:
+    """Return locally persisted PDF files that pass basic integrity checks."""
+    files: list[dict] = []
+    if not os.path.isdir(save_dir):
+        return files
+    for name in sorted(os.listdir(save_dir)):
+        path = os.path.join(save_dir, name)
+        if not name.lower().endswith(".pdf") or not os.path.isfile(path):
+            continue
+        size = os.path.getsize(path)
+        try:
+            with open(path, "rb") as handle:
+                valid_pdf = handle.read(4) == b"%PDF"
+        except OSError:
+            valid_pdf = False
+        if not valid_pdf or size < 1024:
+            continue
+        files.append({
+            "source": source,
+            "sourceLabel": SOURCE_LABELS.get(source, source.upper()),
+            "fileName": name,
+            "savedName": name,
+            "filePath": os.path.abspath(path),
+            "sizeBytes": size,
+            "sizeDisplay": f"{size / 1024:.1f} KB",
+            "collectedAt": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
+            "validPdf": True,
+        })
+    return files
+
+
+def _result(source: str, save_dir: str, downloaded_count: int) -> dict:
+    files = _pdf_files(save_dir, source)
+    return {
+        "source": source,
+        "sourceLabel": SOURCE_LABELS.get(source, source.upper()),
+        "files_downloaded": downloaded_count,
+        "records": downloaded_count,
+        "save_dir": save_dir,
+        "files": files,
+        "valid_pdf_count": len(files),
+    }
+
+
 def _report_progress(cb, downloaded: int, target: int, save_dir: str, filename: str) -> None:
     """Invoke progress callback if provided, for SSE streaming to frontend."""
     if cb is None:
@@ -217,15 +266,33 @@ def _report_progress(cb, downloaded: int, target: int, save_dir: str, filename: 
 def _download_pdf_with_fallback(driver, pdf_url: str, save_dir: str, raw_title: str, referer: str = "") -> bool:
     target_name = safe_pdf_name(raw_title or pdf_url.split("/")[-1].split("?")[0])
     target_path = os.path.join(save_dir, target_name)
-    if os.path.exists(target_path):
+    if is_valid_pdf(target_path):
         logger.info("Skip existing: %s", target_name)
         return True  # Already collected — skip, not a new download
+    if os.path.exists(target_path):
+        try:
+            os.remove(target_path)
+        except OSError:
+            return False
     cookies = {}
     try:
         cookies = {item["name"]: item["value"] for item in driver.get_cookies()}
     except Exception:
         cookies = {}
-    ok = download_pdf(pdf_url, target_path, cookies=cookies, referer=referer or getattr(driver, "current_url", ""))
+    headers = {}
+    try:
+        user_agent = driver.execute_script("return navigator.userAgent")
+        if user_agent:
+            headers["User-Agent"] = user_agent
+    except Exception:
+        pass
+    ok = download_pdf(
+        pdf_url,
+        target_path,
+        cookies=cookies,
+        headers=headers,
+        referer=referer or getattr(driver, "current_url", ""),
+    )
     if ok:
         logger.info("Downloaded PDF via HTTP fallback: %s", os.path.basename(target_path))
     return ok
@@ -251,7 +318,7 @@ def _scrape_sse(config: dict) -> dict:
 
     progress_cb = config.get("progress_callback")
 
-    driver = create_driver(download_dir=save_dir)
+    driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", True)))
     try:
         url = "https://www.sse.com.cn/disclosure/listedinfo/announcement/"
         logger.info("SSE: opening %s", url)
@@ -376,7 +443,7 @@ def _scrape_sse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
+    return _result(source, save_dir, downloaded_count)
 
 
 def _scrape_szse(config: dict) -> dict:
@@ -391,7 +458,7 @@ def _scrape_szse(config: dict) -> dict:
     progress_cb = config.get("progress_callback")
     downloaded_count = 0  # Only new files this session
 
-    driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", False)))
+    driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", True)))
     try:
         url = "https://www.szse.cn/disclosure/supervision/measure/pushish/index.html"
         logger.info(f"SZSE: opening {url}")
@@ -406,25 +473,41 @@ def _scrape_szse(config: dict) -> dict:
             try:
                 time.sleep(2)
                 files_before = set(os.listdir(save_dir))
-                rows = driver.find_elements("xpath", "//tbody/tr")
-                for row in rows:
+                links = driver.find_elements(
+                    "xpath",
+                    "//a[contains(translate(@href,'PDF','pdf'),'.pdf') or @encode-open]",
+                )
+                for a_elem in links:
                     if max_files > 0:
                         if downloaded_count >= max_files:
                             logger.info("SZSE: reached max_files=%s, stopping on this page", max_files)
                             break
                     try:
-                        if not _date_in_range(row.text, date_start, date_end):
+                        try:
+                            container_text = a_elem.find_element(
+                                "xpath", "./ancestor::*[self::tr or self::li or self::div][1]"
+                            ).text
+                        except Exception:
+                            container_text = a_elem.text
+                        if not _date_in_range(container_text, date_start, date_end):
                             continue
-                        title_elem = row.find_element("xpath", "./td[contains(@class, 'text-left')]")
-                        a_elem = row.find_element("xpath", ".//a[@encode-open]")
-                        raw_title = title_elem.text.strip().replace("\n", "")
+                        raw_title = (
+                            a_elem.get_attribute("title")
+                            or a_elem.text
+                            or container_text.split("\n")[0]
+                        ).strip().replace("\n", "")
+                        if not raw_title:
+                            continue
                         clean_title = safe_pdf_name(raw_title)
                         encode_open = a_elem.get_attribute("encode-open")
                         href = a_elem.get_attribute("href")
                         # Skip if already collected
                         if os.path.exists(os.path.join(save_dir, safe_pdf_name(raw_title))):
                             continue
-                        if href and _download_pdf_with_fallback(driver, href, save_dir, raw_title, referer=url):
+                        download_url = urljoin(url, href or encode_open or "")
+                        if download_url and _download_pdf_with_fallback(
+                            driver, download_url, save_dir, raw_title, referer=url
+                        ):
                             downloaded_count += 1
                             _report_progress(progress_cb, downloaded_count, max_files, save_dir, raw_title + ".pdf")
                             continue
@@ -489,7 +572,7 @@ def _scrape_szse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
+    return _result(source, save_dir, downloaded_count)
 
 
 def _scrape_bse(config: dict) -> dict:
@@ -504,11 +587,11 @@ def _scrape_bse(config: dict) -> dict:
     progress_cb = config.get("progress_callback")
     downloaded_count = 0  # Only new files this session
 
-    driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", False)))
+    driver = create_driver(download_dir=save_dir, headless=bool(config.get("headless", True)))
     try:
         BSE_URLS = [
-            "https://www.bse.cn/disclosure/disciplinary_action.html",
             "https://www.bse.cn/disclosure/disciplinary_aciton.html",
+            "https://www.bse.cn/disclosure/disciplinary_action.html",
         ]
         url = BSE_URLS[0]
         logger.info("BSE: opening %s", url)
@@ -619,7 +702,7 @@ def _scrape_bse(config: dict) -> dict:
     finally:
         driver.quit()
 
-    return {"source": source, "files_downloaded": downloaded_count, "records": downloaded_count, "save_dir": save_dir}
+    return _result(source, save_dir, downloaded_count)
 
 
 def run_risk_event_scraper(config: dict) -> dict:
@@ -630,8 +713,14 @@ def run_risk_event_scraper(config: dict) -> dict:
         save_dir = os.path.join(DATA_DIR, "risk_events", source)
         ensure_dir(save_dir)
         return {"source": source, "files_downloaded": 0, "records": 0, "save_dir": save_dir}
-    scraper_fns = {"sse": _scrape_sse, "szse": _scrape_szse, "bse": _scrape_bse}
-    fn = scraper_fns.get(source, _scrape_sse)
+    from .bse_risk_event_scraper import run as run_bse
+    from .sse_risk_event_scraper import run as run_sse
+    from .szse_risk_event_scraper import run as run_szse
+
+    scraper_fns = {"sse": run_sse, "szse": run_szse, "bse": run_bse}
+    fn = scraper_fns.get(source)
+    if fn is None:
+        raise ValueError(f"Unsupported risk-event source: {source}")
     logger.info(
         "RiskEvent scraper: source=%s headless=%s data_dir=%s",
         source,

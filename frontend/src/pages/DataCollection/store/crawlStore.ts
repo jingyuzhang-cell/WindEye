@@ -54,7 +54,7 @@ export const useCrawlStore = create<CrawlState>((set) => ({
 
   dataType: 'risk_event',
   setDataType: (dataType) => set({ dataType }),
-  sources: ['bse'],
+  sources: ['sse', 'szse', 'bse'],
   setSources: (sources) => set({ sources }),
   dateRange: [null, null],
   setDateRange: (dateRange) => set({ dateRange }),
@@ -151,7 +151,7 @@ export const useCrawlStore = create<CrawlState>((set) => ({
   reset: () =>
     set({
       taskId: null, isRunning: false, progress: 0, stage: '', stageMessage: '',
-      sources: ['bse'],
+      sources: ['sse', 'szse', 'bse'],
       logs: [], result: null, error: null, totalFilesDownloaded: 0, targetFiles: 0, collectedFiles: [], sourceDownloadedCounts: {},
     }),
 }));
